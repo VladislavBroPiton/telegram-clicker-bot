@@ -710,16 +710,6 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🪨 **Добро пожаловать в шахтёрскую глубину!**\n\n"
         "Твой путь к богатству начинается здесь.\n"
         "Используй команды из меню (кнопка слева внизу) или кнопки ниже.\n\n"
-        "📍 **Доступные команды:**\n"
-        "/mine - добыча\n"
-        "/locations - выбор локации\n"
-        "/shop - магазин\n"
-        "/tasks - задания\n"
-        "/profile - профиль\n"
-        "/inventory - инвентарь\n"
-        "/market - рынок\n"
-        "/leaderboard - лидеры\n"
-        "/help - помощь"
     )
     if update.callback_query:
         await update.callback_query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
@@ -1272,3 +1262,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
