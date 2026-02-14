@@ -343,24 +343,36 @@ class FakeQuery:
     async def edit_message_text(self, text, reply_markup=None, parse_mode=None):
         await self.message.reply_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
 
-async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+async def start(update: Update, ctx):
     u=update.effective_user; get_player(u.id, u.username)
     await show_main_menu(update, ctx)
 
 async def show_main_menu(update: Update, ctx):
-    kb=[[InlineKeyboardButton("⛏ Добыть", 'mine'), InlineKeyboardButton("📋 Задания", 'tasks'), InlineKeyboardButton("🏆 Лидеры", 'leaderboard_menu')]]
-    rm=InlineKeyboardMarkup(kb)
-    txt="🪨 **Добро пожаловать в шахтёрскую глубину!**\n\nТвой путь к богатству начинается здесь.\nИспользуй команды из меню (кнопка слева внизу) или кнопки ниже.\n\n"
-    if update.callback_query: await update.callback_query.edit_message_text(txt, parse_mode='Markdown', reply_markup=rm)
-    else: await update.message.reply_text(txt, parse_mode='Markdown', reply_markup=rm)
+    kb = [[
+        InlineKeyboardButton("⛏ Добыть", callback_data='mine'),
+        InlineKeyboardButton("📋 Задания", callback_data='tasks'),
+        InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')
+    ]]
+    rm = InlineKeyboardMarkup(kb)
+    txt = "🪨 **Добро пожаловать в шахтёрскую глубину!**\n\nТвой путь к богатству начинается здесь.\nИспользуй команды из меню (кнопка слева внизу) или кнопки ниже.\n\n"
+    if update.callback_query:
+        await update.callback_query.edit_message_text(txt, parse_mode='Markdown', reply_markup=rm)
+    else:
+        await update.message.reply_text(txt, parse_mode='Markdown', reply_markup=rm)
 
 async def show_main_menu_from_query(query):
-    kb=[[InlineKeyboardButton("⛏ Добыть", 'mine'), InlineKeyboardButton("📋 Задания", 'tasks'), InlineKeyboardButton("🏆 Лидеры", 'leaderboard_menu')]]
-    rm=InlineKeyboardMarkup(kb)
-    txt="🪨 **Главное меню**\n\nИспользуй команды из системного меню или кнопки ниже."
-    try: await query.edit_message_text(txt, parse_mode='Markdown', reply_markup=rm)
+    kb = [[
+        InlineKeyboardButton("⛏ Добыть", callback_data='mine'),
+        InlineKeyboardButton("📋 Задания", callback_data='tasks'),
+        InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')
+    ]]
+    rm = InlineKeyboardMarkup(kb)
+    txt = "🪨 **Главное меню**\n\nИспользуй команды из системного меню или кнопки ниже."
+    try:
+        await query.edit_message_text(txt, parse_mode='Markdown', reply_markup=rm)
     except BadRequest as e:
-        if "Message is not modified" not in str(e): logger.error(f"Error: {e}")
+        if "Message is not modified" not in str(e):
+            logger.error(f"Error: {e}")
 
 # команды
 async def cmd_mine(update,ctx): u=update.effective_user; get_player(u.id,u.username); await mine_action(FakeQuery(update.message,u),ctx)
@@ -447,8 +459,8 @@ async def show_locations(q, ctx):
         if not avail: line+=f" (треб. ур.{loc['min_level']})"
         else: line+=f" (ур.{loc['min_level']}+)"
         txt+=line+"\n   "+loc['description']+"\n\n"
-        if avail and not is_cur: kb.append([InlineKeyboardButton(f"Перейти в {loc['name']}", f'goto_{lid}')])
-    kb.append([InlineKeyboardButton("🔙 Назад", 'back_to_menu')])
+        if avail and not is_cur: kb.append([InlineKeyboardButton(f"Перейти в {loc['name']}", callback_data=f'goto_{lid}')])
+    kb.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
     try: await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e): logger.error(f"Error: {e}")
@@ -460,9 +472,11 @@ async def goto_location(q, ctx):
 
 # Магазин с категориями
 async def show_shop_menu(q, ctx):
-    kb=[[InlineKeyboardButton("⚡ Улучшения", 'shop_category_upgrades')],
-        [InlineKeyboardButton("🧰 Инструменты", 'shop_category_tools')],
-        [InlineKeyboardButton("🔙 Назад", 'back_to_menu')]]
+    kb = [
+        [InlineKeyboardButton("⚡ Улучшения", callback_data='shop_category_upgrades')],
+        [InlineKeyboardButton("🧰 Инструменты", callback_data='shop_category_tools')],
+        [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]
+    ]
     try: await q.edit_message_text("🛒 **Магазин**\n\nВыбери категорию:", parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e): logger.error(f"Error: {e}")
@@ -473,8 +487,8 @@ async def show_shop_upgrades(q, ctx):
     for uid2,info in UPGRADES.items():
         lvl=stats['upgrades'][uid2]; price=int(info['base_price']*(info['price_mult']**lvl))
         txt+=f"**{info['name']}** (ур.{lvl})\n{info['description']}\nЦена след.ур.: {price}💰\n\n"
-        kb.append([InlineKeyboardButton(f"Купить {info['name']} за {price}", f'buy_{uid2}')])
-    kb.append([InlineKeyboardButton("🔙 В меню магазина", 'back_to_shop_menu')])
+        kb.append([InlineKeyboardButton(f"Купить {info['name']} за {price}", callback_data=f'buy_{uid2}')])
+    kb.append([InlineKeyboardButton("🔙 В меню магазина", callback_data='back_to_shop_menu')])
     try: await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e): logger.error(f"Error: {e}")
@@ -487,8 +501,8 @@ async def show_shop_tools(q, ctx):
             if has_tool(uid, tid): txt+=f"✅ **{tool['name']}** (уже есть)\n"
             else:
                 txt+=f"**{tool['name']}** – {tool['price']}💰 (треб.ур.{tool['required_level']})\n{tool['description']}\n\n"
-                kb.append([InlineKeyboardButton(f"Купить {tool['name']} за {tool['price']}", f'buy_tool_{tid}')])
-    kb.append([InlineKeyboardButton("🔙 В меню магазина", 'back_to_shop_menu')])
+                kb.append([InlineKeyboardButton(f"Купить {tool['name']} за {tool['price']}", callback_data=f'buy_tool_{tid}')])
+    kb.append([InlineKeyboardButton("🔙 В меню магазина", callback_data='back_to_shop_menu')])
     try: await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e): logger.error(f"Error: {e}")
@@ -530,7 +544,7 @@ async def show_tasks(q, ctx):
     if weekly:
         for t in weekly: _,n,desc,g,prog,com,rew_g,rew_exp=t; st="✅" if com else f"{prog}/{g}"; txt+=f"{n}: {desc}\nПрогресс: {st}\nНаграда: {rew_g}💰, {rew_exp}✨\n\n"
     else: txt+="Нет заданий на эту неделю.\n\n"
-    kb=[[InlineKeyboardButton("🔙 Назад", 'back_to_menu')]]
+    kb=[[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
     try: await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e): logger.error(f"Error: {e}")
@@ -555,21 +569,23 @@ async def show_profile(q, ctx):
     if tools:
         txt+="\n🧰 Инструменты:\n"
         for tid,lvl in tools.items(): tool=TOOLS.get(tid); txt+=f"• {tool['name']}\n" if tool else ""
-    kb=[[InlineKeyboardButton("🔙 Назад", 'back_to_menu')]]
+    kb=[[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
     try: await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e): logger.error(f"Error: {e}")
 
 # Лидеры (без Markdown)
 async def show_leaderboard_menu(q, ctx):
-    kb=[[InlineKeyboardButton("📊 По уровню", 'leaderboard_level')],
-        [InlineKeyboardButton("💰 По золоту", 'leaderboard_gold')],
-        [InlineKeyboardButton("🪨 По углю", 'leaderboard_coal')],
-        [InlineKeyboardButton("⚙️ По железу", 'leaderboard_iron')],
-        [InlineKeyboardButton("🟡 По золотой руде", 'leaderboard_gold_ore')],
-        [InlineKeyboardButton("💎 По алмазам", 'leaderboard_diamond')],
-        [InlineKeyboardButton("🔮 По мифрилу", 'leaderboard_mithril')],
-        [InlineKeyboardButton("🔙 Назад", 'back_to_menu')]]
+    kb = [
+        [InlineKeyboardButton("📊 По уровню", callback_data='leaderboard_level')],
+        [InlineKeyboardButton("💰 По золоту", callback_data='leaderboard_gold')],
+        [InlineKeyboardButton("🪨 По углю", callback_data='leaderboard_coal')],
+        [InlineKeyboardButton("⚙️ По железу", callback_data='leaderboard_iron')],
+        [InlineKeyboardButton("🟡 По золотой руде", callback_data='leaderboard_gold_ore')],
+        [InlineKeyboardButton("💎 По алмазам", callback_data='leaderboard_diamond')],
+        [InlineKeyboardButton("🔮 По мифрилу", callback_data='leaderboard_mithril')],
+        [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]
+    ]
     try: await q.edit_message_text("🏆 Выберите категорию лидеров:", reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e): logger.error(f"Error: {e}")
@@ -582,7 +598,7 @@ async def show_leaderboard_level(q, ctx):
     if not top: txt+="Пока нет данных."
     else:
         for i,(name,lvl,exp) in enumerate(top,1): txt+=f"{i}. {name or 'Аноним'} — уровень {lvl} (опыт {exp})\n"
-    kb=[[InlineKeyboardButton("🔙 К категориям", 'leaderboard_menu')]]
+    kb=[[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
     try: await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e): logger.error(f"Error: {e}")
@@ -595,7 +611,7 @@ async def show_leaderboard_gold(q, ctx):
     if not top: txt+="Пока нет данных."
     else:
         for i,(name,gold) in enumerate(top,1): txt+=f"{i}. {name or 'Аноним'} — {gold}💰\n"
-    kb=[[InlineKeyboardButton("🔙 К категориям", 'leaderboard_menu')]]
+    kb=[[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
     try: await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e): logger.error(f"Error: {e}")
@@ -608,7 +624,7 @@ async def show_leaderboard_resource(q, ctx, rid, rname):
     if not top: txt+="Пока нет данных."
     else:
         for i,(name,amt) in enumerate(top,1): txt+=f"{i}. {name or 'Аноним'} — {amt} шт.\n"
-    kb=[[InlineKeyboardButton("🔙 К категориям", 'leaderboard_menu')]]
+    kb=[[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
     try: await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e): logger.error(f"Error: {e}")
@@ -626,7 +642,7 @@ async def show_inventory(q, ctx):
         amt=inv.get(rid,0)
         if amt>0: txt+=f"• {info['name']}: {amt} шт.\n"; has=True
     if not has: txt="🎒 Твой инвентарь пуст. Добывай ресурсы!"
-    kb=[[InlineKeyboardButton("🔙 Назад", 'back_to_menu')]]
+    kb=[[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
     try: await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e): logger.error(f"Error: {e}")
@@ -637,8 +653,10 @@ async def show_market(q, ctx):
     for rid,info in RESOURCES.items():
         amt=inv.get(rid,0); price=info['base_price']
         txt+=f"{info['name']}: {amt} шт. | Цена: {price}💰 за шт.\n"
-        if amt>0: kb.append([InlineKeyboardButton(f"Продать 1", f'sell_{rid}_1'), InlineKeyboardButton(f"Продать всё", f'sell_{rid}_all')])
-    kb.append([InlineKeyboardButton("🔙 Назад", 'back_to_menu')])
+        if amt>0:
+            kb.append([InlineKeyboardButton("Продать 1", callback_data=f'sell_{rid}_1'),
+                       InlineKeyboardButton("Продать всё", callback_data=f'sell_{rid}_all')])
+    kb.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
     try: await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e): logger.error(f"Error: {e}")
