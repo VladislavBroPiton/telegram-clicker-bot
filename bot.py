@@ -115,7 +115,7 @@ TOOLS = {
     }
 }
 
-# ==================== ЧАСТО ЗАДАВАЕМЫЕ ВОПРОСЫ (FAQ) ====================
+# ==================== ЧАСТО ЗАДАВАЕМЫЕ ВОПРОСЫ ====================
 FAQ = [
     {
         "question": "🪨 Как добывать ресурсы?",
@@ -143,7 +143,7 @@ FAQ = [
     },
     {
         "question": "⚡ Как увеличить доход за клик?",
-        "answer": "Покупай улучшения в магазине (категория «⚡ Улучшения»). «Сила клика» напрямую увеличивает золото за клик, а «Шанс крита» даёт шанс удвоить добычу."
+        "answer": "Покупай улучшения в магазине (категория «⚡ Улучшения»). «Сила клика» прямо увеличивает золото за клик, а «Шанс крита» даёт шанс удвоить добычу."
     },
     {
         "question": "🔄 Как сменить активный инструмент?",
@@ -176,6 +176,8 @@ ACHIEVEMENTS = [
 def init_db():
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
+    
+    # Таблица players (с новым полем active_tool)
     c.execute('''CREATE TABLE IF NOT EXISTS players
                  (user_id INTEGER PRIMARY KEY,
                   username TEXT,
@@ -191,11 +193,23 @@ def init_db():
                   last_weekly_reset DATE,
                   current_location TEXT DEFAULT 'coal_mine',
                   active_tool TEXT DEFAULT 'wooden_pickaxe')''')
+    
+    # Миграция: добавляем поле active_tool, если его нет (для старых баз)
+    try:
+        c.execute("ALTER TABLE players ADD COLUMN active_tool TEXT DEFAULT 'wooden_pickaxe'")
+        logger.info("Column 'active_tool' added to players table.")
+    except sqlite3.OperationalError:
+        # Поле уже существует – игнорируем
+        pass
+
+    # Таблица улучшений
     c.execute('''CREATE TABLE IF NOT EXISTS upgrades
                  (user_id INTEGER,
                   upgrade_id TEXT,
                   level INTEGER DEFAULT 0,
                   PRIMARY KEY (user_id, upgrade_id))''')
+
+    # Таблица ежедневных заданий
     c.execute('''CREATE TABLE IF NOT EXISTS daily_tasks
                  (user_id INTEGER,
                   task_id INTEGER,
@@ -208,6 +222,8 @@ def init_db():
                   reward_exp INTEGER,
                   date DATE,
                   PRIMARY KEY (user_id, task_id))''')
+
+    # Таблица еженедельных заданий
     c.execute('''CREATE TABLE IF NOT EXISTS weekly_tasks
                  (user_id INTEGER,
                   task_id INTEGER,
@@ -220,6 +236,8 @@ def init_db():
                   reward_exp INTEGER,
                   week TEXT,
                   PRIMARY KEY (user_id, task_id, week))''')
+
+    # Таблица достижений
     c.execute('''CREATE TABLE IF NOT EXISTS user_achievements
                  (user_id INTEGER,
                   achievement_id TEXT,
@@ -227,17 +245,22 @@ def init_db():
                   progress INTEGER,
                   max_progress INTEGER,
                   PRIMARY KEY (user_id, achievement_id))''')
+
+    # Таблица инвентаря
     c.execute('''CREATE TABLE IF NOT EXISTS inventory
                  (user_id INTEGER,
                   resource_id TEXT,
                   amount INTEGER DEFAULT 0,
                   PRIMARY KEY (user_id, resource_id))''')
+
+    # Таблица инструментов игрока
     c.execute('''CREATE TABLE IF NOT EXISTS player_tools
                  (user_id INTEGER,
                   tool_id TEXT,
                   level INTEGER DEFAULT 1,
                   experience INTEGER DEFAULT 0,
                   PRIMARY KEY (user_id, tool_id))''')
+
     conn.commit()
     conn.close()
 
@@ -702,7 +725,6 @@ async def cmd_leaderboard(update, ctx):
     get_player(u.id, u.username)
     await show_leaderboard_menu(FakeQuery(update.message, u), ctx)
 
-# ==================== НОВАЯ КОМАНДА /faq ====================
 async def cmd_faq(update, ctx):
     """Отправляет список часто задаваемых вопросов и ответов."""
     faq_text = "📚 **Часто задаваемые вопросы**\n\n"
@@ -1268,7 +1290,7 @@ async def run_bot():
     app.add_handler(CommandHandler("inventory", cmd_inventory))
     app.add_handler(CommandHandler("market", cmd_market))
     app.add_handler(CommandHandler("leaderboard", cmd_leaderboard))
-    app.add_handler(CommandHandler("faq", cmd_faq))  # новая команда
+    app.add_handler(CommandHandler("faq", cmd_faq))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CallbackQueryHandler(button_handler))
     try:
