@@ -616,7 +616,8 @@ def level_up_if_needed(uid):
     c.execute("UPDATE players SET level=?, exp=? WHERE user_id=?", (lvl, exp, uid))
     conn.commit()
     conn.close()
-    async def check_achievements(uid, ctx):
+
+async def check_achievements(uid, ctx):
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
     c.execute("SELECT achievement_id FROM user_achievements WHERE user_id=?", (uid,))
@@ -1375,4 +1376,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
