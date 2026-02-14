@@ -6,6 +6,7 @@ import asyncio
 import os
 from typing import Dict, Tuple
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import BadRequest
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
@@ -340,7 +341,15 @@ async def show_main_menu_from_query(query):
         [InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text("Главное меню. Что хочешь сделать?", reply_markup=reply_markup)
+    try:
+        await query.edit_message_text("Главное меню. Что хочешь сделать?", reply_markup=reply_markup)
+    except BadRequest as e:
+        if "Message is not modified" in str(e):
+            # Игнорируем эту конкретную ошибку
+            pass
+        else:
+            # Другие ошибки логируем
+            logger.error(f"Error in show_main_menu_from_query: {e}")
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -600,4 +609,5 @@ if __name__ == "__main__":
     else:
         # Для Render запускаем веб-сервер
         port = int(os.environ.get("PORT", 8000))
+
         uvicorn.run(app, host="0.0.0.0", port=port)
