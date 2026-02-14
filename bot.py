@@ -826,6 +826,14 @@ async def button_handler(update: Update, ctx):
         await show_leaderboard_diamond(q, ctx)
     elif data == 'leaderboard_mithril':
         await show_leaderboard_mithril(q, ctx)
+    elif data == 'leaderboard_achievements':
+        await show_leaderboard_achievements(q, ctx)
+    elif data == 'leaderboard_total_resources':
+        await show_leaderboard_total_resources(q, ctx)
+    elif data == 'leaderboard_tools':
+        await show_leaderboard_tools(q, ctx)
+    elif data == 'leaderboard_tasks_completed':
+        await show_leaderboard_tasks_completed(q, ctx)
     elif data == 'inventory':
         await show_inventory(q, ctx)
     elif data == 'market':
@@ -1181,6 +1189,7 @@ async def show_profile(q, ctx):
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
 
+# ==================== ТАБЛИЦА ЛИДЕРОВ (РАСШИРЕННАЯ) ====================
 async def show_leaderboard_menu(q, ctx):
     kb = [
         [InlineKeyboardButton("📊 По уровню", callback_data='leaderboard_level')],
@@ -1190,12 +1199,16 @@ async def show_leaderboard_menu(q, ctx):
         [InlineKeyboardButton("🟡 По золотой руде", callback_data='leaderboard_gold_ore')],
         [InlineKeyboardButton("💎 По алмазам", callback_data='leaderboard_diamond')],
         [InlineKeyboardButton("🔮 По мифрилу", callback_data='leaderboard_mithril')],
+        [InlineKeyboardButton("🏆 По достижениям", callback_data='leaderboard_achievements')],
+        [InlineKeyboardButton("📦 По ресурсам (всего)", callback_data='leaderboard_total_resources')],
+        [InlineKeyboardButton("🔨 По инструментам", callback_data='leaderboard_tools')],
+        [InlineKeyboardButton("📅 По заданиям", callback_data='leaderboard_tasks_completed')],
         [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]
     ]
     txt = ("🏆 **Таблица лидеров**\n\n"
            "Выбери, по какому показателю показать топ-10 игроков:")
     try:
-        await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
+        await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
@@ -1266,6 +1279,113 @@ async def show_leaderboard_iron(q, ctx): await show_leaderboard_resource(q, ctx,
 async def show_leaderboard_gold_ore(q, ctx): await show_leaderboard_resource(q, ctx, 'gold', 'Золотая руда')
 async def show_leaderboard_diamond(q, ctx): await show_leaderboard_resource(q, ctx, 'diamond', 'Алмазы')
 async def show_leaderboard_mithril(q, ctx): await show_leaderboard_resource(q, ctx, 'mithril', 'Мифрил')
+
+async def show_leaderboard_achievements(q, ctx):
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute('''SELECT p.username, COUNT(ua.achievement_id) as cnt
+                 FROM players p
+                 LEFT JOIN user_achievements ua ON p.user_id = ua.user_id
+                 GROUP BY p.user_id
+                 ORDER BY cnt DESC
+                 LIMIT 10''')
+    top = c.fetchall()
+    conn.close()
+    txt = "🏆 **Топ по достижениям**\n\n"
+    if not top:
+        txt += "Пока нет данных."
+    else:
+        for i, (name, cnt) in enumerate(top, 1):
+            name = escape_markdown(name or 'Аноним', version=1)
+            txt += f"{i}. {name} — {cnt} достижений\n"
+    kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
+    try:
+        await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+    except BadRequest as e:
+        if "Message is not modified" not in str(e):
+            logger.error(f"Error: {e}")
+
+async def show_leaderboard_total_resources(q, ctx):
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute('''SELECT p.username, SUM(i.amount) as total
+                 FROM players p
+                 LEFT JOIN inventory i ON p.user_id = i.user_id
+                 GROUP BY p.user_id
+                 ORDER BY total DESC
+                 LIMIT 10''')
+    top = c.fetchall()
+    conn.close()
+    txt = "📦 **Топ по общему количеству ресурсов**\n\n"
+    if not top:
+        txt += "Пока нет данных."
+    else:
+        for i, (name, total) in enumerate(top, 1):
+            name = escape_markdown(name or 'Аноним', version=1)
+            txt += f"{i}. {name} — {total} шт.\n"
+    kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
+    try:
+        await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+    except BadRequest as e:
+        if "Message is not modified" not in str(e):
+            logger.error(f"Error: {e}")
+
+async def show_leaderboard_tools(q, ctx):
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute('''SELECT p.username, SUM(pt.level) as total
+                 FROM players p
+                 LEFT JOIN player_tools pt ON p.user_id = pt.user_id
+                 GROUP BY p.user_id
+                 ORDER BY total DESC
+                 LIMIT 10''')
+    top = c.fetchall()
+    conn.close()
+    txt = "🔨 **Топ по уровню инструментов**\n\n"
+    if not top:
+        txt += "Пока нет данных."
+    else:
+        for i, (name, total) in enumerate(top, 1):
+            name = escape_markdown(name or 'Аноним', version=1)
+            txt += f"{i}. {name} — суммарный уровень {total}\n"
+    kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
+    try:
+        await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+    except BadRequest as e:
+        if "Message is not modified" not in str(e):
+            logger.error(f"Error: {e}")
+
+async def show_leaderboard_tasks_completed(q, ctx):
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute('''SELECT user_id, COUNT(*) as cnt FROM daily_tasks WHERE completed = 1 GROUP BY user_id''')
+    daily = dict(c.fetchall())
+    c.execute('''SELECT user_id, COUNT(*) as cnt FROM weekly_tasks WHERE completed = 1 GROUP BY user_id''')
+    weekly = dict(c.fetchall())
+    all_users = set(daily.keys()) | set(weekly.keys())
+    totals = []
+    for uid in all_users:
+        total = daily.get(uid, 0) + weekly.get(uid, 0)
+        c.execute("SELECT username FROM players WHERE user_id=?", (uid,))
+        name = c.fetchone()
+        if name:
+            totals.append((name[0], total))
+    totals.sort(key=lambda x: x[1], reverse=True)
+    top = totals[:10]
+    conn.close()
+    txt = "📅 **Топ по выполненным заданиям**\n\n"
+    if not top:
+        txt += "Пока нет данных."
+    else:
+        for i, (name, cnt) in enumerate(top, 1):
+            name = escape_markdown(name or 'Аноним', version=1)
+            txt += f"{i}. {name} — {cnt} заданий\n"
+    kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
+    try:
+        await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+    except BadRequest as e:
+        if "Message is not modified" not in str(e):
+            logger.error(f"Error: {e}")
 
 async def show_inventory(q, ctx):
     uid = q.from_user.id
@@ -1384,4 +1504,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
