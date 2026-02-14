@@ -803,7 +803,7 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(help_text, parse_mode='Markdown')
 
-# ==================== ОСНОВНЫЕ ДЕЙСТВИЯ (те же, что и раньше) ====================
+# ==================== ОСНОВНЫЕ ДЕЙСТВИЯ ====================
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -910,19 +910,37 @@ async def mine_action(query, context):
     await query.message.reply_text(text)
     await show_main_menu_from_query(query)
 
+# ==================== НОВАЯ ФУНКЦИЯ ПОКАЗА ЛОКАЦИЙ (с требованиями) ====================
 async def show_locations(query, context):
     user_id = query.from_user.id
     current = get_player_current_location(user_id)
-    available = get_available_locations(user_id)
-    text = "🗺 **Доступные локации:**\n\n"
+    stats = get_player_stats(user_id)
+    level = stats['level']
+    
+    text = "🗺 **Локации:**\n\n"
     keyboard = []
-    for loc_id, loc_name in available:
-        mark = "✅" if loc_id == current else ""
-        loc = LOCATIONS[loc_id]
-        text += f"{mark} **{loc['name']}** (ур. {loc['min_level']}+)\n{loc['description']}\n\n"
-        keyboard.append([InlineKeyboardButton(f"Перейти в {loc['name']}", callback_data=f'goto_{loc_id}')])
+    
+    for loc_id, loc in LOCATIONS.items():
+        # Проверяем доступность по уровню (можно добавить проверку инструментов позже)
+        available = level >= loc['min_level']
+        status = "✅" if available else "🔒"
+        current_mark = "📍" if loc_id == current else ""
+        
+        line = f"{current_mark}{status} **{loc['name']}**"
+        if not available:
+            line += f" (требуется уровень {loc['min_level']})"
+        else:
+            line += f" (ур. {loc['min_level']}+)"
+        text += line + "\n"
+        text += f"   {loc['description']}\n\n"
+        
+        if available and loc_id != current:
+            # Кнопка перехода только для доступных и не текущих
+            keyboard.append([InlineKeyboardButton(f"Перейти в {loc['name']}", callback_data=f'goto_{loc_id}')])
+    
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
     reply_markup = InlineKeyboardMarkup(keyboard)
+    
     try:
         await query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
     except BadRequest as e:
@@ -1262,4 +1280,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
