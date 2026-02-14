@@ -253,11 +253,10 @@ ACHIEVEMENTS = [
     Achievement('resources_50', 'Коллекционер', 'Собрать 50 ресурсов', condition_resources_50, 70, 35)
 ]
 
-# ==================== ФУНКЦИИ ДЛЯ РАБОТЫ С БД ====================
+# ==================== ФУНКЦИИ РАБОТЫ С БД ====================
 def init_db():
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
-    # Таблица игроков (добавлено поле current_location)
     c.execute('''CREATE TABLE IF NOT EXISTS players
                  (user_id INTEGER PRIMARY KEY,
                   username TEXT,
@@ -272,13 +271,11 @@ def init_db():
                   last_daily_reset DATE,
                   last_weekly_reset DATE,
                   current_location TEXT DEFAULT 'coal_mine')''')
-    # Таблица улучшений персонажа
     c.execute('''CREATE TABLE IF NOT EXISTS upgrades
                  (user_id INTEGER,
                   upgrade_id TEXT,
                   level INTEGER DEFAULT 0,
                   PRIMARY KEY (user_id, upgrade_id))''')
-    # Таблица ежедневных заданий
     c.execute('''CREATE TABLE IF NOT EXISTS daily_tasks
                  (user_id INTEGER,
                   task_id INTEGER,
@@ -291,7 +288,6 @@ def init_db():
                   reward_exp INTEGER,
                   date DATE,
                   PRIMARY KEY (user_id, task_id))''')
-    # Таблица еженедельных заданий
     c.execute('''CREATE TABLE IF NOT EXISTS weekly_tasks
                  (user_id INTEGER,
                   task_id INTEGER,
@@ -304,7 +300,6 @@ def init_db():
                   reward_exp INTEGER,
                   week TEXT,
                   PRIMARY KEY (user_id, task_id, week))''')
-    # Таблица достижений
     c.execute('''CREATE TABLE IF NOT EXISTS user_achievements
                  (user_id INTEGER,
                   achievement_id TEXT,
@@ -312,13 +307,11 @@ def init_db():
                   progress INTEGER,
                   max_progress INTEGER,
                   PRIMARY KEY (user_id, achievement_id))''')
-    # Таблица инвентаря (ресурсы)
     c.execute('''CREATE TABLE IF NOT EXISTS inventory
                  (user_id INTEGER,
                   resource_id TEXT,
                   amount INTEGER DEFAULT 0,
                   PRIMARY KEY (user_id, resource_id))''')
-    # Таблица инструментов игрока
     c.execute('''CREATE TABLE IF NOT EXISTS player_tools
                  (user_id INTEGER,
                   tool_id TEXT,
@@ -339,17 +332,12 @@ def get_player(user_id: int, username: str = None):
         c.execute('''INSERT INTO players 
                      (user_id, username, last_daily_reset, last_weekly_reset) 
                      VALUES (?, ?, ?, ?)''', (user_id, username, today, current_week))
-        # Начальные улучшения (все уровни 0)
         for upgrade_id in UPGRADES:
             c.execute('''INSERT INTO upgrades (user_id, upgrade_id, level) VALUES (?, ?, 0)''', (user_id, upgrade_id))
-        # Начальный инвентарь (все ресурсы по 0)
         for res_id in RESOURCES:
             c.execute('''INSERT INTO inventory (user_id, resource_id, amount) VALUES (?, ?, 0)''', (user_id, res_id))
-        # Начальные инструменты (только деревянная кирка, остальные по 0?)
-        # Здесь можно дать деревянную кирку, а остальные будут покупаться
         c.execute('''INSERT INTO player_tools (user_id, tool_id, level, experience) VALUES (?, ?, 1, 0)''', (user_id, 'wooden_pickaxe'))
         conn.commit()
-        # Генерация заданий
         generate_daily_tasks(user_id, conn)
         generate_weekly_tasks(user_id, conn)
         conn.commit()
@@ -382,7 +370,7 @@ def set_upgrade_level(user_id: int, upgrade_id: str, level: int):
     conn.commit()
     conn.close()
 
-# -------------------- Работа с заданиями (daily и weekly) --------------------
+# -------------------- Задания --------------------
 def generate_daily_tasks(user_id: int, conn=None):
     should_close = False
     if conn is None:
@@ -435,7 +423,6 @@ def update_daily_task_progress(user_id: int, task_name_contains: str, progress_d
                  WHERE user_id = ? AND date = ? AND completed = 0 AND task_name LIKE ?''',
               (progress_delta, user_id, today, f'%{task_name_contains}%'))
     conn.commit()
-    # Проверяем выполнение заданий и начисляем награды
     c.execute('''SELECT task_id, goal, reward_gold, reward_exp FROM daily_tasks 
                  WHERE user_id = ? AND date = ? AND completed = 0''', (user_id, today))
     tasks = c.fetchall()
@@ -506,7 +493,6 @@ def update_weekly_task_progress(user_id: int, task_name_contains: str, progress_
                  WHERE user_id = ? AND week = ? AND completed = 0 AND task_name LIKE ?''',
               (progress_delta, user_id, week, f'%{task_name_contains}%'))
     conn.commit()
-    # Проверка выполнения
     c.execute('''SELECT task_id, goal, reward_gold, reward_exp FROM weekly_tasks 
                  WHERE user_id = ? AND week = ? AND completed = 0''', (user_id, week))
     tasks = c.fetchall()
@@ -519,7 +505,7 @@ def update_weekly_task_progress(user_id: int, task_name_contains: str, progress_
     conn.commit()
     conn.close()
 
-# -------------------- Работа с ресурсами и инвентарём --------------------
+# -------------------- Инвентарь и ресурсы --------------------
 def get_inventory(user_id: int) -> Dict[str, int]:
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
@@ -550,9 +536,8 @@ def remove_resource(user_id: int, resource_id: str, amount: int = 1) -> bool:
     conn.close()
     return True
 
-# -------------------- Работа с инструментами --------------------
+# -------------------- Инструменты --------------------
 def get_player_tools(user_id: int) -> Dict[str, int]:
-    """Возвращает словарь {tool_id: уровень} для всех инструментов игрока."""
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
     c.execute("SELECT tool_id, level FROM player_tools WHERE user_id = ?", (user_id,))
@@ -561,7 +546,6 @@ def get_player_tools(user_id: int) -> Dict[str, int]:
     return {tool_id: level for tool_id, level in rows}
 
 def add_tool(user_id: int, tool_id: str):
-    """Выдаёт инструмент игроку (если нет) или повышает уровень? Пока просто вставляет уровень 1."""
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
     c.execute("INSERT OR IGNORE INTO player_tools (user_id, tool_id, level, experience) VALUES (?, ?, 1, 0)",
@@ -577,7 +561,7 @@ def has_tool(user_id: int, tool_id: str) -> bool:
     conn.close()
     return res is not None
 
-# -------------------- Работа с локациями --------------------
+# -------------------- Локации --------------------
 def get_player_current_location(user_id: int) -> str:
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
@@ -594,7 +578,6 @@ def set_player_location(user_id: int, location_id: str):
     conn.close()
 
 def get_available_locations(user_id: int):
-    """Возвращает список (id, name) локаций, доступных игроку по уровню."""
     stats = get_player_stats(user_id)
     level = stats['level']
     available = []
@@ -603,7 +586,7 @@ def get_available_locations(user_id: int):
             available.append((loc_id, loc['name']))
     return available
 
-# -------------------- Статистика игрока --------------------
+# -------------------- Статистика --------------------
 def get_player_stats(user_id: int) -> Dict:
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
@@ -613,7 +596,6 @@ def get_player_stats(user_id: int) -> Dict:
         conn.close()
         return {}
     level, exp, gold, clicks, total_gold, total_crits, current_streak, max_streak = player
-    # Улучшения
     upgrades = {}
     for uid in UPGRADES:
         c.execute("SELECT level FROM upgrades WHERE user_id = ? AND upgrade_id = ?", (user_id, uid))
@@ -661,7 +643,7 @@ def level_up_if_needed(user_id: int):
     conn.commit()
     conn.close()
 
-# ==================== ФУНКЦИИ ДЛЯ АНИМАЦИЙ И ДОСТИЖЕНИЙ ====================
+# -------------------- Анимации и достижения --------------------
 async def send_animation(bot, user_id, animation_key, text=None):
     try:
         if animation_key in STICKERS:
@@ -696,6 +678,21 @@ async def check_achievements(user_id: int, context: ContextTypes.DEFAULT_TYPE):
             text += f"\nНаграда: {ach.reward_gold}💰, {ach.reward_exp}✨"
         await send_animation(context.bot, user_id, 'achievement', text)
     return len(new_achievements)
+
+# ==================== ВСПОМОГАТЕЛЬНЫЙ КЛАСС ДЛЯ КОМАНД ====================
+class FakeQuery:
+    """Имитирует callback_query для использования с функциями show_*"""
+    def __init__(self, message, from_user):
+        self.message = message
+        self.from_user = from_user
+        self.data = None  # не используется, но может пригодиться
+    async def answer(self, text=None, show_alert=False):
+        # можно игнорировать или логировать
+        if text:
+            await self.message.reply_text(text)
+    async def edit_message_text(self, text, reply_markup=None, parse_mode=None):
+        # Просто отправляем новое сообщение (редактировать сообщение команды не нужно)
+        await self.message.reply_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
 
 # ==================== ОБРАБОТЧИКИ КОМАНД ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -741,6 +738,74 @@ async def show_main_menu_from_query(query):
         else:
             logger.error(f"Error in show_main_menu_from_query: {e}")
 
+# -------------------- Обработчики команд --------------------
+async def cmd_mine(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    get_player(user.id, user.username)
+    fake = FakeQuery(update.message, update.effective_user)
+    await mine_action(fake, context)
+
+async def cmd_locations(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    get_player(user.id, user.username)
+    fake = FakeQuery(update.message, update.effective_user)
+    await show_locations(fake, context)
+
+async def cmd_shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    get_player(user.id, user.username)
+    fake = FakeQuery(update.message, update.effective_user)
+    await show_shop(fake, context)
+
+async def cmd_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    get_player(user.id, user.username)
+    fake = FakeQuery(update.message, update.effective_user)
+    await show_tasks(fake, context)
+
+async def cmd_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    get_player(user.id, user.username)
+    fake = FakeQuery(update.message, update.effective_user)
+    await show_profile(fake, context)
+
+async def cmd_inventory(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    get_player(user.id, user.username)
+    fake = FakeQuery(update.message, update.effective_user)
+    await show_inventory(fake, context)
+
+async def cmd_market(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    get_player(user.id, user.username)
+    fake = FakeQuery(update.message, update.effective_user)
+    await show_market(fake, context)
+
+async def cmd_leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    get_player(user.id, user.username)
+    fake = FakeQuery(update.message, update.effective_user)
+    await show_leaderboard(fake, context)
+
+async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    help_text = (
+        "🪨 **Шахтёрский бот**\n\n"
+        "Ты начинающий шахтёр. Кликай, добывай ресурсы, продавай их, улучшай инструменты и открывай новые локации.\n\n"
+        "**Команды:**\n"
+        "/start - главное меню\n"
+        "/mine - копнуть в текущей локации\n"
+        "/locations - выбрать локацию\n"
+        "/shop - магазин улучшений\n"
+        "/tasks - задания\n"
+        "/profile - твой профиль\n"
+        "/inventory - ресурсы\n"
+        "/market - продать ресурсы\n"
+        "/leaderboard - топ игроков\n"
+        "/help - это сообщение"
+    )
+    await update.message.reply_text(help_text, parse_mode='Markdown')
+
+# ==================== ОСНОВНЫЕ ДЕЙСТВИЯ (те же, что и раньше) ====================
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -775,16 +840,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == 'back_to_menu':
         await show_main_menu_from_query(query)
 
-# ==================== ОСНОВНЫЕ ДЕЙСТВИЯ ====================
 async def mine_action(query, context):
     user_id = query.from_user.id
-    # Текущая локация
     location_id = get_player_current_location(user_id)
     location = LOCATIONS.get(location_id)
     if not location:
         location = LOCATIONS['coal_mine']
     
-    # Определяем выпавший ресурс (кумулятивный метод)
     rand = random.random()
     cumulative = 0
     found_resource = None
@@ -793,15 +855,11 @@ async def mine_action(query, context):
         cumulative += res['prob']
         if rand < cumulative:
             found_resource = res['res_id']
-            # Базовое количество
             amount = random.randint(res['min'], res['max'])
-            # Здесь можно применить множитель от инструмента (позже)
             break
     
-    # Золото и опыт за клик
     gold, exp, is_crit = get_click_reward(user_id)
     
-    # Обновляем статистику игрока
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
     c.execute('''UPDATE players SET 
@@ -824,7 +882,6 @@ async def mine_action(query, context):
     
     level_up_if_needed(user_id)
     
-    # Добавляем ресурс, если найден
     if found_resource:
         add_resource(user_id, found_resource, amount)
         resource_name = RESOURCES[found_resource]['name']
@@ -832,7 +889,6 @@ async def mine_action(query, context):
     else:
         resource_text = ""
     
-    # Обновление заданий
     update_daily_task_progress(user_id, 'Труженик', 1)
     update_daily_task_progress(user_id, 'Золотоискатель', gold)
     if is_crit:
@@ -847,7 +903,6 @@ async def mine_action(query, context):
     if found_resource:
         update_weekly_task_progress(user_id, 'Коллекционер', amount)
     
-    # Анимация и достижения
     if is_crit:
         await send_animation(context.bot, user_id, 'crit')
     await check_achievements(user_id, context)
@@ -870,7 +925,13 @@ async def show_locations(query, context):
         keyboard.append([InlineKeyboardButton(f"Перейти в {loc['name']}", callback_data=f'goto_{loc_id}')])
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
+    try:
+        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
+    except BadRequest as e:
+        if "Message is not modified" in str(e):
+            pass
+        else:
+            logger.error(f"Error in show_locations: {e}")
 
 async def goto_location(query, context):
     location_id = query.data.replace('goto_', '')
@@ -890,7 +951,6 @@ async def show_shop(query, context):
         price = int(info['base_price'] * (info['price_mult'] ** level))
         text += f"{info['name']} (ур. {level})\n{info['description']}\nЦена следующего уровня: {price} золота\n\n"
         keyboard.append([InlineKeyboardButton(f"Купить {info['name']} за {price}", callback_data=f'buy_{upgrade_id}')])
-    # Добавим раздел инструментов
     text += "\n**Инструменты (кирки):**\n"
     for tool_id, tool in TOOLS.items():
         if tool['price'] > 0:
@@ -925,7 +985,6 @@ async def process_buy(query, context):
         if stats['gold'] < tool['price']:
             await query.answer("❌ Недостаточно золота!", show_alert=True)
             return
-        # Списываем золото и выдаём инструмент
         conn = sqlite3.connect('game.db')
         c = conn.cursor()
         c.execute("UPDATE players SET gold = gold - ? WHERE user_id = ?", (tool['price'], user_id))
@@ -937,7 +996,6 @@ async def process_buy(query, context):
         await show_shop(query, context)
         return
     
-    # Старые улучшения
     upgrade_id = data.replace('buy_', '')
     user_id = query.from_user.id
     stats = get_player_stats(user_id)
@@ -955,7 +1013,6 @@ async def process_buy(query, context):
     conn.commit()
     conn.close()
     
-    # Обновление заданий
     update_daily_task_progress(user_id, 'Покупатель', price)
     update_weekly_task_progress(user_id, 'Магнат', price)
     
@@ -1016,7 +1073,6 @@ async def show_profile(query, context):
         f"🤖 Автокликер: ур. {stats['upgrades']['auto_clicker']}\n"
     )
     
-    # Последние достижения
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
     c.execute('''SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id = ? ORDER BY unlocked_at DESC LIMIT 5''', (user_id,))
@@ -1031,7 +1087,6 @@ async def show_profile(query, context):
     else:
         text += "\nДостижений пока нет. Кликай больше!"
     
-    # Инструменты
     tools = get_player_tools(user_id)
     if tools:
         text += "\n🧰 Инструменты:\n"
@@ -1076,7 +1131,6 @@ async def show_leaderboard(query, context):
         else:
             logger.error(f"Error in show_leaderboard: {e}")
 
-# -------------------- Инвентарь и рынок --------------------
 async def show_inventory(query, context):
     user_id = query.from_user.id
     inv = get_inventory(user_id)
@@ -1156,11 +1210,20 @@ async def process_sell(query, context):
     await query.answer(f"✅ Продано {sell_qty} {RESOURCES[res_id]['name']} за {total_gold} золота!", show_alert=False)
     await show_market(query, context)
 
-# ==================== ФУНКЦИИ ДЛЯ ВЕБ-СЕРВЕРА (RENDER) ====================
+# ==================== ВЕБ-СЕРВЕР ДЛЯ RENDER ====================
 async def run_bot():
     logger.info("Starting bot polling...")
     application = Application.builder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("mine", cmd_mine))
+    application.add_handler(CommandHandler("locations", cmd_locations))
+    application.add_handler(CommandHandler("shop", cmd_shop))
+    application.add_handler(CommandHandler("tasks", cmd_tasks))
+    application.add_handler(CommandHandler("profile", cmd_profile))
+    application.add_handler(CommandHandler("inventory", cmd_inventory))
+    application.add_handler(CommandHandler("market", cmd_market))
+    application.add_handler(CommandHandler("leaderboard", cmd_leaderboard))
+    application.add_handler(CommandHandler("help", cmd_help))
     application.add_handler(CallbackQueryHandler(button_handler))
     
     try:
