@@ -4,15 +4,14 @@ import sqlite3
 import datetime
 import asyncio
 import os
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List, Optional
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.error import BadRequest
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.error import BadRequest
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 import uvicorn
-import threading
 
 # Настройка логирования
 logging.basicConfig(
@@ -21,16 +20,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Токен бота из переменной окружения (обязательно для Render!)
+# Токен бота из переменной окружения
 TOKEN = os.environ.get('BOT_TOKEN')
 if not TOKEN:
     raise ValueError("No BOT_TOKEN environment variable set")
 
-# Константы игры (ваши существующие)
-BASE_CLICK_REWARD = (5, 15)
-BASE_EXP_REWARD = (1, 3)
-EXP_PER_LEVEL = 100
+# ================== КОНСТАНТЫ ИГРЫ ==================
+BASE_CLICK_REWARD = (5, 15)        # базовый диапазон золота за клик
+BASE_EXP_REWARD = (1, 3)           # базовый диапазон опыта за клик
+EXP_PER_LEVEL = 100                 # опыта для перехода на следующий уровень
 
+# Улучшения (id: название, цена, эффект)
 UPGRADES = {
     'click_power': {
         'name': '⚡ Сила клика',
@@ -63,7 +63,43 @@ DAILY_TASK_TEMPLATES = [
     {'name': 'Везунчик', 'description': 'Получить {} критических ударов', 'goal': (3, 8), 'reward_gold': 70, 'reward_exp': 40}
 ]
 
-# Класс достижения
+# Стикеры (замените на реальные file_id, полученные через бота)
+STICKERS = {
+    'crit': 'CAACAgIAAxkBAAEBuK1mM3Fhx7...',   # вставьте сюда file_id стикера для крита
+    'achievement': 'CAACAgIAAxkBAAEBuK9mM3Gx8...', # для достижения
+    'purchase': 'CAACAgIAAxkBAAEBuLFmM3Hx9...'     # для покупки
+}
+
+# Ресурсы (id: название, базовая цена, редкость выпадения)
+RESOURCES = {
+    'coal': {
+        'name': 'Уголь',
+        'base_price': 5,
+        'rarity': 0.5      # 50% шанс
+    },
+    'iron': {
+        'name': 'Железо',
+        'base_price': 10,
+        'rarity': 0.3      # 30%
+    },
+    'gold': {
+        'name': 'Золотая руда',
+        'base_price': 30,
+        'rarity': 0.15     # 15%
+    },
+    'diamond': {
+        'name': 'Алмаз',
+        'base_price': 100,
+        'rarity': 0.04     # 4%
+    },
+    'mithril': {
+        'name': 'Мифрил',
+        'base_price': 300,
+        'rarity': 0.01     # 1%
+    }
+}
+
+# ================== КЛАСС ДОСТИЖЕНИЙ ==================
 class Achievement:
     def __init__(self, id: str, name: str, description: str, condition_func, reward_gold: int = 0, reward_exp: int = 0):
         self.id = id
@@ -103,19 +139,27 @@ def condition_crit_streak_5(user_id):
     conn.close()
     return streak >= 5, streak, 5
 
+def condition_resources_50(user_id):
+    """Достижение: собрать 50 любых ресурсов"""
+    inv = get_inventory(user_id)
+    total = sum(inv.values())
+    return total >= 50, total, 50
+
 ACHIEVEMENTS = [
     Achievement('first_click', 'Первый шаг', 'Сделать первый клик', condition_first_click, 10, 5),
     Achievement('clicks_100', 'Трудоголик', 'Сделать 100 кликов', condition_clicks_100, 50, 20),
     Achievement('gold_1000', 'Золотая жила', 'Добыть 1000 золота', condition_gold_1000, 100, 50),
     Achievement('crits_50', 'Критическая масса', 'Получить 50 критических ударов', condition_crits_50, 80, 30),
-    Achievement('crit_streak_5', 'Везунчик', 'Достичь серии критов в 5', condition_crit_streak_5, 60, 25)
+    Achievement('crit_streak_5', 'Везунчик', 'Достичь серии критов в 5', condition_crit_streak_5, 60, 25),
+    Achievement('resources_50', 'Коллекционер', 'Собрать 50 ресурсов', condition_resources_50, 70, 35)
 ]
 
-# Функции для работы с БД (ваши существующие, с небольшими изменениями)
+# ================== ФУНКЦИИ РАБОТЫ С БД ==================
 def init_db():
+    """Инициализация базы данных (создание таблиц, если их нет)"""
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
-    # Таблица игроков с новыми полями
+    
     c.execute('''CREATE TABLE IF NOT EXISTS players
                  (user_id INTEGER PRIMARY KEY,
                   username TEXT,
@@ -155,10 +199,18 @@ def init_db():
                   progress INTEGER,
                   max_progress INTEGER,
                   PRIMARY KEY (user_id, achievement_id))''')
+    
+    c.execute('''CREATE TABLE IF NOT EXISTS inventory
+                 (user_id INTEGER,
+                  resource_id TEXT,
+                  amount INTEGER DEFAULT 0,
+                  PRIMARY KEY (user_id, resource_id))''')
+    
     conn.commit()
     conn.close()
 
 def get_player(user_id: int, username: str = None):
+    """Получает данные игрока или создаёт нового"""
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
     c.execute("SELECT * FROM players WHERE user_id = ?", (user_id,))
@@ -168,9 +220,12 @@ def get_player(user_id: int, username: str = None):
         c.execute('''INSERT INTO players 
                      (user_id, username, last_daily_reset) 
                      VALUES (?, ?, ?)''', (user_id, username, today))
-        conn.commit()
+        # Начальные улучшения
         for upgrade_id in UPGRADES:
             c.execute('''INSERT INTO upgrades (user_id, upgrade_id, level) VALUES (?, ?, 0)''', (user_id, upgrade_id))
+        # Начальный инвентарь (по 0 каждого ресурса)
+        for res_id in RESOURCES:
+            c.execute('''INSERT INTO inventory (user_id, resource_id, amount) VALUES (?, ?, 0)''', (user_id, res_id))
         conn.commit()
         generate_daily_tasks(user_id, conn)
         conn.commit()
@@ -179,7 +234,33 @@ def get_player(user_id: int, username: str = None):
     conn.close()
     return player
 
+def update_player(user_id: int, **kwargs):
+    """Обновляет указанные поля игрока"""
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    set_clause = ', '.join([f"{k} = ?" for k in kwargs])
+    values = list(kwargs.values()) + [user_id]
+    c.execute(f"UPDATE players SET {set_clause} WHERE user_id = ?", values)
+    conn.commit()
+    conn.close()
+
+def get_upgrade_level(user_id: int, upgrade_id: str) -> int:
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute("SELECT level FROM upgrades WHERE user_id = ? AND upgrade_id = ?", (user_id, upgrade_id))
+    result = c.fetchone()
+    conn.close()
+    return result[0] if result else 0
+
+def set_upgrade_level(user_id: int, upgrade_id: str, level: int):
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute("UPDATE upgrades SET level = ? WHERE user_id = ? AND upgrade_id = ?", (level, user_id, upgrade_id))
+    conn.commit()
+    conn.close()
+
 def generate_daily_tasks(user_id: int, conn=None):
+    """Генерирует 3 случайных ежедневных задания"""
     should_close = False
     if conn is None:
         conn = sqlite3.connect('game.db')
@@ -200,6 +281,7 @@ def generate_daily_tasks(user_id: int, conn=None):
         conn.close()
 
 def check_daily_reset(user_id: int):
+    """Проверяет, нужно ли обновить ежедневные задания (если последний сброс был не сегодня)"""
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
     c.execute("SELECT last_daily_reset FROM players WHERE user_id = ?", (user_id,))
@@ -223,7 +305,19 @@ def get_daily_tasks(user_id: int):
     conn.close()
     return tasks
 
+def update_task_progress(user_id: int, task_id: int, progress_delta: int = 0, set_completed: bool = False):
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    if set_completed:
+        c.execute('''UPDATE daily_tasks SET completed = 1 WHERE user_id = ? AND task_id = ?''', (user_id, task_id))
+    else:
+        c.execute('''UPDATE daily_tasks SET progress = progress + ? WHERE user_id = ? AND task_id = ? AND completed = 0''',
+                  (progress_delta, user_id, task_id))
+    conn.commit()
+    conn.close()
+
 def get_player_stats(user_id: int) -> Dict:
+    """Возвращает словарь со статистикой игрока для профиля"""
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
     c.execute("SELECT level, exp, gold, total_clicks, total_gold_earned, total_crits, current_crit_streak, max_crit_streak FROM players WHERE user_id = ?", (user_id,))
@@ -252,6 +346,7 @@ def get_player_stats(user_id: int) -> Dict:
     }
 
 def get_click_reward(user_id: int) -> Tuple[int, int, bool]:
+    """Рассчитывает награду за клик с учётом улучшений. Возвращает (золото, опыт, был ли крит)"""
     stats = get_player_stats(user_id)
     click_power_level = stats['upgrades']['click_power']
     crit_chance_level = stats['upgrades']['crit_chance']
@@ -268,6 +363,7 @@ def get_click_reward(user_id: int) -> Tuple[int, int, bool]:
     return gold, base_exp, is_crit
 
 def level_up_if_needed(user_id: int):
+    """Проверяет, достаточно ли опыта для повышения уровня, и повышает, если да"""
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
     c.execute("SELECT level, exp FROM players WHERE user_id = ?", (user_id,))
@@ -279,13 +375,52 @@ def level_up_if_needed(user_id: int):
     conn.commit()
     conn.close()
 
-# Функции для анимаций и достижений
+# ================== ФУНКЦИИ ДЛЯ РЕСУРСОВ ==================
+def get_inventory(user_id: int) -> Dict[str, int]:
+    """Возвращает словарь {resource_id: количество} для игрока"""
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute("SELECT resource_id, amount FROM inventory WHERE user_id = ?", (user_id,))
+    rows = c.fetchall()
+    conn.close()
+    return {res_id: amount for res_id, amount in rows}
+
+def add_resource(user_id: int, resource_id: str, amount: int = 1):
+    """Увеличивает количество ресурса у игрока"""
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute("UPDATE inventory SET amount = amount + ? WHERE user_id = ? AND resource_id = ?",
+              (amount, user_id, resource_id))
+    conn.commit()
+    conn.close()
+
+def remove_resource(user_id: int, resource_id: str, amount: int = 1) -> bool:
+    """Уменьшает количество ресурса, если хватает. Возвращает True при успехе"""
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute("SELECT amount FROM inventory WHERE user_id = ? AND resource_id = ?", (user_id, resource_id))
+    res = c.fetchone()
+    if not res or res[0] < amount:
+        conn.close()
+        return False
+    c.execute("UPDATE inventory SET amount = amount - ? WHERE user_id = ? AND resource_id = ?",
+              (amount, user_id, resource_id))
+    conn.commit()
+    conn.close()
+    return True
+
+# ================== ФУНКЦИИ ДЛЯ АНИМАЦИЙ И ДОСТИЖЕНИЙ ==================
 async def send_animation(bot, user_id, animation_key, text=None):
-    # Здесь можно добавить стикеры, если есть file_id
-    if text:
-        await bot.send_message(chat_id=user_id, text=text)
+    try:
+        if animation_key in STICKERS:
+            await bot.send_sticker(chat_id=user_id, sticker=STICKERS[animation_key])
+        if text:
+            await bot.send_message(chat_id=user_id, text=text)
+    except Exception as e:
+        logger.error(f"Failed to send animation: {e}")
 
 async def check_achievements(user_id: int, context: ContextTypes.DEFAULT_TYPE):
+    """Проверяет и выдаёт новые достижения"""
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
     c.execute("SELECT achievement_id FROM user_achievements WHERE user_id = ?", (user_id,))
@@ -311,19 +446,22 @@ async def check_achievements(user_id: int, context: ContextTypes.DEFAULT_TYPE):
         await send_animation(context.bot, user_id, 'achievement', text)
     return len(new_achievements)
 
-# Обработчики команд
+# ================== ОБРАБОТЧИКИ КОМАНД ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    get_player(user.id, user.username)
+    get_player(user.id, user.username)  # создаём/получаем игрока
     await show_main_menu(update, context)
 
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Отображает главное меню для первого сообщения"""
     keyboard = [
         [InlineKeyboardButton("⛏ Добыть", callback_data='mine')],
         [InlineKeyboardButton("🛒 Магазин", callback_data='shop')],
         [InlineKeyboardButton("📋 Задания", callback_data='tasks')],
         [InlineKeyboardButton("👤 Профиль", callback_data='profile')],
-        [InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard')]
+        [InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard')],
+        [InlineKeyboardButton("🎒 Инвентарь", callback_data='inventory')],
+        [InlineKeyboardButton("💰 Рынок", callback_data='market')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     text = "Главное меню. Что хочешь сделать?"
@@ -333,22 +471,24 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(text, reply_markup=reply_markup)
 
 async def show_main_menu_from_query(query):
+    """Отображает главное меню для callback-запроса (редактирует текущее сообщение)"""
     keyboard = [
         [InlineKeyboardButton("⛏ Добыть", callback_data='mine')],
         [InlineKeyboardButton("🛒 Магазин", callback_data='shop')],
         [InlineKeyboardButton("📋 Задания", callback_data='tasks')],
         [InlineKeyboardButton("👤 Профиль", callback_data='profile')],
-        [InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard')]
+        [InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard')],
+        [InlineKeyboardButton("🎒 Инвентарь", callback_data='inventory')],
+        [InlineKeyboardButton("💰 Рынок", callback_data='market')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     try:
         await query.edit_message_text("Главное меню. Что хочешь сделать?", reply_markup=reply_markup)
     except BadRequest as e:
         if "Message is not modified" in str(e):
-            # Игнорируем эту конкретную ошибку
+            # Игнорируем эту ошибку
             pass
         else:
-            # Другие ошибки логируем
             logger.error(f"Error in show_main_menu_from_query: {e}")
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -356,9 +496,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     user_id = query.from_user.id
     data = query.data
-    
+
     check_daily_reset(user_id)
-    
+
     if data == 'mine':
         await mine_action(query, context)
     elif data == 'shop':
@@ -369,15 +509,40 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await show_profile(query, context)
     elif data == 'leaderboard':
         await show_leaderboard(query, context)
+    elif data == 'inventory':
+        await show_inventory(query, context)
+    elif data == 'market':
+        await show_market(query, context)
     elif data.startswith('buy_'):
         await process_buy(query, context)
+    elif data.startswith('sell_'):
+        await process_sell(query, context)
     elif data == 'back_to_menu':
         await show_main_menu_from_query(query)
 
+# ================== ОСНОВНЫЕ ДЕЙСТВИЯ ==================
 async def mine_action(query, context):
     user_id = query.from_user.id
     gold, exp, is_crit = get_click_reward(user_id)
     
+    # Определяем, какой ресурс выпал (кумулятивный метод)
+    rand = random.random()
+    cumulative = 0
+    found_resource = None
+    for res_id, info in RESOURCES.items():
+        cumulative += info['rarity']
+        if rand < cumulative:
+            found_resource = res_id
+            break
+    
+    if found_resource:
+        add_resource(user_id, found_resource, 1)
+        resource_name = RESOURCES[found_resource]['name']
+        resource_text = f"\nТы нашёл: {resource_name}!"
+    else:
+        resource_text = ""
+    
+    # Обновляем данные игрока
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
     c.execute('''UPDATE players SET 
@@ -387,6 +552,7 @@ async def mine_action(query, context):
                  total_gold_earned = total_gold_earned + ?
                  WHERE user_id = ?''', (gold, exp, gold, user_id))
     
+    # Обновляем криты и серию
     if is_crit:
         c.execute('''UPDATE players SET 
                      total_crits = total_crits + 1,
@@ -396,6 +562,7 @@ async def mine_action(query, context):
     else:
         c.execute('''UPDATE players SET current_crit_streak = 0 WHERE user_id = ?''', (user_id,))
     
+    # Обновляем прогресс заданий
     today = datetime.date.today().isoformat()
     c.execute('''UPDATE daily_tasks SET progress = progress + 1 
                  WHERE user_id = ? AND date = ? AND task_name = 'Труженик' AND completed = 0''', (user_id, today))
@@ -406,6 +573,7 @@ async def mine_action(query, context):
                      WHERE user_id = ? AND date = ? AND task_name = 'Везунчик' AND completed = 0''', (user_id, today))
     conn.commit()
     
+    # Проверяем выполнение заданий
     c.execute('''SELECT task_id, goal, reward_gold, reward_exp FROM daily_tasks 
                  WHERE user_id = ? AND date = ? AND completed = 0''', (user_id, today))
     tasks = c.fetchall()
@@ -426,7 +594,7 @@ async def mine_action(query, context):
     await check_achievements(user_id, context)
     
     crit_text = "💥 КРИТ!" if is_crit else ""
-    text = f"Ты добыл: {gold} золота {crit_text}\nПолучено опыта: {exp}"
+    text = f"Ты добыл: {gold} золота {crit_text}{resource_text}\nПолучено опыта: {exp}"
     await query.message.reply_text(text)
     await show_main_menu_from_query(query)
 
@@ -443,7 +611,13 @@ async def show_shop(query, context):
         keyboard.append([InlineKeyboardButton(f"Купить {info['name']} за {price}", callback_data=f'buy_{upgrade_id}')])
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text(text, reply_markup=reply_markup)
+    try:
+        await query.edit_message_text(text, reply_markup=reply_markup)
+    except BadRequest as e:
+        if "Message is not modified" in str(e):
+            pass
+        else:
+            logger.error(f"Error in show_shop: {e}")
 
 async def process_buy(query, context):
     upgrade_id = query.data.replace('buy_', '')
@@ -494,7 +668,13 @@ async def show_tasks(query, context):
             text += f"{name}: {desc}\nПрогресс: {status}\nНаграда: {rew_gold}💰, {rew_exp}✨\n\n"
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text(text, reply_markup=reply_markup)
+    try:
+        await query.edit_message_text(text, reply_markup=reply_markup)
+    except BadRequest as e:
+        if "Message is not modified" in str(e):
+            pass
+        else:
+            logger.error(f"Error in show_tasks: {e}")
 
 async def show_profile(query, context):
     user_id = query.from_user.id
@@ -516,6 +696,7 @@ async def show_profile(query, context):
         f"🤖 Автокликер: ур. {stats['upgrades']['auto_clicker']}\n"
     )
     
+    # Последние достижения
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
     c.execute('''SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id = ? ORDER BY unlocked_at DESC LIMIT 5''', (user_id,))
@@ -532,7 +713,13 @@ async def show_profile(query, context):
     
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text(text, reply_markup=reply_markup)
+    try:
+        await query.edit_message_text(text, reply_markup=reply_markup)
+    except BadRequest as e:
+        if "Message is not modified" in str(e):
+            pass
+        else:
+            logger.error(f"Error in show_profile: {e}")
 
 async def show_leaderboard(query, context):
     conn = sqlite3.connect('game.db')
@@ -552,62 +739,152 @@ async def show_leaderboard(query, context):
     
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text(text, reply_markup=reply_markup)
+    try:
+        await query.edit_message_text(text, reply_markup=reply_markup)
+    except BadRequest as e:
+        if "Message is not modified" in str(e):
+            pass
+        else:
+            logger.error(f"Error in show_leaderboard: {e}")
 
-# 🌟 НОВОЕ: Функция для запуска бота в фоне
+# ================== НОВЫЕ ОБРАБОТЧИКИ ДЛЯ ИНВЕНТАРЯ И РЫНКА ==================
+async def show_inventory(query, context):
+    user_id = query.from_user.id
+    inv = get_inventory(user_id)
+    text = "🎒 **Твой инвентарь:**\n\n"
+    has_items = False
+    for res_id, info in RESOURCES.items():
+        amount = inv.get(res_id, 0)
+        if amount > 0:
+            text += f"• {info['name']}: {amount} шт.\n"
+            has_items = True
+    if not has_items:
+        text = "🎒 Твой инвентарь пуст. Добывай ресурсы!"
+    keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    try:
+        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
+    except BadRequest as e:
+        if "Message is not modified" in str(e):
+            pass
+        else:
+            logger.error(f"Error in show_inventory: {e}")
+
+async def show_market(query, context):
+    user_id = query.from_user.id
+    inv = get_inventory(user_id)
+    text = "💰 **Рынок ресурсов**\n\n"
+    keyboard = []
+    for res_id, info in RESOURCES.items():
+        amount = inv.get(res_id, 0)
+        price = info['base_price']
+        text += f"**{info['name']}**: {amount} шт. | Цена: {price}💰 за шт.\n"
+        if amount > 0:
+            row = [
+                InlineKeyboardButton(f"Продать 1", callback_data=f'sell_{res_id}_1'),
+                InlineKeyboardButton(f"Продать всё", callback_data=f'sell_{res_id}_all')
+            ]
+            keyboard.append(row)
+    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    try:
+        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
+    except BadRequest as e:
+        if "Message is not modified" in str(e):
+            pass
+        else:
+            logger.error(f"Error in show_market: {e}")
+
+async def process_sell(query, context):
+    data = query.data
+    # data имеет формат "sell_coal_1" или "sell_coal_all"
+    parts = data.split('_')  # ['sell', 'coal', '1'] или ['sell', 'coal', 'all']
+    res_id = parts[1]
+    sell_type = parts[2]  # '1' или 'all'
+    user_id = query.from_user.id
+    
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute("SELECT amount FROM inventory WHERE user_id = ? AND resource_id = ?", (user_id, res_id))
+    result = c.fetchone()
+    if not result or result[0] == 0:
+        await query.answer("У тебя нет этого ресурса!", show_alert=True)
+        conn.close()
+        return
+    
+    available = result[0]
+    sell_qty = available if sell_type == 'all' else 1
+    if sell_qty > available:
+        sell_qty = available  # на всякий случай
+    
+    price_per_unit = RESOURCES[res_id]['base_price']
+    total_gold = sell_qty * price_per_unit
+    
+    # Обновляем инвентарь и золото
+    c.execute("UPDATE inventory SET amount = amount - ? WHERE user_id = ? AND resource_id = ?", (sell_qty, user_id, res_id))
+    c.execute("UPDATE players SET gold = gold + ? WHERE user_id = ?", (total_gold, user_id))
+    conn.commit()
+    conn.close()
+    
+    await query.answer(f"✅ Продано {sell_qty} {RESOURCES[res_id]['name']} за {total_gold} золота!", show_alert=False)
+    # Обновляем отображение рынка
+    await show_market(query, context)
+
+# ================== ФУНКЦИИ ДЛЯ ВЕБ-СЕРВЕРА (RENDER) ==================
 async def run_bot():
-    """Запускает Telegram бота в polling режиме"""
+    """Запускает Telegram бота в polling режиме (фоновый процесс)"""
+    logger.info("Starting bot polling...")
     application = Application.builder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_handler))
     
-    logger.info("Starting bot polling...")
-    await application.initialize()
-    await application.start()
-    await application.updater.start_polling()
-    
-    # Держим бота запущенным
-    while True:
-        await asyncio.sleep(10)
+    try:
+        # Удаляем webhook, чтобы избежать конфликтов
+        await application.bot.delete_webhook(drop_pending_updates=True)
+        await application.initialize()
+        await application.start()
+        await application.updater.start_polling()
+        logger.info("Bot polling started successfully")
+        # Держим задачу активной
+        while True:
+            await asyncio.sleep(10)
+    except Exception as e:
+        logger.error(f"Error in bot polling: {e}", exc_info=True)
 
-# 🌟 НОВОЕ: HTTP сервер для healthcheck
 async def healthcheck(request):
-    """Endpoint для Render health checks"""
+    """Endpoint для проверки здоровья сервиса"""
     return JSONResponse({"status": "alive"})
 
 async def startup_event():
-    """Действия при запуске сервера"""
+    """Действия при запуске веб-сервера"""
     logger.info("Starting up...")
     init_db()
-    # Запускаем бота в фоновом режиме
+    # Запускаем бота в фоне
     asyncio.create_task(run_bot())
 
 async def shutdown_event():
-    """Действия при остановке сервера"""
+    """Действия при остановке"""
     logger.info("Shutting down...")
 
-# Создаем Starlette приложение
+# Создаём Starlette приложение
 app = Starlette(
     routes=[
         Route("/healthcheck", healthcheck),
-        Route("/", healthcheck),  # для простоты
+        Route("/", healthcheck),
     ],
     on_startup=[startup_event],
     on_shutdown=[shutdown_event]
 )
 
-# Для локального тестирования
-if __name__ == "__main__":
-    # Локально можно запустить обычный polling
-    import sys
-    if len(sys.argv) > 1 and sys.argv[1] == "--local":
-        application = Application.builder().token(TOKEN).build()
-        application.add_handler(CommandHandler("start", start))
-        application.add_handler(CallbackQueryHandler(button_handler))
-        logger.info("Starting locally in polling mode...")
-        application.run_polling()
-    else:
-        # Для Render запускаем веб-сервер
-        port = int(os.environ.get("PORT", 8000))
+# ================== ТОЧКА ВХОДА ==================
+def main():
+    init_db()
+    application = Application.builder().token(TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button_handler))
+    logger.info("Starting web server with background bot...")
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
-        uvicorn.run(app, host="0.0.0.0", port=port)
+if __name__ == "__main__":
+    main()
