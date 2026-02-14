@@ -910,21 +910,40 @@ async def mine_action(query, context):
     await query.message.reply_text(text)
     await show_main_menu_from_query(query)
 
-# ==================== НОВАЯ ФУНКЦИЯ ПОКАЗА ЛОКАЦИЙ (с требованиями) ====================
+# ==================== НОВАЯ ФУНКЦИЯ ПОКАЗА ЛОКАЦИЙ (только текущая и следующая) ====================
 async def show_locations(query, context):
     user_id = query.from_user.id
     current = get_player_current_location(user_id)
     stats = get_player_stats(user_id)
     level = stats['level']
     
+    # Сортируем локации по минимальному уровню
+    sorted_locs = sorted(LOCATIONS.items(), key=lambda item: item[1]['min_level'])
+    
+    # Находим индекс текущей локации
+    current_index = None
+    for i, (loc_id, loc) in enumerate(sorted_locs):
+        if loc_id == current:
+            current_index = i
+            break
+    if current_index is None:
+        current_index = 0
+    
+    # Определяем, какие локации показывать: текущая и, если есть, следующая
+    show_indices = [current_index]
+    if current_index + 1 < len(sorted_locs):
+        show_indices.append(current_index + 1)
+    
     text = "🗺 **Локации:**\n\n"
     keyboard = []
     
-    for loc_id, loc in LOCATIONS.items():
-        # Проверяем доступность по уровню (можно добавить проверку инструментов позже)
+    for i in show_indices:
+        loc_id, loc = sorted_locs[i]
         available = level >= loc['min_level']
+        is_current = (loc_id == current)
+        
         status = "✅" if available else "🔒"
-        current_mark = "📍" if loc_id == current else ""
+        current_mark = "📍" if is_current else ""
         
         line = f"{current_mark}{status} **{loc['name']}**"
         if not available:
@@ -934,8 +953,8 @@ async def show_locations(query, context):
         text += line + "\n"
         text += f"   {loc['description']}\n\n"
         
-        if available and loc_id != current:
-            # Кнопка перехода только для доступных и не текущих
+        if available and not is_current:
+            # Кнопка перехода для доступных, кроме текущей
             keyboard.append([InlineKeyboardButton(f"Перейти в {loc['name']}", callback_data=f'goto_{loc_id}')])
     
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
