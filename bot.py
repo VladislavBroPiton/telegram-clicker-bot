@@ -75,11 +75,11 @@ WEEKLY_TASK_TEMPLATES = [
     {'name': 'Торговец', 'description': 'Продать ресурсов на {} золота за неделю', 'goal': (2000, 5000), 'reward_gold': 900, 'reward_exp': 450}
 ]
 
-# -------------------- Стикеры (замените на свои) --------------------
+# -------------------- Стикеры (ЗАМЕНИТЕ НА РЕАЛЬНЫЕ FILE_ID) --------------------
 STICKERS = {
-    'crit': 'CAACAgIAAxkBAAEBuK1mM3Fhx7...',      # стикер для крита
-    'achievement': 'CAACAgIAAxkBAAEBuK9mM3Gx8...', # стикер достижения
-    'purchase': 'CAACAgIAAxkBAAEBuLFmM3Hx9...'     # стикер покупки
+    'crit': 'ВАШ_FILE_ID_ДЛЯ_КРИТА',      # стикер для крита
+    'achievement': 'ВАШ_FILE_ID_ДЛЯ_ДОСТИЖЕНИЯ', # стикер достижения
+    'purchase': 'ВАШ_FILE_ID_ДЛЯ_ПОКУПКИ'     # стикер покупки
 }
 
 # -------------------- Ресурсы (базовые) --------------------
@@ -699,11 +699,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await show_main_menu(update, context)
 
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Отображает главное меню с тремя основными кнопками."""
     keyboard = [
         [InlineKeyboardButton("⛏ Добыть", callback_data='mine')],
         [InlineKeyboardButton("📋 Задания", callback_data='tasks')],
-        [InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')]  # Изменено
+        [InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     text = (
@@ -717,11 +716,10 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(text, parse_mode='Markdown', reply_markup=reply_markup)
 
 async def show_main_menu_from_query(query):
-    """Отображает главное меню при возврате из разделов."""
     keyboard = [
         [InlineKeyboardButton("⛏ Добыть", callback_data='mine')],
         [InlineKeyboardButton("📋 Задания", callback_data='tasks')],
-        [InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')]  # Изменено
+        [InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     text = (
@@ -780,7 +778,6 @@ async def cmd_market(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await show_market(fake, context)
 
 async def cmd_leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработчик команды /leaderboard – показывает меню выбора категории."""
     user = update.effective_user
     get_player(user.id, user.username)
     fake = FakeQuery(update.message, update.effective_user)
@@ -932,10 +929,8 @@ async def show_locations(query, context):
     stats = get_player_stats(user_id)
     level = stats['level']
     
-    # Сортируем локации по минимальному уровню
     sorted_locs = sorted(LOCATIONS.items(), key=lambda item: item[1]['min_level'])
     
-    # Находим индекс текущей локации
     current_index = None
     for i, (loc_id, loc) in enumerate(sorted_locs):
         if loc_id == current:
@@ -944,12 +939,11 @@ async def show_locations(query, context):
     if current_index is None:
         current_index = 0
     
-    # Определяем, какие локации показывать: текущая и, если есть, следующая
     show_indices = [current_index]
     if current_index + 1 < len(sorted_locs):
         show_indices.append(current_index + 1)
     
-    text = "🗺 **Локации:**\n\n"
+    text = "🗺 Локации:\n\n"
     keyboard = []
     
     for i in show_indices:
@@ -960,7 +954,7 @@ async def show_locations(query, context):
         status = "✅" if available else "🔒"
         current_mark = "📍" if is_current else ""
         
-        line = f"{current_mark}{status} **{loc['name']}**"
+        line = f"{current_mark}{status} {loc['name']}"
         if not available:
             line += f" (требуется уровень {loc['min_level']})"
         else:
@@ -969,14 +963,13 @@ async def show_locations(query, context):
         text += f"   {loc['description']}\n\n"
         
         if available and not is_current:
-            # Кнопка перехода для доступных, кроме текущей
             keyboard.append([InlineKeyboardButton(f"Перейти в {loc['name']}", callback_data=f'goto_{loc_id}')])
     
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     try:
-        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
+        await query.edit_message_text(text, reply_markup=reply_markup)
     except BadRequest as e:
         if "Message is not modified" in str(e):
             pass
@@ -1002,7 +995,7 @@ async def show_shop(query, context):
         price = int(info['base_price'] * (info['price_mult'] ** level))
         text += f"{info['name']} (ур. {level})\n{info['description']}\nЦена следующего уровня: {price} золота\n\n"
         keyboard.append([InlineKeyboardButton(f"Купить {info['name']} за {price}", callback_data=f'buy_{upgrade_id}')])
-    text += "\n**Инструменты (кирки):**\n"
+    text += "\nИнструменты (кирки):\n"
     for tool_id, tool in TOOLS.items():
         if tool['price'] > 0:
             if has_tool(user_id, tool_id):
@@ -1013,7 +1006,7 @@ async def show_shop(query, context):
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
     reply_markup = InlineKeyboardMarkup(keyboard)
     try:
-        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
+        await query.edit_message_text(text, reply_markup=reply_markup)
     except BadRequest as e:
         if "Message is not modified" in str(e):
             pass
@@ -1077,7 +1070,7 @@ async def show_tasks(query, context):
     daily = get_daily_tasks(user_id)
     weekly = get_weekly_tasks(user_id)
     
-    text = "📋 **Ежедневные задания:**\n"
+    text = "📋 Ежедневные задания:\n"
     if daily:
         for task in daily:
             task_id, name, desc, goal, progress, completed, rew_gold, rew_exp = task
@@ -1086,7 +1079,7 @@ async def show_tasks(query, context):
     else:
         text += "Нет заданий на сегодня.\n\n"
     
-    text += "📅 **Еженедельные задания:**\n"
+    text += "📅 Еженедельные задания:\n"
     if weekly:
         for task in weekly:
             task_id, name, desc, goal, progress, completed, rew_gold, rew_exp = task
@@ -1098,7 +1091,7 @@ async def show_tasks(query, context):
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     try:
-        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
+        await query.edit_message_text(text, reply_markup=reply_markup)
     except BadRequest as e:
         if "Message is not modified" in str(e):
             pass
@@ -1158,9 +1151,9 @@ async def show_profile(query, context):
         else:
             logger.error(f"Error in show_profile: {e}")
 
-# ==================== ТАБЛИЦА ЛИДЕРОВ (новая) ====================
+# ==================== ТАБЛИЦА ЛИДЕРОВ (ИСПРАВЛЕНА, БЕЗ MARKDOWN) ====================
 async def show_leaderboard_menu(query, context):
-    """Меню выбора категории для таблицы лидеров."""
+    """Меню выбора категории для таблицы лидеров (без Markdown)."""
     keyboard = [
         [InlineKeyboardButton("📊 По уровню", callback_data='leaderboard_level')],
         [InlineKeyboardButton("💰 По золоту", callback_data='leaderboard_gold')],
@@ -1173,7 +1166,7 @@ async def show_leaderboard_menu(query, context):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     try:
-        await query.edit_message_text("🏆 **Выберите категорию лидеров:**", parse_mode='Markdown', reply_markup=reply_markup)
+        await query.edit_message_text("🏆 Выберите категорию лидеров:", reply_markup=reply_markup)
     except BadRequest as e:
         if "Message is not modified" in str(e):
             pass
@@ -1186,7 +1179,7 @@ async def show_leaderboard_level(query, context):
     c.execute('''SELECT username, level, exp FROM players ORDER BY level DESC, exp DESC LIMIT 10''')
     top = c.fetchall()
     conn.close()
-    text = "🏆 **Топ по уровню**\n\n"
+    text = "🏆 Топ по уровню\n\n"
     if not top:
         text += "Пока нет данных."
     else:
@@ -1195,7 +1188,7 @@ async def show_leaderboard_level(query, context):
     keyboard = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     try:
-        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
+        await query.edit_message_text(text, reply_markup=reply_markup)
     except BadRequest as e:
         if "Message is not modified" in str(e):
             pass
@@ -1208,7 +1201,7 @@ async def show_leaderboard_gold(query, context):
     c.execute('''SELECT username, gold FROM players ORDER BY gold DESC LIMIT 10''')
     top = c.fetchall()
     conn.close()
-    text = "💰 **Топ по золоту**\n\n"
+    text = "💰 Топ по золоту\n\n"
     if not top:
         text += "Пока нет данных."
     else:
@@ -1217,7 +1210,7 @@ async def show_leaderboard_gold(query, context):
     keyboard = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     try:
-        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
+        await query.edit_message_text(text, reply_markup=reply_markup)
     except BadRequest as e:
         if "Message is not modified" in str(e):
             pass
@@ -1235,7 +1228,7 @@ async def show_leaderboard_resource(query, context, resource_id, resource_name):
                  LIMIT 10''', (resource_id,))
     top = c.fetchall()
     conn.close()
-    text = f"🏆 **Топ по {resource_name}**\n\n"
+    text = f"🏆 Топ по {resource_name}\n\n"
     if not top:
         text += "Пока нет данных."
     else:
@@ -1244,7 +1237,7 @@ async def show_leaderboard_resource(query, context, resource_id, resource_name):
     keyboard = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     try:
-        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
+        await query.edit_message_text(text, reply_markup=reply_markup)
     except BadRequest as e:
         if "Message is not modified" in str(e):
             pass
@@ -1270,7 +1263,7 @@ async def show_leaderboard_mithril(query, context):
 async def show_inventory(query, context):
     user_id = query.from_user.id
     inv = get_inventory(user_id)
-    text = "🎒 **Твой инвентарь:**\n\n"
+    text = "🎒 Твой инвентарь:\n\n"
     has_items = False
     for res_id, info in RESOURCES.items():
         amount = inv.get(res_id, 0)
@@ -1282,7 +1275,7 @@ async def show_inventory(query, context):
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     try:
-        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
+        await query.edit_message_text(text, reply_markup=reply_markup)
     except BadRequest as e:
         if "Message is not modified" in str(e):
             pass
@@ -1292,12 +1285,12 @@ async def show_inventory(query, context):
 async def show_market(query, context):
     user_id = query.from_user.id
     inv = get_inventory(user_id)
-    text = "💰 **Рынок ресурсов**\n\n"
+    text = "💰 Рынок ресурсов\n\n"
     keyboard = []
     for res_id, info in RESOURCES.items():
         amount = inv.get(res_id, 0)
         price = info['base_price']
-        text += f"**{info['name']}**: {amount} шт. | Цена: {price}💰 за шт.\n"
+        text += f"{info['name']}: {amount} шт. | Цена: {price}💰 за шт.\n"
         if amount > 0:
             row = [
                 InlineKeyboardButton(f"Продать 1", callback_data=f'sell_{res_id}_1'),
@@ -1307,7 +1300,7 @@ async def show_market(query, context):
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
     reply_markup = InlineKeyboardMarkup(keyboard)
     try:
-        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
+        await query.edit_message_text(text, reply_markup=reply_markup)
     except BadRequest as e:
         if "Message is not modified" in str(e):
             pass
