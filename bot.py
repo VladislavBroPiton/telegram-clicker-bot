@@ -108,7 +108,7 @@ LOCATIONS = {
         'name': 'Железный рудник',
         'description': 'Глубокая шахта с залежами железной руды.',
         'min_level': 3,
-        'min_tool_level': 1,      # требуется каменная кирка или лучше
+        'min_tool_level': 1,
         'difficulty': 1.2,
         'resources': [
             {'res_id': 'iron', 'prob': 0.7, 'min': 1, 'max': 2},
@@ -685,13 +685,11 @@ class FakeQuery:
     def __init__(self, message, from_user):
         self.message = message
         self.from_user = from_user
-        self.data = None  # не используется, но может пригодиться
+        self.data = None
     async def answer(self, text=None, show_alert=False):
-        # можно игнорировать или логировать
         if text:
             await self.message.reply_text(text)
     async def edit_message_text(self, text, reply_markup=None, parse_mode=None):
-        # Просто отправляем новое сообщение (редактировать сообщение команды не нужно)
         await self.message.reply_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
 
 # ==================== ОБРАБОТЧИКИ КОМАНД ====================
@@ -701,44 +699,54 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await show_main_menu(update, context)
 
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Отображает главное меню с тремя основными кнопками."""
     keyboard = [
         [InlineKeyboardButton("⛏ Добыть", callback_data='mine')],
-        [InlineKeyboardButton("🗺 Локации", callback_data='locations')],
-        [InlineKeyboardButton("🛒 Магазин", callback_data='shop')],
         [InlineKeyboardButton("📋 Задания", callback_data='tasks')],
-        [InlineKeyboardButton("👤 Профиль", callback_data='profile')],
-        [InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard')],
-        [InlineKeyboardButton("🎒 Инвентарь", callback_data='inventory')],
-        [InlineKeyboardButton("💰 Рынок", callback_data='market')]
+        [InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    text = "Главное меню. Что хочешь сделать?"
+    text = (
+        "🪨 **Добро пожаловать в шахтёрскую глубину!**\n\n"
+        "Твой путь к богатству начинается здесь.\n"
+        "Используй команды из меню (кнопка слева внизу) или кнопки ниже.\n\n"
+        "📍 **Доступные команды:**\n"
+        "/mine - добыча\n"
+        "/locations - выбор локации\n"
+        "/shop - магазин\n"
+        "/tasks - задания\n"
+        "/profile - профиль\n"
+        "/inventory - инвентарь\n"
+        "/market - рынок\n"
+        "/leaderboard - лидеры\n"
+        "/help - помощь"
+    )
     if update.callback_query:
-        await update.callback_query.edit_message_text(text, reply_markup=reply_markup)
+        await update.callback_query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
     else:
-        await update.message.reply_text(text, reply_markup=reply_markup)
+        await update.message.reply_text(text, parse_mode='Markdown', reply_markup=reply_markup)
 
 async def show_main_menu_from_query(query):
+    """Отображает главное меню при возврате из разделов."""
     keyboard = [
         [InlineKeyboardButton("⛏ Добыть", callback_data='mine')],
-        [InlineKeyboardButton("🗺 Локации", callback_data='locations')],
-        [InlineKeyboardButton("🛒 Магазин", callback_data='shop')],
         [InlineKeyboardButton("📋 Задания", callback_data='tasks')],
-        [InlineKeyboardButton("👤 Профиль", callback_data='profile')],
-        [InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard')],
-        [InlineKeyboardButton("🎒 Инвентарь", callback_data='inventory')],
-        [InlineKeyboardButton("💰 Рынок", callback_data='market')]
+        [InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    text = (
+        "🪨 **Главное меню**\n\n"
+        "Используй команды из системного меню или кнопки ниже."
+    )
     try:
-        await query.edit_message_text("Главное меню. Что хочешь сделать?", reply_markup=reply_markup)
+        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
     except BadRequest as e:
         if "Message is not modified" in str(e):
             pass
         else:
             logger.error(f"Error in show_main_menu_from_query: {e}")
 
-# -------------------- Обработчики команд --------------------
+# -------------------- Обработчики команд (для системного меню) --------------------
 async def cmd_mine(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     get_player(user.id, user.username)
