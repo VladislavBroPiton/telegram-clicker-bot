@@ -48,12 +48,6 @@ WEEKLY_TASK_TEMPLATES = [
     {'name': 'Торговец', 'description': 'Продать ресурсов на {} золота', 'goal': (2000, 5000), 'reward_gold': 900, 'reward_exp': 450}
 ]
 
-STICKERS = {
-    'crit': 'ВАШ_FILE_ID_КРИТ',
-    'achievement': 'ВАШ_FILE_ID_ДОСТИЖЕНИЕ',
-    'purchase': 'ВАШ_FILE_ID_ПОКУПКА'
-}
-
 RESOURCES = {
     'coal': {'name': 'Уголь', 'base_price': 5},
     'iron': {'name': 'Железо', 'base_price': 10},
@@ -564,15 +558,6 @@ def level_up_if_needed(uid):
     conn.commit()
     conn.close()
 
-async def send_animation(bot, uid, key, text=None):
-    try:
-        if key in STICKERS:
-            await bot.send_sticker(chat_id=uid, sticker=STICKERS[key])
-        if text:
-            await bot.send_message(chat_id=uid, text=text)
-    except Exception as e:
-        logger.error(f"Animation error: {e}")
-
 async def check_achievements(uid, ctx):
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
@@ -595,7 +580,7 @@ async def check_achievements(uid, ctx):
         txt = f"🏆 Достижение получено: {ach.name}\n{ach.description}"
         if ach.reward_gold > 0 or ach.reward_exp > 0:
             txt += f"\nНаграда: {ach.reward_gold}💰, {ach.reward_exp}✨"
-        await send_animation(ctx.bot, uid, 'achievement', txt)
+        await ctx.bot.send_message(chat_id=uid, text=txt)
     return len(new_ach)
 
 class FakeQuery:
@@ -772,7 +757,6 @@ async def mine_action(q, ctx):
             amt = random.randint(r['min'], r['max'])
             break
     gold, exp, is_crit = get_click_reward(uid)
-    # Учёт силы активного инструмента
     if found:
         active_tool = get_active_tool(uid)
         tool_power = get_tool_power(uid, active_tool)
@@ -808,8 +792,6 @@ async def mine_action(q, ctx):
         update_weekly_task_progress(uid, 'Критический удар', 1)
     if found:
         update_weekly_task_progress(uid, 'Коллекционер', amt)
-    if is_crit:
-        await send_animation(ctx.bot, uid, 'crit')
     await check_achievements(uid, ctx)
     ct = "💥 КРИТ!" if is_crit else ""
     txt = f"Ты добыл: {gold} золота {ct}{res_txt}\nПолучено опыта: {exp}"
@@ -950,7 +932,7 @@ async def process_buy(q, ctx):
         c.execute("INSERT OR IGNORE INTO player_tools (user_id, tool_id, level, experience) VALUES (?,?,1,0)", (uid, tid))
         conn.commit()
         conn.close()
-        await send_animation(ctx.bot, uid, 'purchase', f"✅ Ты купил {tool['name']}!")
+        await ctx.bot.send_message(chat_id=uid, text=f"✅ Ты купил {tool['name']}!")
         await show_shop_tools(q, ctx)
         return
     uid2 = data.replace('buy_', '')
@@ -969,7 +951,7 @@ async def process_buy(q, ctx):
     conn.close()
     update_daily_task_progress(uid, 'Покупатель', price)
     update_weekly_task_progress(uid, 'Магнат', price)
-    await send_animation(ctx.bot, uid, 'purchase', f"✅ {UPGRADES[uid2]['name']} улучшен до {lvl+1} уровня.")
+    await ctx.bot.send_message(chat_id=uid, text=f"✅ {UPGRADES[uid2]['name']} улучшен до {lvl+1} уровня.")
     await check_achievements(uid, ctx)
     await show_shop_upgrades(q, ctx)
 
@@ -1008,7 +990,7 @@ async def confirm_upgrade(q, ctx):
     if upgrade_tool(uid, tid):
         new_level = get_tool_level(uid, tid)
         await q.answer("✅ Уровень повышен!")
-        await send_animation(ctx.bot, uid, 'purchase', f"🔨 {TOOLS[tid]['name']} улучшена до уровня {new_level}!")
+        await ctx.bot.send_message(chat_id=uid, text=f"🔨 {TOOLS[tid]['name']} улучшена до уровня {new_level}!")
     else:
         await q.answer("❌ Ошибка при улучшении", show_alert=True)
     await show_shop_tools(q, ctx)
