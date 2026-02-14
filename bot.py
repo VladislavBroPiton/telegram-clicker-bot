@@ -8,6 +8,7 @@ from typing import Dict, Tuple
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from telegram.error import BadRequest
+from telegram.helpers import escape_markdown
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
@@ -177,7 +178,6 @@ def init_db():
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
     
-    # Таблица players (с новым полем active_tool)
     c.execute('''CREATE TABLE IF NOT EXISTS players
                  (user_id INTEGER PRIMARY KEY,
                   username TEXT,
@@ -194,22 +194,19 @@ def init_db():
                   current_location TEXT DEFAULT 'coal_mine',
                   active_tool TEXT DEFAULT 'wooden_pickaxe')''')
     
-    # Миграция: добавляем поле active_tool, если его нет (для старых баз)
+    # Миграция для добавления поля active_tool (если его нет в старой базе)
     try:
         c.execute("ALTER TABLE players ADD COLUMN active_tool TEXT DEFAULT 'wooden_pickaxe'")
         logger.info("Column 'active_tool' added to players table.")
     except sqlite3.OperationalError:
-        # Поле уже существует – игнорируем
         pass
 
-    # Таблица улучшений
     c.execute('''CREATE TABLE IF NOT EXISTS upgrades
                  (user_id INTEGER,
                   upgrade_id TEXT,
                   level INTEGER DEFAULT 0,
                   PRIMARY KEY (user_id, upgrade_id))''')
 
-    # Таблица ежедневных заданий
     c.execute('''CREATE TABLE IF NOT EXISTS daily_tasks
                  (user_id INTEGER,
                   task_id INTEGER,
@@ -223,7 +220,6 @@ def init_db():
                   date DATE,
                   PRIMARY KEY (user_id, task_id))''')
 
-    # Таблица еженедельных заданий
     c.execute('''CREATE TABLE IF NOT EXISTS weekly_tasks
                  (user_id INTEGER,
                   task_id INTEGER,
@@ -237,7 +233,6 @@ def init_db():
                   week TEXT,
                   PRIMARY KEY (user_id, task_id, week))''')
 
-    # Таблица достижений
     c.execute('''CREATE TABLE IF NOT EXISTS user_achievements
                  (user_id INTEGER,
                   achievement_id TEXT,
@@ -246,14 +241,12 @@ def init_db():
                   max_progress INTEGER,
                   PRIMARY KEY (user_id, achievement_id))''')
 
-    # Таблица инвентаря
     c.execute('''CREATE TABLE IF NOT EXISTS inventory
                  (user_id INTEGER,
                   resource_id TEXT,
                   amount INTEGER DEFAULT 0,
                   PRIMARY KEY (user_id, resource_id))''')
 
-    # Таблица инструментов игрока
     c.execute('''CREATE TABLE IF NOT EXISTS player_tools
                  (user_id INTEGER,
                   tool_id TEXT,
@@ -615,9 +608,7 @@ def level_up_if_needed(uid):
         exp -= EXP_PER_LEVEL
     c.execute("UPDATE players SET level=?, exp=? WHERE user_id=?", (lvl, exp, uid))
     conn.commit()
-    conn.close()
-
-async def check_achievements(uid, ctx):
+    conn.close()async def check_achievements(uid, ctx):
     conn = sqlite3.connect('game.db')
     c = conn.cursor()
     c.execute("SELECT achievement_id FROM user_achievements WHERE user_id=?", (uid,))
@@ -737,11 +728,7 @@ async def cmd_leaderboard(update, ctx):
     await show_leaderboard_menu(FakeQuery(update.message, u), ctx)
 
 async def cmd_faq(update, ctx):
-    """Отправляет красиво оформленный список часто задаваемых вопросов и ответов."""
-    # Словарь вопрос->ответ (можно оставить как есть)
     faq_dict = {item["question"]: item["answer"] for item in FAQ}
-    
-    # Группируем вопросы по категориям
     categories = {
         "🪨 **Основное**": [
             "🪨 Как добывать ресурсы?",
@@ -762,16 +749,15 @@ async def cmd_faq(update, ctx):
             "🔄 Как сменить активный инструмент?"
         ]
     }
-    
     text = "📚 **Часто задаваемые вопросы**\n\n"
-    
     for category, questions in categories.items():
         text += f"{category}\n" + "─" * 25 + "\n\n"
         for q in questions:
             if q in faq_dict:
-                text += f"❓ **{q}**\n{faq_dict[q]}\n\n"
+                q_esc = escape_markdown(q, version=1)
+                a_esc = escape_markdown(faq_dict[q], version=1)
+                text += f"❓ **{q_esc}**\n{a_esc}\n\n"
         text += "\n"
-    
     await update.message.reply_text(text, parse_mode='Markdown')
 
 async def cmd_help(update, ctx):
@@ -931,7 +917,8 @@ async def show_locations(q, ctx):
         is_cur = (lid == cur)
         status = "✅" if avail else "🔒"
         mark = "📍" if is_cur else ""
-        line = f"{mark}{status} **{loc['name']}**"
+        loc_name = escape_markdown(loc['name'], version=1)
+        line = f"{mark}{status} **{loc_name}**"
         if not avail:
             line += f" (требуется ур.{loc['min_level']})"
         else:
@@ -942,7 +929,7 @@ async def show_locations(q, ctx):
     txt += "─────────────────────────\nХочешь сменить локацию? Нажми на кнопку ниже (если она доступна)."
     kb.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
     try:
-        await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
+        await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
@@ -979,7 +966,8 @@ async def show_shop_upgrades(q, ctx):
     for uid2, info in UPGRADES.items():
         lvl = stats['upgrades'][uid2]
         price = int(info['base_price'] * (info['price_mult'] ** lvl))
-        txt += f"─────────────────────────\n**{info['name']}** (ур.{lvl})\n   {info['description']}\n   💰 Следующий уровень: {price}\n\n"
+        name = escape_markdown(info['name'], version=1)
+        txt += f"─────────────────────────\n**{name}** (ур.{lvl})\n   {info['description']}\n   💰 Следующий уровень: {price}\n\n"
         kb.append([InlineKeyboardButton(f"Купить {info['name']} за {price}", callback_data=f'buy_{uid2}')])
     txt += "─────────────────────────\nЧтобы купить, нажми на кнопку ниже."
     kb.append([InlineKeyboardButton("🔙 В меню магазина", callback_data='back_to_shop_menu')])
@@ -998,24 +986,26 @@ async def show_shop_tools(q, ctx):
     kb = []
     for tid, tool in TOOLS.items():
         level = get_tool_level(uid, tid)
+        tool_name = escape_markdown(tool['name'], version=1)
         if level == 0 and tool['price'] > 0:
-            txt += f"─────────────────────────\n🔒 **{tool['name']}** – {tool['price']}💰 (треб.ур.{tool['required_level']})\n   {tool['description']}\n\n"
+            txt += f"─────────────────────────\n🔒 **{tool_name}** – {tool['price']}💰 (треб.ур.{tool['required_level']})\n   {tool['description']}\n\n"
             kb.append([InlineKeyboardButton(f"Купить {tool['name']} за {tool['price']}", callback_data=f'buy_tool_{tid}')])
         elif level > 0:
             is_active = (tid == active)
             active_mark = "📍" if is_active else ""
             power = get_tool_power(uid, tid)
-            txt += f"─────────────────────────\n{active_mark} **{tool['name']}** ур.{level} (сила {power})\n   {tool['description']}\n"
+            txt += f"─────────────────────────\n{active_mark} **{tool_name}** ур.{level} (сила {power})\n   {tool['description']}\n"
             row = []
             if not is_active:
                 row.append(InlineKeyboardButton("🔨 Сделать активным", callback_data=f'activate_tool_{tid}'))
             if can_upgrade_tool(uid, tid):
                 cost = get_upgrade_cost(uid, tid)
-                cost_str = ", ".join([f"{RESOURCES[res]['name']} {amt}" for res, amt in cost.items()])
+                cost_parts = [f"{escape_markdown(RESOURCES[res]['name'], version=1)} {amt}" for res, amt in cost.items()]
+                cost_str = ", ".join(cost_parts)
                 row.append(InlineKeyboardButton(f"⬆️ Улучшить ({cost_str})", callback_data=f'upgrade_tool_{tid}'))
             if row:
                 kb.append(row)
-    txt += "─────────────────────────\nВыбери действие."
+    txt += "\n─────────────────────────\nВыбери действие."
     kb.append([InlineKeyboardButton("🔙 В меню магазина", callback_data='back_to_shop_menu')])
     try:
         await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
@@ -1083,13 +1073,14 @@ async def upgrade_tool_handler(q, ctx):
         await show_shop_tools(q, ctx)
         return
     cost = get_upgrade_cost(uid, tid)
-    cost_text = "\n".join([f"{RESOURCES[res]['name']}: {amt}" for res, amt in cost.items()])
+    cost_text = "\n".join([f"{escape_markdown(RESOURCES[res]['name'], version=1)}: {amt}" for res, amt in cost.items()])
     kb = [[
         InlineKeyboardButton("✅ Подтвердить", callback_data=f'confirm_upgrade_{tid}'),
         InlineKeyboardButton("❌ Отмена", callback_data='back_to_shop_tools')
     ]]
     await q.edit_message_text(
-        f"⬆️ Улучшение {TOOLS[tid]['name']} до ур.{get_tool_level(uid, tid)+1}\n\nПотребуется:\n{cost_text}\n\nПодтверждаешь?",
+        f"⬆️ Улучшение {escape_markdown(TOOLS[tid]['name'], version=1)} до ур.{get_tool_level(uid, tid)+1}\n\nПотребуется:\n{cost_text}\n\nПодтверждаешь?",
+        parse_mode='Markdown',
         reply_markup=InlineKeyboardMarkup(kb)
     )
 
@@ -1117,7 +1108,9 @@ async def show_tasks(q, ctx):
         for t in daily:
             _, n, desc, g, prog, com, rg, re = t
             st = "✅" if com else f"{prog}/{g}"
-            txt += f"🔹 **{n}**\n   {desc}\n   Прогресс: {st}\n   Награда: {rg}💰, {re}✨\n\n"
+            name = escape_markdown(n, version=1)
+            desc_esc = escape_markdown(desc, version=1)
+            txt += f"🔹 {name}: {desc_esc}\n   Прогресс: {st}\n   Награда: {rg}💰 + {re}✨\n\n"
     else:
         txt += "Нет заданий на сегодня.\n\n"
     txt += "─────────────────────────\n📅 **Еженедельные задания**\n\n"
@@ -1125,12 +1118,14 @@ async def show_tasks(q, ctx):
         for t in weekly:
             _, n, desc, g, prog, com, rg, re = t
             st = "✅" if com else f"{prog}/{g}"
-            txt += f"🔸 **{n}**\n   {desc}\n   Прогресс: {st}\n   Награда: {rg}💰, {re}✨\n\n"
+            name = escape_markdown(n, version=1)
+            desc_esc = escape_markdown(desc, version=1)
+            txt += f"🔸 {name}: {desc_esc}\n   Прогресс: {st}\n   Награда: {rg}💰 + {re}✨\n\n"
     else:
         txt += "Нет заданий на эту неделю.\n\n"
     kb = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
     try:
-        await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
+        await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
@@ -1141,6 +1136,7 @@ async def show_profile(q, ctx):
     if not stats:
         await q.edit_message_text("Профиль не найден.")
         return
+    username = escape_markdown(q.from_user.username or 'Аноним', version=1)
     txt = (f"👤 **Профиль игрока**\n\n"
            f"📊 **Статистика**\n"
            f"• Уровень: **{stats['level']}**\n"
@@ -1164,7 +1160,8 @@ async def show_profile(q, ctx):
         for aid, dt in recent:
             ach = next((a for a in ACHIEVEMENTS if a.id == aid), None)
             if ach:
-                txt += f"• {ach.name} ({dt})\n"
+                ach_name = escape_markdown(ach.name, version=1)
+                txt += f"• {ach_name} ({dt})\n"
     else:
         txt += "\n🏅 **Последние достижения**\n• Пока нет\n"
     tools = get_player_tools(uid)
@@ -1173,10 +1170,11 @@ async def show_profile(q, ctx):
         for tid, lvl in tools.items():
             tool = TOOLS.get(tid)
             if tool:
-                txt += f"• {tool['name']} ур.{lvl}\n"
+                tool_name = escape_markdown(tool['name'], version=1)
+                txt += f"• {tool_name} ур.{lvl}\n"
     kb = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
     try:
-        await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
+        await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
@@ -1192,7 +1190,8 @@ async def show_leaderboard_menu(q, ctx):
         [InlineKeyboardButton("🔮 По мифрилу", callback_data='leaderboard_mithril')],
         [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]
     ]
-    txt = "🏆 **Таблица лидеров**\n\nВыбери, по какому показателю показать топ-10 игроков:"
+    txt = ("🏆 **Таблица лидеров**\n\n"
+           "Выбери, по какому показателю показать топ-10 игроков:")
     try:
         await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
@@ -1210,10 +1209,11 @@ async def show_leaderboard_level(q, ctx):
         txt += "Пока нет данных."
     else:
         for i, (name, lvl, exp) in enumerate(top, 1):
-            txt += f"{i}. {name or 'Аноним'} — уровень {lvl} (опыт {exp})\n"
+            name = escape_markdown(name or 'Аноним', version=1)
+            txt += f"{i}. {name} — уровень {lvl} (опыт {exp})\n"
     kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
     try:
-        await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
+        await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
@@ -1229,10 +1229,11 @@ async def show_leaderboard_gold(q, ctx):
         txt += "Пока нет данных."
     else:
         for i, (name, gold) in enumerate(top, 1):
-            txt += f"{i}. {name or 'Аноним'} — {gold}💰\n"
+            name = escape_markdown(name or 'Аноним', version=1)
+            txt += f"{i}. {name} — {gold}💰\n"
     kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
     try:
-        await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
+        await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
@@ -1243,15 +1244,17 @@ async def show_leaderboard_resource(q, ctx, rid, rname):
     c.execute("SELECT p.username, i.amount FROM inventory i JOIN players p ON i.user_id=p.user_id WHERE i.resource_id=? ORDER BY i.amount DESC LIMIT 10", (rid,))
     top = c.fetchall()
     conn.close()
-    txt = f"🏆 **Топ по {rname}**\n\n"
+    rname_esc = escape_markdown(rname, version=1)
+    txt = f"🏆 **Топ по {rname_esc}**\n\n"
     if not top:
         txt += "Пока нет данных."
     else:
         for i, (name, amt) in enumerate(top, 1):
-            txt += f"{i}. {name or 'Аноним'} — {amt} шт.\n"
+            name = escape_markdown(name or 'Аноним', version=1)
+            txt += f"{i}. {name} — {amt} шт.\n"
     kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
     try:
-        await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
+        await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
@@ -1270,8 +1273,10 @@ async def show_inventory(q, ctx):
     for rid, info in RESOURCES.items():
         amt = inv.get(rid, 0)
         emoji = "🪨" if rid == 'coal' else "⚙️" if rid == 'iron' else "🟡" if rid == 'gold' else "💎" if rid == 'diamond' else "🔮"
-        txt += f"{emoji} {info['name']}: **{amt}** шт.\n"
-        if amt > 0: has = True
+        name = escape_markdown(info['name'], version=1)
+        txt += f"{emoji} {name}: **{amt}** шт.\n"
+        if amt > 0:
+            has = True
     if not has:
         txt = "🎒 **Инвентарь**\n\nТвой инвентарь пока пуст. Иди добывай!\n\n"
     txt += "\n─────────────────────────\nПродать ресурсы можно на рынке (/market)."
@@ -1291,14 +1296,15 @@ async def show_market(q, ctx):
         amt = inv.get(rid, 0)
         price = info['base_price']
         emoji = "🪨" if rid == 'coal' else "⚙️" if rid == 'iron' else "🟡" if rid == 'gold' else "💎" if rid == 'diamond' else "🔮"
-        txt += f"{emoji} {info['name']}: **{amt}** шт. | 💰 Цена: {price} за шт.\n"
+        name = escape_markdown(info['name'], version=1)
+        txt += f"{emoji} {name}: **{amt}** шт. | 💰 Цена: {price} за шт.\n"
         if amt > 0:
-            kb.append([InlineKeyboardButton(f"Продать 1 {info['name']}", callback_data=f'sell_{rid}_1'),
+            kb.append([InlineKeyboardButton(f"Продать 1 {name}", callback_data=f'sell_{rid}_1'),
                        InlineKeyboardButton(f"Продать всё", callback_data=f'sell_{rid}_all')])
     txt += "\n─────────────────────────\nВыбери, что и сколько продать."
     kb.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
     try:
-        await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
+        await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
@@ -1376,5 +1382,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
