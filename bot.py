@@ -703,7 +703,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("⛏ Добыть", callback_data='mine')],
         [InlineKeyboardButton("📋 Задания", callback_data='tasks')],
-        [InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard')]
+        [InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')]  # Изменено
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     text = (
@@ -721,7 +721,7 @@ async def show_main_menu_from_query(query):
     keyboard = [
         [InlineKeyboardButton("⛏ Добыть", callback_data='mine')],
         [InlineKeyboardButton("📋 Задания", callback_data='tasks')],
-        [InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard')]
+        [InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')]  # Изменено
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     text = (
@@ -780,10 +780,11 @@ async def cmd_market(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await show_market(fake, context)
 
 async def cmd_leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик команды /leaderboard – показывает меню выбора категории."""
     user = update.effective_user
     get_player(user.id, user.username)
     fake = FakeQuery(update.message, update.effective_user)
-    await show_leaderboard(fake, context)
+    await show_leaderboard_menu(fake, context)
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = (
@@ -798,7 +799,7 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/profile - твой профиль\n"
         "/inventory - ресурсы\n"
         "/market - продать ресурсы\n"
-        "/leaderboard - топ игроков\n"
+        "/leaderboard - топ игроков (по разным категориям)\n"
         "/help - это сообщение"
     )
     await update.message.reply_text(help_text, parse_mode='Markdown')
@@ -823,8 +824,22 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await show_tasks(query, context)
     elif data == 'profile':
         await show_profile(query, context)
-    elif data == 'leaderboard':
-        await show_leaderboard(query, context)
+    elif data == 'leaderboard_menu':
+        await show_leaderboard_menu(query, context)
+    elif data == 'leaderboard_level':
+        await show_leaderboard_level(query, context)
+    elif data == 'leaderboard_gold':
+        await show_leaderboard_gold(query, context)
+    elif data == 'leaderboard_coal':
+        await show_leaderboard_coal(query, context)
+    elif data == 'leaderboard_iron':
+        await show_leaderboard_iron(query, context)
+    elif data == 'leaderboard_gold_ore':
+        await show_leaderboard_gold_ore(query, context)
+    elif data == 'leaderboard_diamond':
+        await show_leaderboard_diamond(query, context)
+    elif data == 'leaderboard_mithril':
+        await show_leaderboard_mithril(query, context)
     elif data == 'inventory':
         await show_inventory(query, context)
     elif data == 'market':
@@ -910,7 +925,7 @@ async def mine_action(query, context):
     await query.message.reply_text(text)
     await show_main_menu_from_query(query)
 
-# ==================== НОВАЯ ФУНКЦИЯ ПОКАЗА ЛОКАЦИЙ (только текущая и следующая) ====================
+# ==================== ЛОКАЦИИ (только текущая и следующая) ====================
 async def show_locations(query, context):
     user_id = query.from_user.id
     current = get_player_current_location(user_id)
@@ -975,6 +990,7 @@ async def goto_location(query, context):
     await query.answer(f"Ты переместился в {LOCATIONS[location_id]['name']}")
     await show_main_menu_from_query(query)
 
+# ==================== МАГАЗИН И ПОКУПКИ ====================
 async def show_shop(query, context):
     user_id = query.from_user.id
     stats = get_player_stats(user_id)
@@ -1055,6 +1071,7 @@ async def process_buy(query, context):
     await check_achievements(user_id, context)
     await show_shop(query, context)
 
+# ==================== ЗАДАНИЯ ====================
 async def show_tasks(query, context):
     user_id = query.from_user.id
     daily = get_daily_tasks(user_id)
@@ -1088,6 +1105,7 @@ async def show_tasks(query, context):
         else:
             logger.error(f"Error in show_tasks: {e}")
 
+# ==================== ПРОФИЛЬ ====================
 async def show_profile(query, context):
     user_id = query.from_user.id
     stats = get_player_stats(user_id)
@@ -1140,32 +1158,115 @@ async def show_profile(query, context):
         else:
             logger.error(f"Error in show_profile: {e}")
 
-async def show_leaderboard(query, context):
-    conn = sqlite3.connect('game.db')
-    c = conn.cursor()
-    c.execute('''SELECT username, level, exp FROM players ORDER BY level DESC, exp DESC LIMIT 5''')
-    top_level = c.fetchall()
-    c.execute('''SELECT username, gold FROM players ORDER BY gold DESC LIMIT 5''')
-    top_gold = c.fetchall()
-    conn.close()
-    
-    text = "🏆 Таблица лидеров\n\nПо уровню:\n"
-    for i, (name, lvl, exp) in enumerate(top_level, 1):
-        text += f"{i}. {name or 'Аноним'} — уровень {lvl} (опыт {exp})\n"
-    text += "\nПо золоту:\n"
-    for i, (name, gold) in enumerate(top_gold, 1):
-        text += f"{i}. {name or 'Аноним'} — {gold}💰\n"
-    
-    keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
+# ==================== ТАБЛИЦА ЛИДЕРОВ (новая) ====================
+async def show_leaderboard_menu(query, context):
+    """Меню выбора категории для таблицы лидеров."""
+    keyboard = [
+        [InlineKeyboardButton("📊 По уровню", callback_data='leaderboard_level')],
+        [InlineKeyboardButton("💰 По золоту", callback_data='leaderboard_gold')],
+        [InlineKeyboardButton("🪨 По углю", callback_data='leaderboard_coal')],
+        [InlineKeyboardButton("⚙️ По железу", callback_data='leaderboard_iron')],
+        [InlineKeyboardButton("🟡 По золотой руде", callback_data='leaderboard_gold_ore')],
+        [InlineKeyboardButton("💎 По алмазам", callback_data='leaderboard_diamond')],
+        [InlineKeyboardButton("🔮 По мифрилу", callback_data='leaderboard_mithril')],
+        [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     try:
-        await query.edit_message_text(text, reply_markup=reply_markup)
+        await query.edit_message_text("🏆 **Выберите категорию лидеров:**", parse_mode='Markdown', reply_markup=reply_markup)
     except BadRequest as e:
         if "Message is not modified" in str(e):
             pass
         else:
-            logger.error(f"Error in show_leaderboard: {e}")
+            logger.error(f"Error in show_leaderboard_menu: {e}")
 
+async def show_leaderboard_level(query, context):
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute('''SELECT username, level, exp FROM players ORDER BY level DESC, exp DESC LIMIT 10''')
+    top = c.fetchall()
+    conn.close()
+    text = "🏆 **Топ по уровню**\n\n"
+    if not top:
+        text += "Пока нет данных."
+    else:
+        for i, (name, lvl, exp) in enumerate(top, 1):
+            text += f"{i}. {name or 'Аноним'} — уровень {lvl} (опыт {exp})\n"
+    keyboard = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    try:
+        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
+    except BadRequest as e:
+        if "Message is not modified" in str(e):
+            pass
+        else:
+            logger.error(f"Error in show_leaderboard_level: {e}")
+
+async def show_leaderboard_gold(query, context):
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute('''SELECT username, gold FROM players ORDER BY gold DESC LIMIT 10''')
+    top = c.fetchall()
+    conn.close()
+    text = "💰 **Топ по золоту**\n\n"
+    if not top:
+        text += "Пока нет данных."
+    else:
+        for i, (name, gold) in enumerate(top, 1):
+            text += f"{i}. {name or 'Аноним'} — {gold}💰\n"
+    keyboard = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    try:
+        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
+    except BadRequest as e:
+        if "Message is not modified" in str(e):
+            pass
+        else:
+            logger.error(f"Error in show_leaderboard_gold: {e}")
+
+async def show_leaderboard_resource(query, context, resource_id, resource_name):
+    conn = sqlite3.connect('game.db')
+    c = conn.cursor()
+    c.execute('''SELECT p.username, i.amount 
+                 FROM inventory i
+                 JOIN players p ON i.user_id = p.user_id
+                 WHERE i.resource_id = ?
+                 ORDER BY i.amount DESC
+                 LIMIT 10''', (resource_id,))
+    top = c.fetchall()
+    conn.close()
+    text = f"🏆 **Топ по {resource_name}**\n\n"
+    if not top:
+        text += "Пока нет данных."
+    else:
+        for i, (name, amount) in enumerate(top, 1):
+            text += f"{i}. {name or 'Аноним'} — {amount} шт.\n"
+    keyboard = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    try:
+        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=reply_markup)
+    except BadRequest as e:
+        if "Message is not modified" in str(e):
+            pass
+        else:
+            logger.error(f"Error in show_leaderboard_resource: {e}")
+
+async def show_leaderboard_coal(query, context):
+    await show_leaderboard_resource(query, context, 'coal', 'Уголь')
+
+async def show_leaderboard_iron(query, context):
+    await show_leaderboard_resource(query, context, 'iron', 'Железо')
+
+async def show_leaderboard_gold_ore(query, context):
+    await show_leaderboard_resource(query, context, 'gold', 'Золотая руда')
+
+async def show_leaderboard_diamond(query, context):
+    await show_leaderboard_resource(query, context, 'diamond', 'Алмазы')
+
+async def show_leaderboard_mithril(query, context):
+    await show_leaderboard_resource(query, context, 'mithril', 'Мифрил')
+
+# ==================== ИНВЕНТАРЬ И РЫНОК ====================
 async def show_inventory(query, context):
     user_id = query.from_user.id
     inv = get_inventory(user_id)
