@@ -712,7 +712,10 @@ async def cmd_leaderboard(update, ctx):
     await show_leaderboard_menu(FakeQuery(update.message, u), ctx)
 
 async def cmd_faq(update, ctx):
-    faq_dict = {item["question"]: item["answer"] for item in FAQ}
+    u = update.effective_user
+    get_player(u.id, u.username)
+    fake = FakeQuery(update.message, u)
+    await show_faq_menu(fake, ctx)
     
     # Создаём динамический ответ для локаций
     locations_info = "🗺 **Список локаций и ресурсов:**\n\n"
@@ -1470,6 +1473,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
