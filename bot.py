@@ -85,6 +85,28 @@ FAQ = [
     {"question": "🔄 Как сменить активный инструмент?", "answer": "В магазине в категории «🧰 Инструменты» нажми кнопку «🔨 Сделать активным» рядом с нужным инструментом. Активный инструмент используется при добыче."}
 ]
 
+FAQ_CATEGORIES = {
+    "🪨 Основное": [
+        "🪨 Как добывать ресурсы?",
+        "🧰 Зачем нужны инструменты?",
+        "⚡ Как увеличить доход за клик?"
+    ],
+    "🗺 Локации": [
+        "🗺 Как открыть новые локации?",
+        "🗺 Какие локации существуют и что там добывают?"
+    ],
+    "📋 Задания": [
+        "📋 Что такое ежедневные и еженедельные задания?"
+    ],
+    "💰 Экономика": [
+        "💰 Как продать ресурсы?",
+        "🏆 Что такое достижения?"
+    ],
+    "🔄 Инструменты": [
+        "🔄 Как сменить активный инструмент?"
+    ]
+}
+
 class Achievement:
     def __init__(self, id, name, desc, cond, reward_gold=0, reward_exp=0):
         self.id, self.name, self.description, self.condition_func, self.reward_gold, self.reward_exp = id, name, desc, cond, reward_gold, reward_exp
@@ -97,17 +119,51 @@ def cond_crits_50(uid):
 def cond_crit_streak_5(uid):
     conn=get_db(); c=conn.cursor(); c.execute("SELECT max_crit_streak FROM players WHERE user_id=?",(uid,)); r=c.fetchone()[0]; conn.close(); return r>=5, r, 5
 def cond_resources_50(uid): inv=get_inventory(uid); total=sum(inv.values()); return total>=50, total, 50
+
+def condition_clicks_300(uid):
+    stats = get_player_stats(uid)
+    return stats['clicks'] >= 300, stats['clicks'], 300
+def condition_clicks_500(uid):
+    stats = get_player_stats(uid)
+    return stats['clicks'] >= 500, stats['clicks'], 500
+def condition_clicks_1000(uid):
+    stats = get_player_stats(uid)
+    return stats['clicks'] >= 1000, stats['clicks'], 1000
+def condition_gold_1500(uid):
+    stats = get_player_stats(uid)
+    return stats['total_gold'] >= 1500, stats['total_gold'], 1500
+def condition_gold_5000(uid):
+    stats = get_player_stats(uid)
+    return stats['total_gold'] >= 5000, stats['total_gold'], 5000
+def condition_gold_20000(uid):
+    stats = get_player_stats(uid)
+    return stats['total_gold'] >= 20000, stats['total_gold'], 20000
 def condition_smith(uid):
     tools = get_player_tools(uid)
     max_level = max(tools.values()) if tools else 0
     return max_level >= 5, max_level, 5
-def condition_millionaire(uid):
-    stats = get_player_stats(uid)
-    return stats['total_gold'] >= 10000, stats['total_gold'], 10000
-def condition_explorer(uid):
-    max_loc_level = max(loc['min_level'] for loc in LOCATIONS.values())
-    stats = get_player_stats(uid)
-    return stats['level'] >= max_loc_level, stats['level'], max_loc_level
+def condition_tools_all_purchased(uid):
+    tools = get_player_tools(uid)
+    all_tools = list(TOOLS.keys())
+    purchased = [tid for tid in all_tools if tid in tools]
+    return len(purchased) == len(all_tools), len(purchased), len(all_tools)
+def condition_tools_all_level5(uid):
+    tools = get_player_tools(uid)
+    all_tools = list(TOOLS.keys())
+    if len(tools) != len(all_tools):
+        return False, len(tools), len(all_tools)
+    for tid in all_tools:
+        if tools.get(tid, 0) < 5:
+            return False, tools.get(tid, 0), 5
+    return True, 5, 5
+def condition_tools_total_level_50(uid):
+    tools = get_player_tools(uid)
+    total = sum(tools.values())
+    return total >= 50, total, 50
+def condition_tools_total_level_100(uid):
+    tools = get_player_tools(uid)
+    total = sum(tools.values())
+    return total >= 100, total, 100
 def condition_hardworker(uid):
     conn = get_db()
     c = conn.cursor()
@@ -118,6 +174,10 @@ def condition_hardworker(uid):
     conn.close()
     total = daily + weekly
     return total >= 50, total, 50
+def condition_explorer(uid):
+    max_loc_level = max(loc['min_level'] for loc in LOCATIONS.values())
+    stats = get_player_stats(uid)
+    return stats['level'] >= max_loc_level, stats['level'], max_loc_level
 def condition_collector_all(uid):
     inv = get_inventory(uid)
     min_amount = min(inv.get(rid, 0) for rid in RESOURCES)
@@ -131,88 +191,27 @@ def condition_tool_master(uid):
     min_level = min(tools.get(tid, 0) for tid in all_tools)
     return min_level >= 3, min_level, 3
 
-def condition_clicks_300(uid):
-    stats = get_player_stats(uid)
-    return stats['clicks'] >= 300, stats['clicks'], 300
-
-def condition_clicks_500(uid):
-    stats = get_player_stats(uid)
-    return stats['clicks'] >= 500, stats['clicks'], 500
-
-def condition_clicks_1000(uid):
-    stats = get_player_stats(uid)
-    return stats['clicks'] >= 1000, stats['clicks'], 1000
-
-def condition_gold_1500(uid):
-    stats = get_player_stats(uid)
-    return stats['total_gold'] >= 1500, stats['total_gold'], 1500
-
-def condition_gold_5000(uid):
-    stats = get_player_stats(uid)
-    return stats['total_gold'] >= 5000, stats['total_gold'], 5000
-
-def condition_gold_20000(uid):
-    stats = get_player_stats(uid)
-    return stats['total_gold'] >= 20000, stats['total_gold'], 20000
-
-def condition_tools_all_level5(uid):
-    tools = get_player_tools(uid)
-    all_tools = list(TOOLS.keys())
-    if len(tools) != len(all_tools):
-        return False, len(tools), len(all_tools)
-    for tid in all_tools:
-        if tools.get(tid, 0) < 5:
-            return False, tools.get(tid, 0), 5
-    return True, 5, 5
-
-def condition_tools_all_purchased(uid):
-    tools = get_player_tools(uid)
-    all_tools = list(TOOLS.keys())
-    purchased = [tid for tid in all_tools if tid in tools]
-    return len(purchased) == len(all_tools), len(purchased), len(all_tools)
-
-def condition_tools_total_level_50(uid):
-    tools = get_player_tools(uid)
-    total = sum(tools.values())
-    return total >= 50, total, 50
-
-def condition_tools_total_level_100(uid):
-    tools = get_player_tools(uid)
-    total = sum(tools.values())
-    return total >= 100, total, 100
-
 ACHIEVEMENTS = [
-    # Базовые (оставлены с уточнёнными названиями)
     Achievement('first_click', 'Первые шаги', 'Сделать первый клик', cond_first_click, 10, 5),
     Achievement('clicks_100', 'Начинающий шахтёр', 'Сделать 100 кликов', cond_clicks_100, 50, 20),
     Achievement('clicks_300', 'Трудоголик', 'Сделать 300 кликов', condition_clicks_300, 80, 35),
     Achievement('clicks_500', 'Опытный шахтёр', 'Сделать 500 кликов', condition_clicks_500, 120, 50),
     Achievement('clicks_1000', 'Ветеран', 'Сделать 1000 кликов', condition_clicks_1000, 200, 100),
-    
-    # Золото
     Achievement('gold_1000', 'Золотая жила', 'Добыть 1000 золота', cond_gold_1000, 100, 50),
     Achievement('gold_1500', 'Золотая лихорадка', 'Добыть 1500 золота', condition_gold_1500, 150, 75),
     Achievement('gold_5000', 'Золотой магнат', 'Добыть 5000 золота', condition_gold_5000, 300, 150),
     Achievement('gold_20000', 'Король золота', 'Добыть 20000 золота', condition_gold_20000, 600, 300),
-    
-    # Ресурсы
     Achievement('resources_50', 'Коллекционер', 'Собрать 50 любых ресурсов', cond_resources_50, 70, 35),
     Achievement('collector_all', 'Абсолютный коллекционер', 'Собрать не менее 100 каждого ресурса', condition_collector_all, 400, 200),
-    
-    # Криты
     Achievement('crits_50', 'Критическая масса', 'Получить 50 критических ударов', cond_crits_50, 80, 30),
     Achievement('crit_master', 'Критический удар', 'Получить 100 критических ударов', condition_crit_master, 250, 120),
     Achievement('crit_streak_5', 'Везунчик', 'Достичь серии критов в 5', cond_crit_streak_5, 60, 25),
-    
-    # Инструменты
     Achievement('smith', 'Кузнец', 'Улучшить любой инструмент до 5 уровня', condition_smith, 150, 50),
     Achievement('tool_master', 'Мастер инструментов', 'Все инструменты минимум 3 уровня', condition_tool_master, 350, 180),
     Achievement('tools_all_purchased', 'Коллекционер инструментов', 'Купить все виды кирок', condition_tools_all_purchased, 200, 100),
     Achievement('tools_all_level5', 'Легендарный кузнец', 'Все инструменты 5 уровня', condition_tools_all_level5, 500, 250),
     Achievement('tools_total_50', 'Сила инструментов I', 'Суммарный уровень инструментов 50', condition_tools_total_level_50, 150, 60),
     Achievement('tools_total_100', 'Сила инструментов II', 'Суммарный уровень инструментов 100', condition_tools_total_level_100, 300, 150),
-    
-    # Задания
     Achievement('hardworker', 'Трудяга', 'Выполнить 50 заданий', condition_hardworker, 200, 100),
     Achievement('explorer', 'Исследователь', 'Достичь максимального уровня', condition_explorer, 300, 150),
 ]
@@ -285,6 +284,11 @@ def set_upgrade_level(uid, uid2, lvl):
     conn.commit()
     conn.close()
 
+def get_week_number(d=None):
+    if d is None: d = datetime.date.today()
+    y, w, _ = d.isocalendar()
+    return f"{y}-{w:02d}"
+
 def generate_daily_tasks(uid, conn=None):
     close = False
     if conn is None:
@@ -340,11 +344,6 @@ def update_daily_task_progress(uid, name_contains, delta):
             c.execute("UPDATE players SET gold=gold+?, exp=exp+? WHERE user_id=?", (rg, re, uid))
     conn.commit()
     conn.close()
-
-def get_week_number(d=None):
-    if d is None: d = datetime.date.today()
-    y, w, _ = d.isocalendar()
-    return f"{y}-{w:02d}"
 
 def generate_weekly_tasks(uid, conn=None):
     close = False
@@ -690,69 +689,10 @@ async def cmd_leaderboard(update, ctx):
     await show_leaderboard_menu(FakeQuery(update.message, u), ctx)
 
 async def cmd_faq(update, ctx):
-    uid = update.effective_user.id
-    stats = get_player_stats(uid)
-    lvl = stats['level']
-    faq_dict = {item["question"]: item["answer"] for item in FAQ}
-    
-    # Создаём динамический ответ для локаций с прогресс-барами
-    locations_info = "🗺 **Список локаций и ресурсов:**\n\n"
-    for loc_id, loc in LOCATIONS.items():
-        emoji = "🪨" if 'coal' in loc_id else "⚙️" if 'iron' in loc_id else "🟡" if 'gold' in loc_id else "💎" if 'diamond' in loc_id else "🔮"
-        locations_info += f"{emoji} **{loc['name']}** (треб. ур. {loc['min_level']})\n"
-        for res in loc['resources']:
-            res_name = RESOURCES[res['res_id']]['name']
-            prob_percent = int(res['prob'] * 100)
-            amount_range = f"{res['min']}-{res['max']}" if res['min'] != res['max'] else str(res['min'])
-            locations_info += f"   • {res_name}: {prob_percent}% ({amount_range} шт.)\n"
-        # Прогресс-бар для локации
-        if lvl >= loc['min_level']:
-            locations_info += f"   ✅ Доступна! (ваш уровень {lvl})\n"
-        else:
-            progress = lvl
-            percent = int(progress / loc['min_level'] * 100) if loc['min_level'] > 0 else 0
-            bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
-            locations_info += f"   Прогресс открытия: {bar} {lvl}/{loc['min_level']}\n"
-        locations_info += "\n"
-    
-    # Категории вопросов
-    categories = {
-        "🪨 **Основное**": [
-            "🪨 Как добывать ресурсы?",
-            "🧰 Зачем нужны инструменты?",
-            "⚡ Как увеличить доход за клик?"
-        ],
-        "🗺 **Локации**": [
-            "🗺 Как открыть новые локации?",
-            "🗺 Какие локации существуют и что там добывают?"
-        ],
-        "📋 **Задания**": [
-            "📋 Что такое ежедневные и еженедельные задания?"
-        ],
-        "💰 **Экономика**": [
-            "💰 Как продать ресурсы?",
-            "🏆 Что такое достижения?"
-        ],
-        "🔄 **Инструменты**": [
-            "🔄 Как сменить активный инструмент?"
-        ]
-    }
-    
-    text = "📚 **Часто задаваемые вопросы**\n\n"
-    
-    for category, questions in categories.items():
-        text += f"{category}\n" + "─" * 25 + "\n\n"
-        for q in questions:
-            if q == "🗺 Какие локации существуют и что там добывают?":
-                q_esc = escape_markdown(q, version=1)
-                text += f"❓ **{q_esc}**\n{locations_info}\n\n"
-            elif q in faq_dict:
-                q_esc = escape_markdown(q, version=1)
-                a_esc = escape_markdown(faq_dict[q], version=1)
-                text += f"❓ **{q_esc}**\n{a_esc}\n\n"
-        text += "\n"
-    
-    await update.message.reply_text(text, parse_mode='Markdown')
+    u = update.effective_user
+    get_player(u.id, u.username)
+    fake = FakeQuery(update.message, u)
+    await show_faq_menu(fake, ctx)
 
 async def cmd_achievements(update, ctx):
     uid = update.effective_user.id
@@ -769,6 +709,8 @@ async def button_handler(update: Update, ctx):
     data = q.data
     check_daily_reset(uid)
     check_weekly_reset(uid)
+
+    # Основные действия
     if data == 'mine':
         await mine_action(q, ctx)
     elif data == 'locations':
@@ -795,6 +737,17 @@ async def button_handler(update: Update, ctx):
         await show_profile(q, ctx)
     elif data == 'profile_achievements':
         await send_achievements(uid, ctx)
+    elif data == 'inventory':
+        await show_inventory(q, ctx)
+    elif data == 'market':
+        await show_market(q, ctx)
+    elif data.startswith('buy_'):
+        await process_buy(q, ctx)
+    elif data.startswith('sell_'):
+        await process_sell(q, ctx)
+    elif data.startswith('goto_'):
+        await goto_location(q, ctx)
+    # Лидеры
     elif data == 'leaderboard_menu':
         await show_leaderboard_menu(q, ctx)
     elif data == 'leaderboard_resources_menu':
@@ -821,16 +774,22 @@ async def button_handler(update: Update, ctx):
         await show_leaderboard_mithril(q, ctx)
     elif data == 'leaderboard_total_resources':
         await show_leaderboard_total_resources(q, ctx)
-    elif data == 'inventory':
-        await show_inventory(q, ctx)
-    elif data == 'market':
-        await show_market(q, ctx)
-    elif data.startswith('buy_'):
-        await process_buy(q, ctx)
-    elif data.startswith('sell_'):
-        await process_sell(q, ctx)
-    elif data.startswith('goto_'):
-        await goto_location(q, ctx)
+    # FAQ
+    elif data == 'faq_menu':
+        await show_faq_menu(q, ctx)
+    elif data == 'faq_category_basic':
+        await show_faq_category(q, ctx, "🪨 Основное", FAQ_CATEGORIES["🪨 Основное"])
+    elif data == 'faq_category_locations':
+        await show_faq_locations(q, ctx)
+    elif data == 'faq_category_tasks':
+        await show_faq_category(q, ctx, "📋 Задания", FAQ_CATEGORIES["📋 Задания"])
+    elif data == 'faq_category_economy':
+        await show_faq_category(q, ctx, "💰 Экономика", FAQ_CATEGORIES["💰 Экономика"])
+    elif data == 'faq_category_tools':
+        await show_faq_category(q, ctx, "🔄 Инструменты", FAQ_CATEGORIES["🔄 Инструменты"])
+    elif data.startswith('faq_q_'):
+        qid = int(data.replace('faq_q_', ''))
+        await show_faq_answer(q, ctx, qid)
     elif data == 'back_to_menu':
         await show_main_menu_from_query(q)
 
@@ -938,7 +897,7 @@ async def goto_location(q, ctx):
     await show_main_menu_from_query(q)
 
 async def show_shop_menu(q, ctx):
-    kb = [[InlineKeyboardButton("⚡ Улучшения", callback_data='shop_category_upgrades')], [InlineKeyboardButton("🧰 Инструменты", callback_data='shop_category_tools')], [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
+    kb = [[InlineKeyboardButton("⚡ Улучшения", callback_data='shop_category_upgrades'), InlineKeyboardButton("🧰 Инструменты", callback_data='shop_category_tools')], [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
     txt = "🛒 **Магазин**\n\nЗдесь ты можешь улучшить своего шахтёра. Выбери категорию:\n\n⚡ Улучшения – прокачка навыков\n🧰 Инструменты – покупка и улучшение кирок"
     try:
         await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
@@ -1152,13 +1111,84 @@ async def show_profile(q, ctx):
             if tool:
                 tool_name = escape_markdown(tool['name'], version=1)
                 txt += f"• {tool_name} ур.{lvl}\n"
-    kb = [[InlineKeyboardButton("🏆 Достижения", callback_data='profile_achievements')], [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
+    kb = [[InlineKeyboardButton("🏆 Достижения", callback_data='profile_achievements'), InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
     try:
         await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
 
+async def show_inventory(q, ctx):
+    uid = q.from_user.id
+    inv = get_inventory(uid)
+    txt = "🎒 **Инвентарь**\n\nВот что ты накопал:\n\n"
+    has = False
+    for rid, info in RESOURCES.items():
+        amt = inv.get(rid, 0)
+        emoji = "🪨" if rid == 'coal' else "⚙️" if rid == 'iron' else "🟡" if rid == 'gold' else "💎" if rid == 'diamond' else "🔮"
+        name = escape_markdown(info['name'], version=1)
+        txt += f"{emoji} {name}: **{amt}** шт.\n"
+        if amt > 0:
+            has = True
+    if not has:
+        txt = "🎒 **Инвентарь**\n\nТвой инвентарь пока пуст. Иди добывай!\n\n"
+    txt += "\n─────────────────────────\nПродать ресурсы можно на рынке (/market)."
+    kb = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
+    try:
+        await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
+    except BadRequest as e:
+        if "Message is not modified" not in str(e):
+            logger.error(f"Error: {e}")
+
+async def show_market(q, ctx):
+    uid = q.from_user.id
+    inv = get_inventory(uid)
+    txt = "💰 **Рынок ресурсов**\n\nТвои запасы и текущие цены:\n\n"
+    kb = []
+    for rid, info in RESOURCES.items():
+        amt = inv.get(rid, 0)
+        price = info['base_price']
+        emoji = "🪨" if rid == 'coal' else "⚙️" if rid == 'iron' else "🟡" if rid == 'gold' else "💎" if rid == 'diamond' else "🔮"
+        name = escape_markdown(info['name'], version=1)
+        txt += f"{emoji} {name}: **{amt}** шт. | 💰 Цена: {price} за шт.\n"
+        if amt > 0:
+            kb.append([InlineKeyboardButton(f"Продать 1 {name}", callback_data=f'sell_{rid}_1'), InlineKeyboardButton(f"Продать всё", callback_data=f'sell_{rid}_all')])
+    txt += "\n─────────────────────────\nВыбери, что и сколько продать."
+    kb.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
+    try:
+        await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+    except BadRequest as e:
+        if "Message is not modified" not in str(e):
+            logger.error(f"Error: {e}")
+
+async def process_sell(q, ctx):
+    data = q.data
+    parts = data.split('_')
+    rid = parts[1]
+    sell_type = parts[2]
+    uid = q.from_user.id
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT amount FROM inventory WHERE user_id=? AND resource_id=?", (uid, rid))
+    r = c.fetchone()
+    if not r or r[0] == 0:
+        await q.answer("Нет ресурса!", show_alert=True)
+        conn.close()
+        return
+    avail = r[0]
+    qty = avail if sell_type == 'all' else 1
+    price = RESOURCES[rid]['base_price']
+    total = qty * price
+    c.execute("UPDATE inventory SET amount=amount-? WHERE user_id=? AND resource_id=?", (qty, uid, rid))
+    c.execute("UPDATE players SET gold=gold+? WHERE user_id=?", (total, uid))
+    conn.commit()
+    conn.close()
+    update_daily_task_progress(uid, 'Продавец', total)
+    update_weekly_task_progress(uid, 'Торговец', total)
+    await q.answer(f"✅ Продано {qty} {RESOURCES[rid]['name']} за {total}💰", show_alert=False)
+    await show_market(q, ctx)
+
+# ==================== ТАБЛИЦА ЛИДЕРОВ ====================
 async def show_leaderboard_menu(q, ctx):
     kb = [
         [InlineKeyboardButton("📊 По уровню", callback_data='leaderboard_level')],
@@ -1351,76 +1381,87 @@ async def show_leaderboard_total_resources(q, ctx):
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
 
-async def show_inventory(q, ctx):
-    uid = q.from_user.id
-    inv = get_inventory(uid)
-    txt = "🎒 **Инвентарь**\n\nВот что ты накопал:\n\n"
-    has = False
-    for rid, info in RESOURCES.items():
-        amt = inv.get(rid, 0)
-        emoji = "🪨" if rid == 'coal' else "⚙️" if rid == 'iron' else "🟡" if rid == 'gold' else "💎" if rid == 'diamond' else "🔮"
-        name = escape_markdown(info['name'], version=1)
-        txt += f"{emoji} {name}: **{amt}** шт.\n"
-        if amt > 0:
-            has = True
-    if not has:
-        txt = "🎒 **Инвентарь**\n\nТвой инвентарь пока пуст. Иди добывай!\n\n"
-    txt += "\n─────────────────────────\nПродать ресурсы можно на рынке (/market)."
-    kb = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
+# ==================== ИНТЕРАКТИВНЫЙ FAQ ====================
+async def show_faq_menu(query, ctx):
+    """Главное меню FAQ с категориями."""
+    kb = [
+        [InlineKeyboardButton("🪨 Основное", callback_data='faq_category_basic')],
+        [InlineKeyboardButton("🗺 Локации", callback_data='faq_category_locations')],
+        [InlineKeyboardButton("📋 Задания", callback_data='faq_category_tasks')],
+        [InlineKeyboardButton("💰 Экономика", callback_data='faq_category_economy')],
+        [InlineKeyboardButton("🔄 Инструменты", callback_data='faq_category_tools')],
+        [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]
+    ]
+    txt = "📚 **Часто задаваемые вопросы**\n\nВыберите категорию:"
     try:
-        await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
+        await query.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e):
-            logger.error(f"Error: {e}")
+            logger.error(f"Error in show_faq_menu: {e}")
 
-async def show_market(q, ctx):
-    uid = q.from_user.id
-    inv = get_inventory(uid)
-    txt = "💰 **Рынок ресурсов**\n\nТвои запасы и текущие цены:\n\n"
+async def show_faq_category(query, ctx, category_name, questions):
+    """Показывает вопросы выбранной категории в виде кнопок."""
+    text = f"📚 **{category_name}**\n\n"
     kb = []
-    for rid, info in RESOURCES.items():
-        amt = inv.get(rid, 0)
-        price = info['base_price']
-        emoji = "🪨" if rid == 'coal' else "⚙️" if rid == 'iron' else "🟡" if rid == 'gold' else "💎" if rid == 'diamond' else "🔮"
-        name = escape_markdown(info['name'], version=1)
-        txt += f"{emoji} {name}: **{amt}** шт. | 💰 Цена: {price} за шт.\n"
-        if amt > 0:
-            kb.append([InlineKeyboardButton(f"Продать 1 {name}", callback_data=f'sell_{rid}_1'), InlineKeyboardButton(f"Продать всё", callback_data=f'sell_{rid}_all')])
-    txt += "\n─────────────────────────\nВыбери, что и сколько продать."
-    kb.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
+    for idx, q_text in enumerate(questions):
+        kb.append([InlineKeyboardButton(q_text, callback_data=f'faq_q_{idx}')])
+    kb.append([InlineKeyboardButton("🔙 К категориям", callback_data='faq_menu')])
     try:
-        await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e):
-            logger.error(f"Error: {e}")
+            logger.error(f"Error in show_faq_category: {e}")
 
-async def process_sell(q, ctx):
-    data = q.data
-    parts = data.split('_')
-    rid = parts[1]
-    sell_type = parts[2]
-    uid = q.from_user.id
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT amount FROM inventory WHERE user_id=? AND resource_id=?", (uid, rid))
-    r = c.fetchone()
-    if not r or r[0] == 0:
-        await q.answer("Нет ресурса!", show_alert=True)
-        conn.close()
-        return
-    avail = r[0]
-    qty = avail if sell_type == 'all' else 1
-    price = RESOURCES[rid]['base_price']
-    total = qty * price
-    c.execute("UPDATE inventory SET amount=amount-? WHERE user_id=? AND resource_id=?", (qty, uid, rid))
-    c.execute("UPDATE players SET gold=gold+? WHERE user_id=?", (total, uid))
-    conn.commit()
-    conn.close()
-    update_daily_task_progress(uid, 'Продавец', total)
-    update_weekly_task_progress(uid, 'Торговец', total)
-    await q.answer(f"✅ Продано {qty} {RESOURCES[rid]['name']} за {total}💰", show_alert=False)
-    await show_market(q, ctx)
+async def show_faq_locations(query, ctx):
+    """Показывает все локации с прогресс-барами."""
+    uid = query.from_user.id
+    stats = get_player_stats(uid)
+    lvl = stats['level']
+    text = "🗺 **Локации**\n\n"
+    for loc_id, loc in LOCATIONS.items():
+        emoji = "🪨" if 'coal' in loc_id else "⚙️" if 'iron' in loc_id else "🟡" if 'gold' in loc_id else "💎" if 'diamond' in loc_id else "🔮"
+        name = loc['name']
+        req = loc['min_level']
+        status = "✅" if lvl >= req else "🔒"
+        progress = min(lvl, req)
+        percent = int(progress / req * 100) if req > 0 else 0
+        bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
+        text += f"{emoji} **{name}** {status}\n"
+        text += f"   Требуется уровень: {req}\n"
+        if lvl < req:
+            text += f"   Прогресс: {bar} {lvl}/{req}\n"
+        else:
+            text += f"   Доступна! (ваш уровень {lvl})\n"
+        text += "\n"
+    kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='faq_menu')]]
+    try:
+        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+    except BadRequest as e:
+        if "Message is not modified" not in str(e):
+            logger.error(f"Error in show_faq_locations: {e}")
 
+async def show_faq_answer(query, ctx, qid):
+    """Показывает ответ на выбранный вопрос."""
+    # Собираем все вопросы из всех категорий в один список
+    all_questions = []
+    for cat_questions in FAQ_CATEGORIES.values():
+        all_questions.extend(cat_questions)
+    if 0 <= qid < len(all_questions):
+        q_text = all_questions[qid]
+        answer = next((item['answer'] for item in FAQ if item['question'] == q_text), "Ответ не найден.")
+        q_esc = escape_markdown(q_text, version=1)
+        a_esc = escape_markdown(answer, version=1)
+        text = f"❓ **{q_esc}**\n\n{a_esc}"
+        kb = [[InlineKeyboardButton("🔙 К категории", callback_data='faq_menu')]]
+        try:
+            await query.edit_message_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+        except BadRequest as e:
+            if "Message is not modified" not in str(e):
+                logger.error(f"Error in show_faq_answer: {e}")
+    else:
+        await query.answer("Вопрос не найден", show_alert=True)
+
+# ==================== ВЕБ-СЕРВЕР ====================
 async def run_bot():
     logger.info("Starting bot polling...")
     app = Application.builder().token(TOKEN).build()
@@ -1446,7 +1487,7 @@ async def run_bot():
         while True:
             await asyncio.sleep(10)
     except Exception as e:
-        logger.error(f"Error: {e}", exc_info=True)
+        logger.error(f"Error in bot polling: {e}", exc_info=True)
 
 async def healthcheck(request):
     return JSONResponse({"status": "alive"})
@@ -1468,6 +1509,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
