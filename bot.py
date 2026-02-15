@@ -773,6 +773,87 @@ async def cmd_achievements(update, ctx):
     uid = update.effective_user.id
     await send_achievements(uid, ctx)
 
+# ==================== ИНТЕРАКТИВНЫЙ FAQ ====================
+async def show_faq_menu(query, ctx):
+    """Главное меню FAQ с категориями."""
+    kb = [
+        [InlineKeyboardButton("🪨 Основное", callback_data='faq_category_basic')],
+        [InlineKeyboardButton("🗺 Локации", callback_data='faq_category_locations')],
+        [InlineKeyboardButton("📋 Задания", callback_data='faq_category_tasks')],
+        [InlineKeyboardButton("💰 Экономика", callback_data='faq_category_economy')],
+        [InlineKeyboardButton("🔄 Инструменты", callback_data='faq_category_tools')],
+        [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]
+    ]
+    txt = "📚 **Часто задаваемые вопросы**\n\nВыберите категорию:"
+    try:
+        await query.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+    except BadRequest as e:
+        if "Message is not modified" not in str(e):
+            logger.error(f"Error in show_faq_menu: {e}")
+
+async def show_faq_category(query, ctx, category_name, questions):
+    """Показывает вопросы выбранной категории в виде кнопок."""
+    text = f"📚 **{category_name}**\n\n"
+    kb = []
+    for idx, q_text in enumerate(questions):
+        # Создаём кнопку с текстом вопроса
+        kb.append([InlineKeyboardButton(q_text, callback_data=f'faq_q_{idx}')])
+    kb.append([InlineKeyboardButton("🔙 К категориям", callback_data='faq_menu')])
+    try:
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(kb))
+    except BadRequest as e:
+        if "Message is not modified" not in str(e):
+            logger.error(f"Error in show_faq_category: {e}")
+
+async def show_faq_locations(query, ctx):
+    """Показывает все локации с прогресс-барами."""
+    uid = query.from_user.id
+    stats = get_player_stats(uid)
+    lvl = stats['level']
+    text = "🗺 **Локации**\n\n"
+    for loc_id, loc in LOCATIONS.items():
+        emoji = "🪨" if 'coal' in loc_id else "⚙️" if 'iron' in loc_id else "🟡" if 'gold' in loc_id else "💎" if 'diamond' in loc_id else "🔮"
+        name = loc['name']
+        req = loc['min_level']
+        status = "✅" if lvl >= req else "🔒"
+        progress = min(lvl, req)
+        percent = int(progress / req * 100) if req > 0 else 0
+        bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
+        text += f"{emoji} **{name}** {status}\n"
+        text += f"   Требуется уровень: {req}\n"
+        if lvl < req:
+            text += f"   Прогресс: {bar} {lvl}/{req}\n"
+        else:
+            text += f"   Доступна! (ваш уровень {lvl})\n"
+        text += "\n"
+    kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='faq_menu')]]
+    try:
+        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+    except BadRequest as e:
+        if "Message is not modified" not in str(e):
+            logger.error(f"Error in show_faq_locations: {e}")
+
+async def show_faq_answer(query, ctx, qid):
+    """Показывает ответ на выбранный вопрос."""
+    # Собираем все вопросы из всех категорий в один список
+    all_questions = []
+    for cat_questions in FAQ_CATEGORIES.values():
+        all_questions.extend(cat_questions)
+    if 0 <= qid < len(all_questions):
+        q_text = all_questions[qid]
+        answer = next((item['answer'] for item in FAQ if item['question'] == q_text), "Ответ не найден.")
+        q_esc = escape_markdown(q_text, version=1)
+        a_esc = escape_markdown(answer, version=1)
+        text = f"❓ **{q_esc}**\n\n{a_esc}"
+        kb = [[InlineKeyboardButton("🔙 К категории", callback_data='faq_menu')]]
+        try:
+            await query.edit_message_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+        except BadRequest as e:
+            if "Message is not modified" not in str(e):
+                logger.error(f"Error in show_faq_answer: {e}")
+    else:
+        await query.answer("Вопрос не найден", show_alert=True)
+
 async def cmd_help(update, ctx):
     txt = ("🪨 **Шахтёрский бот**\n\nТы начинающий шахтёр. Кликай, добывай ресурсы, продавай их, улучшай инструменты и открывай новые локации.\n\n**Команды:**\n/start - главное меню\n/mine - копнуть в текущей локации\n/locations - выбрать локацию\n/shop - магазин улучшений\n/tasks - задания\n/profile - твой профиль\n/inventory - ресурсы\n/market - продать ресурсы\n/leaderboard - топ игроков\n/achievements - мои достижения\n/faq - часто задаваемые вопросы\n/help - это сообщение")
     await update.message.reply_text(txt, parse_mode='Markdown')
@@ -1473,6 +1554,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
