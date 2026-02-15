@@ -486,10 +486,49 @@ async def button_handler(update: Update, ctx):
         await goto_location(q, ctx)
     elif data == 'back_to_menu':
         await show_main_menu_from_query(q)
-    # Лидеры будут добавлены в части 3, но для совместимости оставим заглушки или перенесём в часть 3
-    # Пока что мы не добавляем их сюда, так как в части 3 будут определения функций лидеров.
-    # Однако, чтобы код не падал, нужно либо добавить их сейчас, либо перенести в часть 3.
-    # Поскольку часть 3 ещё не готова, я пока их не включаю. Они появятся в части 3.
+    # Лидеры
+    elif data == 'leaderboard_menu':
+        await show_leaderboard_menu(q, ctx)
+    elif data == 'leaderboard_resources_menu':
+        await show_leaderboard_resources_menu(q, ctx)
+    elif data == 'leaderboard_level':
+        await show_leaderboard_level(q, ctx)
+    elif data == 'leaderboard_gold':
+        await show_leaderboard_gold(q, ctx)
+    elif data == 'leaderboard_achievements':
+        await show_leaderboard_achievements(q, ctx)
+    elif data == 'leaderboard_tasks_completed':
+        await show_leaderboard_tasks_completed(q, ctx)
+    elif data == 'leaderboard_tools':
+        await show_leaderboard_tools(q, ctx)
+    elif data == 'leaderboard_coal':
+        await show_leaderboard_coal(q, ctx)
+    elif data == 'leaderboard_iron':
+        await show_leaderboard_iron(q, ctx)
+    elif data == 'leaderboard_gold_ore':
+        await show_leaderboard_gold_ore(q, ctx)
+    elif data == 'leaderboard_diamond':
+        await show_leaderboard_diamond(q, ctx)
+    elif data == 'leaderboard_mithril':
+        await show_leaderboard_mithril(q, ctx)
+    elif data == 'leaderboard_total_resources':
+        await show_leaderboard_total_resources(q, ctx)
+    # FAQ
+    elif data == 'faq_menu':
+        await show_faq_menu(q, ctx)
+    elif data == 'faq_category_basic':
+        await show_faq_category(q, ctx, "🪨 Основное", FAQ_CATEGORIES["🪨 Основное"])
+    elif data == 'faq_category_locations':
+        await show_faq_locations(q, ctx)
+    elif data == 'faq_category_tasks':
+        await show_faq_category(q, ctx, "📋 Задания", FAQ_CATEGORIES["📋 Задания"])
+    elif data == 'faq_category_economy':
+        await show_faq_category(q, ctx, "💰 Экономика", FAQ_CATEGORIES["💰 Экономика"])
+    elif data == 'faq_category_tools':
+        await show_faq_category(q, ctx, "🔄 Инструменты", FAQ_CATEGORIES["🔄 Инструменты"])
+    elif data.startswith('faq_q_'):
+        qid = int(data.replace('faq_q_', ''))
+        await show_faq_answer(q, ctx, qid)
 
 async def mine_action(q, ctx):
     uid = q.from_user.id
@@ -1278,3 +1317,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
