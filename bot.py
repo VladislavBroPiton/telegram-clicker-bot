@@ -131,20 +131,90 @@ def condition_tool_master(uid):
     min_level = min(tools.get(tid, 0) for tid in all_tools)
     return min_level >= 3, min_level, 3
 
+def condition_clicks_300(uid):
+    stats = get_player_stats(uid)
+    return stats['clicks'] >= 300, stats['clicks'], 300
+
+def condition_clicks_500(uid):
+    stats = get_player_stats(uid)
+    return stats['clicks'] >= 500, stats['clicks'], 500
+
+def condition_clicks_1000(uid):
+    stats = get_player_stats(uid)
+    return stats['clicks'] >= 1000, stats['clicks'], 1000
+
+def condition_gold_1500(uid):
+    stats = get_player_stats(uid)
+    return stats['total_gold'] >= 1500, stats['total_gold'], 1500
+
+def condition_gold_5000(uid):
+    stats = get_player_stats(uid)
+    return stats['total_gold'] >= 5000, stats['total_gold'], 5000
+
+def condition_gold_20000(uid):
+    stats = get_player_stats(uid)
+    return stats['total_gold'] >= 20000, stats['total_gold'], 20000
+
+def condition_tools_all_level5(uid):
+    tools = get_player_tools(uid)
+    all_tools = list(TOOLS.keys())
+    if len(tools) != len(all_tools):
+        return False, len(tools), len(all_tools)
+    for tid in all_tools:
+        if tools.get(tid, 0) < 5:
+            return False, tools.get(tid, 0), 5
+    return True, 5, 5
+
+def condition_tools_all_purchased(uid):
+    tools = get_player_tools(uid)
+    all_tools = list(TOOLS.keys())
+    purchased = [tid for tid in all_tools if tid in tools]
+    return len(purchased) == len(all_tools), len(purchased), len(all_tools)
+
+def condition_tools_total_level_50(uid):
+    tools = get_player_tools(uid)
+    total = sum(tools.values())
+    return total >= 50, total, 50
+
+def condition_tools_total_level_100(uid):
+    tools = get_player_tools(uid)
+    total = sum(tools.values())
+    return total >= 100, total, 100
+
 ACHIEVEMENTS = [
-    Achievement('first_click', 'Первый шаг', 'Сделать первый клик', cond_first_click, 10, 5),
-    Achievement('clicks_100', 'Трудоголик', 'Сделать 100 кликов', cond_clicks_100, 50, 20),
+    # Базовые (оставлены с уточнёнными названиями)
+    Achievement('first_click', 'Первые шаги', 'Сделать первый клик', cond_first_click, 10, 5),
+    Achievement('clicks_100', 'Начинающий шахтёр', 'Сделать 100 кликов', cond_clicks_100, 50, 20),
+    Achievement('clicks_300', 'Трудоголик', 'Сделать 300 кликов', condition_clicks_300, 80, 35),
+    Achievement('clicks_500', 'Опытный шахтёр', 'Сделать 500 кликов', condition_clicks_500, 120, 50),
+    Achievement('clicks_1000', 'Ветеран', 'Сделать 1000 кликов', condition_clicks_1000, 200, 100),
+    
+    # Золото
     Achievement('gold_1000', 'Золотая жила', 'Добыть 1000 золота', cond_gold_1000, 100, 50),
-    Achievement('crits_50', 'Критическая масса', 'Получить 50 критических ударов', cond_crits_50, 80, 30),
-    Achievement('crit_streak_5', 'Везунчик', 'Достичь серии критов в 5', cond_crit_streak_5, 60, 25),
-    Achievement('resources_50', 'Коллекционер', 'Собрать 50 ресурсов', cond_resources_50, 70, 35),
-    Achievement('smith', 'Кузнец', 'Улучшить любой инструмент до 5 уровня', condition_smith, 150, 50),
-    Achievement('millionaire', 'Миллионер', 'Накопить 10 000 золота', condition_millionaire, 500, 200),
-    Achievement('explorer', 'Исследователь', 'Достичь максимального уровня и открыть все локации', condition_explorer, 300, 150),
-    Achievement('hardworker', 'Трудяга', 'Выполнить 50 заданий', condition_hardworker, 200, 100),
+    Achievement('gold_1500', 'Золотая лихорадка', 'Добыть 1500 золота', condition_gold_1500, 150, 75),
+    Achievement('gold_5000', 'Золотой магнат', 'Добыть 5000 золота', condition_gold_5000, 300, 150),
+    Achievement('gold_20000', 'Король золота', 'Добыть 20000 золота', condition_gold_20000, 600, 300),
+    
+    # Ресурсы
+    Achievement('resources_50', 'Коллекционер', 'Собрать 50 любых ресурсов', cond_resources_50, 70, 35),
     Achievement('collector_all', 'Абсолютный коллекционер', 'Собрать не менее 100 каждого ресурса', condition_collector_all, 400, 200),
+    
+    # Криты
+    Achievement('crits_50', 'Критическая масса', 'Получить 50 критических ударов', cond_crits_50, 80, 30),
     Achievement('crit_master', 'Критический удар', 'Получить 100 критических ударов', condition_crit_master, 250, 120),
-    Achievement('tool_master', 'Мастер инструментов', 'Все инструменты минимум 3 уровня', condition_tool_master, 350, 180)
+    Achievement('crit_streak_5', 'Везунчик', 'Достичь серии критов в 5', cond_crit_streak_5, 60, 25),
+    
+    # Инструменты
+    Achievement('smith', 'Кузнец', 'Улучшить любой инструмент до 5 уровня', condition_smith, 150, 50),
+    Achievement('tool_master', 'Мастер инструментов', 'Все инструменты минимум 3 уровня', condition_tool_master, 350, 180),
+    Achievement('tools_all_purchased', 'Коллекционер инструментов', 'Купить все виды кирок', condition_tools_all_purchased, 200, 100),
+    Achievement('tools_all_level5', 'Легендарный кузнец', 'Все инструменты 5 уровня', condition_tools_all_level5, 500, 250),
+    Achievement('tools_total_50', 'Сила инструментов I', 'Суммарный уровень инструментов 50', condition_tools_total_level_50, 150, 60),
+    Achievement('tools_total_100', 'Сила инструментов II', 'Суммарный уровень инструментов 100', condition_tools_total_level_100, 300, 150),
+    
+    # Задания
+    Achievement('hardworker', 'Трудяга', 'Выполнить 50 заданий', condition_hardworker, 200, 100),
+    Achievement('explorer', 'Исследователь', 'Достичь максимального уровня', condition_explorer, 300, 150),
 ]
 
 def get_db():
@@ -1343,4 +1413,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
