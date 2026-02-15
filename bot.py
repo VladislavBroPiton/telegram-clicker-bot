@@ -66,90 +66,23 @@ LOCATIONS = {
 }
 
 TOOLS = {
-    'wooden_pickaxe': {
-        'name': 'Деревянная кирка',
-        'description': 'Самая простая.',
-        'price': 0,
-        'required_level': 1,
-        'base_power': 1,
-        'upgrade_cost': {'coal': 5, 'iron': 2}
-    },
-    'stone_pickaxe': {
-        'name': 'Каменная кирка',
-        'description': 'Немного прочнее.',
-        'price': 100,
-        'required_level': 3,
-        'base_power': 2,
-        'upgrade_cost': {'coal': 10, 'iron': 5, 'gold': 1}
-    },
-    'iron_pickaxe': {
-        'name': 'Железная кирка',
-        'description': 'Хорошая кирка.',
-        'price': 500,
-        'required_level': 5,
-        'base_power': 3,
-        'upgrade_cost': {'coal': 20, 'iron': 10, 'gold': 3}
-    },
-    'golden_pickaxe': {
-        'name': 'Золотая кирка',
-        'description': 'Быстрая, но хрупкая.',
-        'price': 1000,
-        'required_level': 8,
-        'base_power': 2,
-        'upgrade_cost': {'coal': 30, 'iron': 15, 'gold': 10, 'diamond': 1}
-    },
-    'diamond_pickaxe': {
-        'name': 'Алмазная кирка',
-        'description': 'Прочная и эффективная.',
-        'price': 5000,
-        'required_level': 15,
-        'base_power': 4,
-        'upgrade_cost': {'coal': 50, 'iron': 30, 'gold': 20, 'diamond': 5}
-    },
-    'mithril_pickaxe': {
-        'name': 'Мифриловая кирка',
-        'description': 'Легендарная.',
-        'price': 20000,
-        'required_level': 25,
-        'base_power': 5,
-        'upgrade_cost': {'coal': 100, 'iron': 50, 'gold': 30, 'diamond': 10, 'mithril': 2}
-    }
+    'wooden_pickaxe': {'name': 'Деревянная кирка', 'description': 'Самая простая.', 'price': 0, 'required_level': 1, 'base_power': 1, 'upgrade_cost': {'coal': 5, 'iron': 2}},
+    'stone_pickaxe': {'name': 'Каменная кирка', 'description': 'Немного прочнее.', 'price': 100, 'required_level': 3, 'base_power': 2, 'upgrade_cost': {'coal': 10, 'iron': 5, 'gold': 1}},
+    'iron_pickaxe': {'name': 'Железная кирка', 'description': 'Хорошая кирка.', 'price': 500, 'required_level': 5, 'base_power': 3, 'upgrade_cost': {'coal': 20, 'iron': 10, 'gold': 3}},
+    'golden_pickaxe': {'name': 'Золотая кирка', 'description': 'Быстрая, но хрупкая.', 'price': 1000, 'required_level': 8, 'base_power': 2, 'upgrade_cost': {'coal': 30, 'iron': 15, 'gold': 10, 'diamond': 1}},
+    'diamond_pickaxe': {'name': 'Алмазная кирка', 'description': 'Прочная и эффективная.', 'price': 5000, 'required_level': 15, 'base_power': 4, 'upgrade_cost': {'coal': 50, 'iron': 30, 'gold': 20, 'diamond': 5}},
+    'mithril_pickaxe': {'name': 'Мифриловая кирка', 'description': 'Легендарная.', 'price': 20000, 'required_level': 25, 'base_power': 5, 'upgrade_cost': {'coal': 100, 'iron': 50, 'gold': 30, 'diamond': 10, 'mithril': 2}}
 }
 
-# ==================== ЧАСТО ЗАДАВАЕМЫЕ ВОПРОСЫ ====================
 FAQ = [
-    {
-        "question": "🪨 Как добывать ресурсы?",
-        "answer": "Нажимай кнопку «⛏ Добыть» в главном меню. Каждый клик приносит золото, опыт и случайные ресурсы в зависимости от текущей локации."
-    },
-    {
-        "question": "🗺 Как открыть новые локации?",
-        "answer": "Повышай уровень, кликая. Каждая новая локация требует определённый уровень. Список доступных локаций можно посмотреть по команде /locations. Там же отображается следующая локация и условия её открытия."
-    },
-    {
-        "question": "🧰 Зачем нужны инструменты?",
-        "answer": "Инструменты (кирки) увеличивают количество добываемых ресурсов. Их можно купить в магазине за золото, а затем улучшать за ресурсы. Чем выше уровень инструмента, тем больше ресурсов ты добываешь за клик."
-    },
-    {
-        "question": "📋 Что такое ежедневные и еженедельные задания?",
-        "answer": "Каждый день появляются 3 случайных задания, а каждую неделю – 2 более сложных. Выполняй их, чтобы получать дополнительное золото и опыт. Задания обновляются автоматически."
-    },
-    {
-        "question": "💰 Как продать ресурсы?",
-        "answer": "Зайди в раздел «💰 Рынок» (команда /market). Ты увидишь список своих ресурсов и текущие цены. Можно продать 1 единицу или всё количество сразу."
-    },
-    {
-        "question": "🏆 Что такое достижения?",
-        "answer": "Достижения – это особые цели, за выполнение которых даются награды (золото и опыт). Список полученных достижений можно увидеть в профиле (команда /profile)."
-    },
-    {
-        "question": "⚡ Как увеличить доход за клик?",
-        "answer": "Покупай улучшения в магазине (категория «⚡ Улучшения»). «Сила клика» прямо увеличивает золото за клик, а «Шанс крита» даёт шанс удвоить добычу."
-    },
-    {
-        "question": "🔄 Как сменить активный инструмент?",
-        "answer": "В магазине в категории «🧰 Инструменты» нажми кнопку «🔨 Сделать активным» рядом с нужным инструментом. Активный инструмент используется при добыче."
-    }
+    {"question": "🪨 Как добывать ресурсы?", "answer": "Нажимай кнопку «⛏ Добыть» в главном меню. Каждый клик приносит золото, опыт и случайные ресурсы в зависимости от текущей локации."},
+    {"question": "🗺 Как открыть новые локации?", "answer": "Повышай уровень, кликая. Каждая новая локация требует определённый уровень. Список доступных локаций можно посмотреть по команде /locations. Там же отображается следующая локация и условия её открытия."},
+    {"question": "🧰 Зачем нужны инструменты?", "answer": "Инструменты (кирки) увеличивают количество добываемых ресурсов. Их можно купить в магазине за золото, а затем улучшать за ресурсы. Чем выше уровень инструмента, тем больше ресурсов ты добываешь за клик."},
+    {"question": "📋 Что такое ежедневные и еженедельные задания?", "answer": "Каждый день появляются 3 случайных задания, а каждую неделю – 2 более сложных. Выполняй их, чтобы получать дополнительное золото и опыт. Задания обновляются автоматически."},
+    {"question": "💰 Как продать ресурсы?", "answer": "Зайди в раздел «💰 Рынок» (команда /market). Ты увидишь список своих ресурсов и текущие цены. Можно продать 1 единицу или всё количество сразу."},
+    {"question": "🏆 Что такое достижения?", "answer": "Достижения – это особые цели, за выполнение которых даются награды (золото и опыт). Посмотреть список своих достижений можно по команде /achievements или нажав кнопку «🏆 Достижения» в профиле."},
+    {"question": "⚡ Как увеличить доход за клик?", "answer": "Покупай улучшения в магазине (категория «⚡ Улучшения»). «Сила клика» прямо увеличивает золото за клик, а «Шанс крита» даёт шанс удвоить добычу."},
+    {"question": "🔄 Как сменить активный инструмент?", "answer": "В магазине в категории «🧰 Инструменты» нажми кнопку «🔨 Сделать активным» рядом с нужным инструментом. Активный инструмент используется при добыче."}
 ]
 
 class Achievement:
@@ -164,6 +97,39 @@ def cond_crits_50(uid):
 def cond_crit_streak_5(uid):
     conn=get_db(); c=conn.cursor(); c.execute("SELECT max_crit_streak FROM players WHERE user_id=?",(uid,)); r=c.fetchone()[0]; conn.close(); return r>=5, r, 5
 def cond_resources_50(uid): inv=get_inventory(uid); total=sum(inv.values()); return total>=50, total, 50
+def condition_smith(uid):
+    tools = get_player_tools(uid)
+    max_level = max(tools.values()) if tools else 0
+    return max_level >= 5, max_level, 5
+def condition_millionaire(uid):
+    stats = get_player_stats(uid)
+    return stats['total_gold'] >= 10000, stats['total_gold'], 10000
+def condition_explorer(uid):
+    max_loc_level = max(loc['min_level'] for loc in LOCATIONS.values())
+    stats = get_player_stats(uid)
+    return stats['level'] >= max_loc_level, stats['level'], max_loc_level
+def condition_hardworker(uid):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM daily_tasks WHERE completed=1")
+    daily = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM weekly_tasks WHERE completed=1")
+    weekly = c.fetchone()[0]
+    conn.close()
+    total = daily + weekly
+    return total >= 50, total, 50
+def condition_collector_all(uid):
+    inv = get_inventory(uid)
+    min_amount = min(inv.get(rid, 0) for rid in RESOURCES)
+    return min_amount >= 100, min_amount, 100
+def condition_crit_master(uid):
+    stats = get_player_stats(uid)
+    return stats['total_crits'] >= 100, stats['total_crits'], 100
+def condition_tool_master(uid):
+    tools = get_player_tools(uid)
+    all_tools = list(TOOLS.keys())
+    min_level = min(tools.get(tid, 0) for tid in all_tools)
+    return min_level >= 3, min_level, 3
 
 ACHIEVEMENTS = [
     Achievement('first_click', 'Первый шаг', 'Сделать первый клик', cond_first_click, 10, 5),
@@ -171,10 +137,16 @@ ACHIEVEMENTS = [
     Achievement('gold_1000', 'Золотая жила', 'Добыть 1000 золота', cond_gold_1000, 100, 50),
     Achievement('crits_50', 'Критическая масса', 'Получить 50 критических ударов', cond_crits_50, 80, 30),
     Achievement('crit_streak_5', 'Везунчик', 'Серия критов 5', cond_crit_streak_5, 60, 25),
-    Achievement('resources_50', 'Коллекционер', 'Собрать 50 ресурсов', cond_resources_50, 70, 35)
+    Achievement('resources_50', 'Коллекционер', 'Собрать 50 ресурсов', cond_resources_50, 70, 35),
+    Achievement('smith', 'Кузнец', 'Улучшить любой инструмент до 5 уровня', condition_smith, 150, 50),
+    Achievement('millionaire', 'Миллионер', 'Накопить 10 000 золота', condition_millionaire, 500, 200),
+    Achievement('explorer', 'Исследователь', 'Достичь максимального уровня и открыть все локации', condition_explorer, 300, 150),
+    Achievement('hardworker', 'Трудоголик', 'Выполнить 50 заданий', condition_hardworker, 200, 100),
+    Achievement('collector_all', 'Коллекционер', 'Собрать не менее 100 каждого ресурса', condition_collector_all, 400, 200),
+    Achievement('crit_master', 'Критический удар', 'Получить 100 критических ударов', condition_crit_master, 250, 120),
+    Achievement('tool_master', 'Мастер инструментов', 'Все инструменты минимум 3 уровня', condition_tool_master, 350, 180)
 ]
 
-# Новая функция для получения соединения с WAL
 def get_db():
     conn = sqlite3.connect('game.db')
     conn.execute('PRAGMA journal_mode=WAL')
@@ -183,83 +155,18 @@ def get_db():
 def init_db():
     conn = get_db()
     c = conn.cursor()
-    
-    c.execute('''CREATE TABLE IF NOT EXISTS players
-                 (user_id INTEGER PRIMARY KEY,
-                  username TEXT,
-                  level INTEGER DEFAULT 1,
-                  exp INTEGER DEFAULT 0,
-                  gold INTEGER DEFAULT 0,
-                  total_clicks INTEGER DEFAULT 0,
-                  total_gold_earned INTEGER DEFAULT 0,
-                  total_crits INTEGER DEFAULT 0,
-                  current_crit_streak INTEGER DEFAULT 0,
-                  max_crit_streak INTEGER DEFAULT 0,
-                  last_daily_reset DATE,
-                  last_weekly_reset DATE,
-                  current_location TEXT DEFAULT 'coal_mine',
-                  active_tool TEXT DEFAULT 'wooden_pickaxe')''')
-    
-    # Миграция для добавления поля active_tool (если его нет в старой базе)
+    c.execute('''CREATE TABLE IF NOT EXISTS players (user_id INTEGER PRIMARY KEY, username TEXT, level INTEGER DEFAULT 1, exp INTEGER DEFAULT 0, gold INTEGER DEFAULT 0, total_clicks INTEGER DEFAULT 0, total_gold_earned INTEGER DEFAULT 0, total_crits INTEGER DEFAULT 0, current_crit_streak INTEGER DEFAULT 0, max_crit_streak INTEGER DEFAULT 0, last_daily_reset DATE, last_weekly_reset DATE, current_location TEXT DEFAULT 'coal_mine', active_tool TEXT DEFAULT 'wooden_pickaxe')''')
     try:
         c.execute("ALTER TABLE players ADD COLUMN active_tool TEXT DEFAULT 'wooden_pickaxe'")
         logger.info("Column 'active_tool' added to players table.")
     except sqlite3.OperationalError:
         pass
-
-    c.execute('''CREATE TABLE IF NOT EXISTS upgrades
-                 (user_id INTEGER,
-                  upgrade_id TEXT,
-                  level INTEGER DEFAULT 0,
-                  PRIMARY KEY (user_id, upgrade_id))''')
-
-    c.execute('''CREATE TABLE IF NOT EXISTS daily_tasks
-                 (user_id INTEGER,
-                  task_id INTEGER,
-                  task_name TEXT,
-                  description TEXT,
-                  goal INTEGER,
-                  progress INTEGER DEFAULT 0,
-                  completed BOOLEAN DEFAULT 0,
-                  reward_gold INTEGER,
-                  reward_exp INTEGER,
-                  date DATE,
-                  PRIMARY KEY (user_id, task_id))''')
-
-    c.execute('''CREATE TABLE IF NOT EXISTS weekly_tasks
-                 (user_id INTEGER,
-                  task_id INTEGER,
-                  task_name TEXT,
-                  description TEXT,
-                  goal INTEGER,
-                  progress INTEGER DEFAULT 0,
-                  completed BOOLEAN DEFAULT 0,
-                  reward_gold INTEGER,
-                  reward_exp INTEGER,
-                  week TEXT,
-                  PRIMARY KEY (user_id, task_id, week))''')
-
-    c.execute('''CREATE TABLE IF NOT EXISTS user_achievements
-                 (user_id INTEGER,
-                  achievement_id TEXT,
-                  unlocked_at DATE,
-                  progress INTEGER,
-                  max_progress INTEGER,
-                  PRIMARY KEY (user_id, achievement_id))''')
-
-    c.execute('''CREATE TABLE IF NOT EXISTS inventory
-                 (user_id INTEGER,
-                  resource_id TEXT,
-                  amount INTEGER DEFAULT 0,
-                  PRIMARY KEY (user_id, resource_id))''')
-
-    c.execute('''CREATE TABLE IF NOT EXISTS player_tools
-                 (user_id INTEGER,
-                  tool_id TEXT,
-                  level INTEGER DEFAULT 1,
-                  experience INTEGER DEFAULT 0,
-                  PRIMARY KEY (user_id, tool_id))''')
-
+    c.execute('''CREATE TABLE IF NOT EXISTS upgrades (user_id INTEGER, upgrade_id TEXT, level INTEGER DEFAULT 0, PRIMARY KEY (user_id, upgrade_id))''')
+    c.execute('''CREATE TABLE IF NOT EXISTS daily_tasks (user_id INTEGER, task_id INTEGER, task_name TEXT, description TEXT, goal INTEGER, progress INTEGER DEFAULT 0, completed BOOLEAN DEFAULT 0, reward_gold INTEGER, reward_exp INTEGER, date DATE, PRIMARY KEY (user_id, task_id))''')
+    c.execute('''CREATE TABLE IF NOT EXISTS weekly_tasks (user_id INTEGER, task_id INTEGER, task_name TEXT, description TEXT, goal INTEGER, progress INTEGER DEFAULT 0, completed BOOLEAN DEFAULT 0, reward_gold INTEGER, reward_exp INTEGER, week TEXT, PRIMARY KEY (user_id, task_id, week))''')
+    c.execute('''CREATE TABLE IF NOT EXISTS user_achievements (user_id INTEGER, achievement_id TEXT, unlocked_at DATE, progress INTEGER, max_progress INTEGER, PRIMARY KEY (user_id, achievement_id))''')
+    c.execute('''CREATE TABLE IF NOT EXISTS inventory (user_id INTEGER, resource_id TEXT, amount INTEGER DEFAULT 0, PRIMARY KEY (user_id, resource_id))''')
+    c.execute('''CREATE TABLE IF NOT EXISTS player_tools (user_id INTEGER, tool_id TEXT, level INTEGER DEFAULT 1, experience INTEGER DEFAULT 0, PRIMARY KEY (user_id, tool_id))''')
     conn.commit()
     conn.close()
 
@@ -271,12 +178,9 @@ def get_player(uid, username=None):
     if not p:
         today = datetime.date.today().isoformat()
         cur_week = get_week_number()
-        c.execute("INSERT INTO players (user_id, username, last_daily_reset, last_weekly_reset) VALUES (?,?,?,?)",
-                  (uid, username, today, cur_week))
-        for uid2 in UPGRADES:
-            c.execute("INSERT INTO upgrades (user_id, upgrade_id, level) VALUES (?,?,0)", (uid, uid2))
-        for rid in RESOURCES:
-            c.execute("INSERT INTO inventory (user_id, resource_id, amount) VALUES (?,?,0)", (uid, rid))
+        c.execute("INSERT INTO players (user_id, username, last_daily_reset, last_weekly_reset) VALUES (?,?,?,?)", (uid, username, today, cur_week))
+        for uid2 in UPGRADES: c.execute("INSERT INTO upgrades (user_id, upgrade_id, level) VALUES (?,?,0)", (uid, uid2))
+        for rid in RESOURCES: c.execute("INSERT INTO inventory (user_id, resource_id, amount) VALUES (?,?,0)", (uid, rid))
         c.execute("INSERT INTO player_tools (user_id, tool_id, level, experience) VALUES (?,?,1,0)", (uid, 'wooden_pickaxe'))
         conn.commit()
         generate_daily_tasks(uid, conn)
@@ -318,18 +222,14 @@ def generate_daily_tasks(uid, conn=None):
         close = True
     c = conn.cursor()
     today = datetime.date.today().isoformat()
-    # Удаляем старые задания за сегодня
     c.execute("DELETE FROM daily_tasks WHERE user_id=? AND date=?", (uid, today))
     templates = random.sample(DAILY_TASK_TEMPLATES, min(3, len(DAILY_TASK_TEMPLATES)))
     for i, t in enumerate(templates):
         goal = random.randint(*t['goal'])
         desc = t['description'].format(goal)
-        # Используем INSERT OR REPLACE для надёжности
-        c.execute("INSERT OR REPLACE INTO daily_tasks (user_id, task_id, task_name, description, goal, reward_gold, reward_exp, date) VALUES (?,?,?,?,?,?,?,?)",
-                  (uid, i, t['name'], desc, goal, t['reward_gold'], t['reward_exp'], today))
+        c.execute("INSERT OR REPLACE INTO daily_tasks (user_id, task_id, task_name, description, goal, reward_gold, reward_exp, date) VALUES (?,?,?,?,?,?,?,?)", (uid, i, t['name'], desc, goal, t['reward_gold'], t['reward_exp'], today))
     conn.commit()
-    if close:
-        conn.close()
+    if close: conn.close()
 
 def check_daily_reset(uid):
     conn = get_db()
@@ -358,8 +258,7 @@ def update_daily_task_progress(uid, name_contains, delta):
     conn = get_db()
     c = conn.cursor()
     today = datetime.date.today().isoformat()
-    c.execute("UPDATE daily_tasks SET progress=progress+? WHERE user_id=? AND date=? AND completed=0 AND task_name LIKE ?",
-              (delta, uid, today, f'%{name_contains}%'))
+    c.execute("UPDATE daily_tasks SET progress=progress+? WHERE user_id=? AND date=? AND completed=0 AND task_name LIKE ?", (delta, uid, today, f'%{name_contains}%'))
     conn.commit()
     c.execute("SELECT task_id, goal, reward_gold, reward_exp FROM daily_tasks WHERE user_id=? AND date=? AND completed=0", (uid, today))
     tasks = c.fetchall()
@@ -373,8 +272,7 @@ def update_daily_task_progress(uid, name_contains, delta):
     conn.close()
 
 def get_week_number(d=None):
-    if d is None:
-        d = datetime.date.today()
+    if d is None: d = datetime.date.today()
     y, w, _ = d.isocalendar()
     return f"{y}-{w:02d}"
 
@@ -390,11 +288,9 @@ def generate_weekly_tasks(uid, conn=None):
     for i, t in enumerate(templates):
         goal = random.randint(*t['goal'])
         desc = t['description'].format(goal)
-        c.execute("INSERT OR REPLACE INTO weekly_tasks (user_id, task_id, task_name, description, goal, reward_gold, reward_exp, week) VALUES (?,?,?,?,?,?,?,?)",
-                  (uid, i, t['name'], desc, goal, t['reward_gold'], t['reward_exp'], week))
+        c.execute("INSERT OR REPLACE INTO weekly_tasks (user_id, task_id, task_name, description, goal, reward_gold, reward_exp, week) VALUES (?,?,?,?,?,?,?,?)", (uid, i, t['name'], desc, goal, t['reward_gold'], t['reward_exp'], week))
     conn.commit()
-    if close:
-        conn.close()
+    if close: conn.close()
 
 def check_weekly_reset(uid):
     conn = get_db()
@@ -423,8 +319,7 @@ def update_weekly_task_progress(uid, name_contains, delta):
     conn = get_db()
     c = conn.cursor()
     week = get_week_number()
-    c.execute("UPDATE weekly_tasks SET progress=progress+? WHERE user_id=? AND week=? AND completed=0 AND task_name LIKE ?",
-              (delta, uid, week, f'%{name_contains}%'))
+    c.execute("UPDATE weekly_tasks SET progress=progress+? WHERE user_id=? AND week=? AND completed=0 AND task_name LIKE ?", (delta, uid, week, f'%{name_contains}%'))
     conn.commit()
     c.execute("SELECT task_id, goal, reward_gold, reward_exp FROM weekly_tasks WHERE user_id=? AND week=? AND completed=0", (uid, week))
     tasks = c.fetchall()
@@ -498,22 +393,18 @@ def get_tool_level(uid, tid):
 
 def get_tool_power(uid, tid):
     level = get_tool_level(uid, tid)
-    if level == 0:
-        return 0
-    base = TOOLS[tid]['base_power']
-    return base + level - 1
+    if level == 0: return 0
+    return TOOLS[tid]['base_power'] + level - 1
 
 def get_upgrade_cost(uid, tid):
     level = get_tool_level(uid, tid)
-    if level == 0:
-        return {}
+    if level == 0: return {}
     base_cost = TOOLS[tid]['upgrade_cost']
     return {res: amount * level for res, amount in base_cost.items()}
 
 def can_upgrade_tool(uid, tid):
     level = get_tool_level(uid, tid)
-    if level == 0:
-        return False
+    if level == 0: return False
     cost = get_upgrade_cost(uid, tid)
     inv = get_inventory(uid)
     for res, need in cost.items():
@@ -522,8 +413,7 @@ def can_upgrade_tool(uid, tid):
     return True
 
 def upgrade_tool(uid, tid):
-    if not can_upgrade_tool(uid, tid):
-        return False
+    if not can_upgrade_tool(uid, tid): return False
     cost = get_upgrade_cost(uid, tid)
     conn = get_db()
     c = conn.cursor()
@@ -579,18 +469,7 @@ def get_player_stats(uid):
         res = c.fetchone()
         ups[uid2] = res[0] if res else 0
     conn.close()
-    return {
-        'level': lvl,
-        'exp': exp,
-        'exp_next': EXP_PER_LEVEL,
-        'gold': gold,
-        'clicks': clicks,
-        'total_gold': tg,
-        'total_crits': crits,
-        'current_crit_streak': cstreak,
-        'max_crit_streak': mstreak,
-        'upgrades': ups
-    }
+    return {'level': lvl, 'exp': exp, 'exp_next': EXP_PER_LEVEL, 'gold': gold, 'clicks': clicks, 'total_gold': tg, 'total_crits': crits, 'current_crit_streak': cstreak, 'max_crit_streak': mstreak, 'upgrades': ups}
 
 def get_click_reward(uid):
     s = get_player_stats(uid)
@@ -625,13 +504,11 @@ async def check_achievements(uid, ctx):
     unlocked = {r[0] for r in c.fetchall()}
     new_ach = []
     for ach in ACHIEVEMENTS:
-        if ach.id in unlocked:
-            continue
+        if ach.id in unlocked: continue
         achieved, prog, maxp = ach.condition_func(uid)
         if achieved:
             today = datetime.date.today().isoformat()
-            c.execute("INSERT INTO user_achievements (user_id, achievement_id, unlocked_at, progress, max_progress) VALUES (?,?,?,?,?)",
-                      (uid, ach.id, today, prog, maxp))
+            c.execute("INSERT INTO user_achievements (user_id, achievement_id, unlocked_at, progress, max_progress) VALUES (?,?,?,?,?)", (uid, ach.id, today, prog, maxp))
             c.execute("UPDATE players SET gold=gold+?, exp=exp+? WHERE user_id=?", (ach.reward_gold, ach.reward_exp, uid))
             new_ach.append(ach)
     conn.commit()
@@ -643,14 +520,38 @@ async def check_achievements(uid, ctx):
         await ctx.bot.send_message(chat_id=uid, text=txt)
     return len(new_ach)
 
+async def send_achievements(uid, ctx):
+    get_player(uid, None)
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id=?", (uid,))
+    unlocked = {row[0]: row[1] for row in c.fetchall()}
+    conn.close()
+    text = "🏆 **Ваши достижения**\n\n"
+    for ach in ACHIEVEMENTS:
+        if ach.id in unlocked:
+            text += f"✅ **{ach.name}** (получено {unlocked[ach.id]})\n   {ach.description}\n"
+            if ach.reward_gold > 0 or ach.reward_exp > 0:
+                text += f"   🎁 Награда: {ach.reward_gold}💰, {ach.reward_exp}✨\n"
+            text += "\n"
+        else:
+            achieved, prog, maxp = ach.condition_func(uid)
+            percent = int(prog / maxp * 100) if maxp else 0
+            bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
+            text += f"🔜 **{ach.name}**\n   {ach.description}\n"
+            text += f"   Прогресс: {prog}/{maxp} {bar}\n"
+            if ach.reward_gold > 0 or ach.reward_exp > 0:
+                text += f"   🎁 Награда: {ach.reward_gold}💰, {ach.reward_exp}✨\n"
+            text += "\n"
+    await ctx.bot.send_message(chat_id=uid, text=text, parse_mode='Markdown')
+
 class FakeQuery:
     def __init__(self, msg, from_user):
         self.message = msg
         self.from_user = from_user
         self.data = None
     async def answer(self, text=None, show_alert=False):
-        if text:
-            await self.message.reply_text(text)
+        if text: await self.message.reply_text(text)
     async def edit_message_text(self, text, reply_markup=None, parse_mode=None):
         await self.message.reply_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
 
@@ -660,37 +561,18 @@ async def start(update: Update, ctx):
     await show_main_menu(update, ctx)
 
 async def show_main_menu(update: Update, ctx):
-    kb = [[
-        InlineKeyboardButton("⛏ Добыть", callback_data='mine'),
-        InlineKeyboardButton("📋 Задания", callback_data='tasks'),
-        InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')
-    ]]
+    kb = [[InlineKeyboardButton("⛏ Добыть", callback_data='mine'), InlineKeyboardButton("📋 Задания", callback_data='tasks'), InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')]]
     rm = InlineKeyboardMarkup(kb)
-    txt = ("🪨 **Шахтёрская глубина**\n\n"
-           "Привет, шахтёр! Твой путь к богатству начинается здесь.\n\n"
-           "🏁 **Что делать?**\n"
-           "• Нажимай «⛏ Добыть» – каждый клик приносит золото и ресурсы.\n"
-           "• Выполняй «📋 Задания» – получай бонусы.\n"
-           "• Соревнуйся в «🏆 Лидеры» – стань лучшим!\n\n"
-           "Остальные команды доступны в меню (кнопка слева внизу).")
+    txt = ("🪨 **Шахтёрская глубина**\n\nПривет, шахтёр! Твой путь к богатству начинается здесь.\n\n🏁 **Что делать?**\n• Нажимай «⛏ Добыть» – каждый клик приносит золото и ресурсы.\n• Выполняй «📋 Задания» – получай бонусы.\n• Соревнуйся в «🏆 Лидеры» – стань лучшим!\n\nОстальные команды доступны в меню (кнопка слева внизу).")
     if update.callback_query:
         await update.callback_query.edit_message_text(txt, parse_mode='Markdown', reply_markup=rm)
     else:
         await update.message.reply_text(txt, parse_mode='Markdown', reply_markup=rm)
 
 async def show_main_menu_from_query(query):
-    kb = [[
-        InlineKeyboardButton("⛏ Добыть", callback_data='mine'),
-        InlineKeyboardButton("📋 Задания", callback_data='tasks'),
-        InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')
-    ]]
+    kb = [[InlineKeyboardButton("⛏ Добыть", callback_data='mine'), InlineKeyboardButton("📋 Задания", callback_data='tasks'), InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')]]
     rm = InlineKeyboardMarkup(kb)
-    txt = ("🪨 **Главное меню**\n\n"
-           "🏁 **Куда идём?**\n"
-           "• ⛏ Добыча – вперёд за ресурсами!\n"
-           "• 📋 Задания – ежедневные и еженедельные.\n"
-           "• 🏆 Лидеры – посмотреть топ игроков.\n\n"
-           "Остальные команды – в меню Telegram.")
+    txt = ("🪨 **Главное меню**\n\n🏁 **Куда идём?**\n• ⛏ Добыча – вперёд за ресурсами!\n• 📋 Задания – ежедневные и еженедельные.\n• 🏆 Лидеры – посмотреть топ игроков.\n\nОстальные команды – в меню Telegram.")
     try:
         await query.edit_message_text(txt, parse_mode='Markdown', reply_markup=rm)
     except BadRequest as e:
@@ -740,24 +622,11 @@ async def cmd_leaderboard(update, ctx):
 async def cmd_faq(update, ctx):
     faq_dict = {item["question"]: item["answer"] for item in FAQ}
     categories = {
-        "🪨 **Основное**": [
-            "🪨 Как добывать ресурсы?",
-            "🧰 Зачем нужны инструменты?",
-            "⚡ Как увеличить доход за клик?"
-        ],
-        "🗺 **Локации**": [
-            "🗺 Как открыть новые локации?"
-        ],
-        "📋 **Задания**": [
-            "📋 Что такое ежедневные и еженедельные задания?"
-        ],
-        "💰 **Экономика**": [
-            "💰 Как продать ресурсы?",
-            "🏆 Что такое достижения?"
-        ],
-        "🔄 **Инструменты**": [
-            "🔄 Как сменить активный инструмент?"
-        ]
+        "🪨 **Основное**": ["🪨 Как добывать ресурсы?", "🧰 Зачем нужны инструменты?", "⚡ Как увеличить доход за клик?"],
+        "🗺 **Локации**": ["🗺 Как открыть новые локации?"],
+        "📋 **Задания**": ["📋 Что такое ежедневные и еженедельные задания?"],
+        "💰 **Экономика**": ["💰 Как продать ресурсы?", "🏆 Что такое достижения?"],
+        "🔄 **Инструменты**": ["🔄 Как сменить активный инструмент?"]
     }
     text = "📚 **Часто задаваемые вопросы**\n\n"
     for category, questions in categories.items():
@@ -770,21 +639,12 @@ async def cmd_faq(update, ctx):
         text += "\n"
     await update.message.reply_text(text, parse_mode='Markdown')
 
+async def cmd_achievements(update, ctx):
+    uid = update.effective_user.id
+    await send_achievements(uid, ctx)
+
 async def cmd_help(update, ctx):
-    txt = ("🪨 **Шахтёрский бот**\n\n"
-           "Ты начинающий шахтёр. Кликай, добывай ресурсы, продавай их, улучшай инструменты и открывай новые локации.\n\n"
-           "**Команды:**\n"
-           "/start - главное меню\n"
-           "/mine - копнуть в текущей локации\n"
-           "/locations - выбрать локацию\n"
-           "/shop - магазин улучшений\n"
-           "/tasks - задания\n"
-           "/profile - твой профиль\n"
-           "/inventory - ресурсы\n"
-           "/market - продать ресурсы\n"
-           "/leaderboard - топ игроков\n"
-           "/faq - часто задаваемые вопросы\n"
-           "/help - это сообщение")
+    txt = ("🪨 **Шахтёрский бот**\n\nТы начинающий шахтёр. Кликай, добывай ресурсы, продавай их, улучшай инструменты и открывай новые локации.\n\n**Команды:**\n/start - главное меню\n/mine - копнуть в текущей локации\n/locations - выбрать локацию\n/shop - магазин улучшений\n/tasks - задания\n/profile - твой профиль\n/inventory - ресурсы\n/market - продать ресурсы\n/leaderboard - топ игроков\n/achievements - мои достижения\n/faq - часто задаваемые вопросы\n/help - это сообщение")
     await update.message.reply_text(txt, parse_mode='Markdown')
 
 async def button_handler(update: Update, ctx):
@@ -818,6 +678,8 @@ async def button_handler(update: Update, ctx):
         await show_tasks(q, ctx)
     elif data == 'profile':
         await show_profile(q, ctx)
+    elif data == 'profile_achievements':
+        await send_achievements(uid, ctx)
     elif data == 'leaderboard_menu':
         await show_leaderboard_menu(q, ctx)
     elif data == 'leaderboard_resources_menu':
@@ -881,8 +743,7 @@ async def mine_action(q, ctx):
             amt = max(1, amt)
     conn = get_db()
     c = conn.cursor()
-    c.execute("UPDATE players SET gold=gold+?, exp=exp+?, total_clicks=total_clicks+1, total_gold_earned=total_gold_earned+? WHERE user_id=?",
-              (gold, exp, gold, uid))
+    c.execute("UPDATE players SET gold=gold+?, exp=exp+?, total_clicks=total_clicks+1, total_gold_earned=total_gold_earned+? WHERE user_id=?", (gold, exp, gold, uid))
     if is_crit:
         c.execute("UPDATE players SET total_crits=total_crits+1, current_crit_streak=current_crit_streak+1, max_crit_streak=MAX(max_crit_streak, current_crit_streak) WHERE user_id=?", (uid,))
     else:
@@ -962,15 +823,8 @@ async def goto_location(q, ctx):
     await show_main_menu_from_query(q)
 
 async def show_shop_menu(q, ctx):
-    kb = [
-        [InlineKeyboardButton("⚡ Улучшения", callback_data='shop_category_upgrades')],
-        [InlineKeyboardButton("🧰 Инструменты", callback_data='shop_category_tools')],
-        [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]
-    ]
-    txt = ("🛒 **Магазин**\n\n"
-           "Здесь ты можешь улучшить своего шахтёра. Выбери категорию:\n\n"
-           "⚡ Улучшения – прокачка навыков\n"
-           "🧰 Инструменты – покупка и улучшение кирок")
+    kb = [[InlineKeyboardButton("⚡ Улучшения", callback_data='shop_category_upgrades')], [InlineKeyboardButton("🧰 Инструменты", callback_data='shop_category_tools')], [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
+    txt = "🛒 **Магазин**\n\nЗдесь ты можешь улучшить своего шахтёра. Выбери категорию:\n\n⚡ Улучшения – прокачка навыков\n🧰 Инструменты – покупка и улучшение кирок"
     try:
         await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
@@ -1094,15 +948,8 @@ async def upgrade_tool_handler(q, ctx):
         return
     cost = get_upgrade_cost(uid, tid)
     cost_text = "\n".join([f"{escape_markdown(RESOURCES[res]['name'], version=1)}: {amt}" for res, amt in cost.items()])
-    kb = [[
-        InlineKeyboardButton("✅ Подтвердить", callback_data=f'confirm_upgrade_{tid}'),
-        InlineKeyboardButton("❌ Отмена", callback_data='back_to_shop_tools')
-    ]]
-    await q.edit_message_text(
-        f"⬆️ Улучшение {escape_markdown(TOOLS[tid]['name'], version=1)} до ур.{get_tool_level(uid, tid)+1}\n\nПотребуется:\n{cost_text}\n\nПодтверждаешь?",
-        parse_mode='Markdown',
-        reply_markup=InlineKeyboardMarkup(kb)
-    )
+    kb = [[InlineKeyboardButton("✅ Подтвердить", callback_data=f'confirm_upgrade_{tid}'), InlineKeyboardButton("❌ Отмена", callback_data='back_to_shop_tools')]]
+    await q.edit_message_text(f"⬆️ Улучшение {escape_markdown(TOOLS[tid]['name'], version=1)} до ур.{get_tool_level(uid, tid)+1}\n\nПотребуется:\n{cost_text}\n\nПодтверждаешь?", parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
 
 async def confirm_upgrade(q, ctx):
     tid = q.data.replace('confirm_upgrade_', '')
@@ -1145,7 +992,7 @@ async def show_tasks(q, ctx):
         txt += "Нет заданий на эту неделю.\n\n"
     kb = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
     try:
-        await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+        await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
@@ -1157,19 +1004,7 @@ async def show_profile(q, ctx):
         await q.edit_message_text("Профиль не найден.")
         return
     username = escape_markdown(q.from_user.username or 'Аноним', version=1)
-    txt = (f"👤 **Профиль игрока**\n\n"
-           f"📊 **Статистика**\n"
-           f"• Уровень: **{stats['level']}**\n"
-           f"• Опыт: **{stats['exp']}** / {stats['exp_next']}\n"
-           f"• Золото: **{stats['gold']}**💰\n"
-           f"• Всего кликов: **{stats['clicks']}**\n"
-           f"• Всего добыто золота: **{stats['total_gold']}**💰\n"
-           f"• Критические удары: **{stats['total_crits']}**\n"
-           f"• Макс. серия критов: **{stats['max_crit_streak']}**\n\n"
-           f"⚡ **Улучшения**\n"
-           f"• Сила клика: ур.**{stats['upgrades']['click_power']}**\n"
-           f"• Шанс крита: ур.**{stats['upgrades']['crit_chance']}**\n"
-           f"• Автокликер: ур.**{stats['upgrades']['auto_clicker']}**\n")
+    txt = (f"👤 **Профиль игрока**\n\n📊 **Статистика**\n• Уровень: **{stats['level']}**\n• Опыт: **{stats['exp']}** / {stats['exp_next']}\n• Золото: **{stats['gold']}**💰\n• Всего кликов: **{stats['clicks']}**\n• Всего добыто золота: **{stats['total_gold']}**💰\n• Критические удары: **{stats['total_crits']}**\n• Макс. серия критов: **{stats['max_crit_streak']}**\n\n⚡ **Улучшения**\n• Сила клика: ур.**{stats['upgrades']['click_power']}**\n• Шанс крита: ур.**{stats['upgrades']['crit_chance']}**\n• Автокликер: ур.**{stats['upgrades']['auto_clicker']}**\n")
     conn = get_db()
     c = conn.cursor()
     c.execute("SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id=? ORDER BY unlocked_at DESC LIMIT 5", (uid,))
@@ -1192,14 +1027,13 @@ async def show_profile(q, ctx):
             if tool:
                 tool_name = escape_markdown(tool['name'], version=1)
                 txt += f"• {tool_name} ур.{lvl}\n"
-    kb = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
+    kb = [[InlineKeyboardButton("🏆 Достижения", callback_data='profile_achievements')], [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
     try:
         await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
 
-# ==================== ТАБЛИЦА ЛИДЕРОВ (УЛУЧШЕННАЯ СТРУКТУРА) ====================
 async def show_leaderboard_menu(q, ctx):
     kb = [
         [InlineKeyboardButton("📊 По уровню", callback_data='leaderboard_level')],
@@ -1210,8 +1044,7 @@ async def show_leaderboard_menu(q, ctx):
         [InlineKeyboardButton("📦 По ресурсам", callback_data='leaderboard_resources_menu')],
         [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]
     ]
-    txt = ("🏆 **Таблица лидеров**\n\n"
-           "Выбери категорию для просмотра топ-10 игроков:")
+    txt = ("🏆 **Таблица лидеров**\n\nВыбери категорию для просмотра топ-10 игроков:")
     try:
         await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
@@ -1228,8 +1061,7 @@ async def show_leaderboard_resources_menu(q, ctx):
         [InlineKeyboardButton("📦 По общему количеству", callback_data='leaderboard_total_resources')],
         [InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]
     ]
-    txt = ("📦 **Лидеры по ресурсам**\n\n"
-           "Выбери конкретный ресурс или общее количество:")
+    txt = ("📦 **Лидеры по ресурсам**\n\nВыбери конкретный ресурс или общее количество:")
     try:
         await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
@@ -1279,12 +1111,7 @@ async def show_leaderboard_gold(q, ctx):
 async def show_leaderboard_achievements(q, ctx):
     conn = get_db()
     c = conn.cursor()
-    c.execute('''SELECT p.username, COUNT(ua.achievement_id) as cnt
-                 FROM players p
-                 LEFT JOIN user_achievements ua ON p.user_id = ua.user_id
-                 GROUP BY p.user_id
-                 ORDER BY cnt DESC
-                 LIMIT 10''')
+    c.execute('''SELECT p.username, COUNT(ua.achievement_id) as cnt FROM players p LEFT JOIN user_achievements ua ON p.user_id = ua.user_id GROUP BY p.user_id ORDER BY cnt DESC LIMIT 10''')
     top = c.fetchall()
     conn.close()
     txt = "🏆 **Топ по достижениям**\n\n"
@@ -1336,12 +1163,7 @@ async def show_leaderboard_tasks_completed(q, ctx):
 async def show_leaderboard_tools(q, ctx):
     conn = get_db()
     c = conn.cursor()
-    c.execute('''SELECT p.username, SUM(pt.level) as total
-                 FROM players p
-                 LEFT JOIN player_tools pt ON p.user_id = pt.user_id
-                 GROUP BY p.user_id
-                 ORDER BY total DESC
-                 LIMIT 10''')
+    c.execute('''SELECT p.username, SUM(pt.level) as total FROM players p LEFT JOIN player_tools pt ON p.user_id = pt.user_id GROUP BY p.user_id ORDER BY total DESC LIMIT 10''')
     top = c.fetchall()
     conn.close()
     txt = "🔨 **Топ по уровню инструментов**\n\n"
@@ -1384,16 +1206,10 @@ async def show_leaderboard_iron(q, ctx): await show_leaderboard_resource(q, ctx,
 async def show_leaderboard_gold_ore(q, ctx): await show_leaderboard_resource(q, ctx, 'gold', 'Золотая руда')
 async def show_leaderboard_diamond(q, ctx): await show_leaderboard_resource(q, ctx, 'diamond', 'Алмазы')
 async def show_leaderboard_mithril(q, ctx): await show_leaderboard_resource(q, ctx, 'mithril', 'Мифрил')
-
 async def show_leaderboard_total_resources(q, ctx):
     conn = get_db()
     c = conn.cursor()
-    c.execute('''SELECT p.username, SUM(i.amount) as total
-                 FROM players p
-                 LEFT JOIN inventory i ON p.user_id = i.user_id
-                 GROUP BY p.user_id
-                 ORDER BY total DESC
-                 LIMIT 10''')
+    c.execute('''SELECT p.username, SUM(i.amount) as total FROM players p LEFT JOIN inventory i ON p.user_id = i.user_id GROUP BY p.user_id ORDER BY total DESC LIMIT 10''')
     top = c.fetchall()
     conn.close()
     txt = "📦 **Топ по общему количеству ресурсов**\n\n"
@@ -1444,8 +1260,7 @@ async def show_market(q, ctx):
         name = escape_markdown(info['name'], version=1)
         txt += f"{emoji} {name}: **{amt}** шт. | 💰 Цена: {price} за шт.\n"
         if amt > 0:
-            kb.append([InlineKeyboardButton(f"Продать 1 {name}", callback_data=f'sell_{rid}_1'),
-                       InlineKeyboardButton(f"Продать всё", callback_data=f'sell_{rid}_all')])
+            kb.append([InlineKeyboardButton(f"Продать 1 {name}", callback_data=f'sell_{rid}_1'), InlineKeyboardButton(f"Продать всё", callback_data=f'sell_{rid}_all')])
     txt += "\n─────────────────────────\nВыбери, что и сколько продать."
     kb.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
     try:
@@ -1494,6 +1309,7 @@ async def run_bot():
     app.add_handler(CommandHandler("market", cmd_market))
     app.add_handler(CommandHandler("leaderboard", cmd_leaderboard))
     app.add_handler(CommandHandler("faq", cmd_faq))
+    app.add_handler(CommandHandler("achievements", cmd_achievements))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CallbackQueryHandler(button_handler))
     try:
