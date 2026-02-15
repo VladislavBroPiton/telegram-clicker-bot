@@ -689,12 +689,6 @@ async def cmd_leaderboard(update, ctx):
     get_player(u.id, u.username)
     await show_leaderboard_menu(FakeQuery(update.message, u), ctx)
 
-async def cmd_faq(update, ctx):
-    uid = update.effective_user.id
-    stats = get_player_stats(uid)
-    lvl = stats['level']
-    faq_dict = {item["question"]: item["answer"] for item in FAQ}
-    
     # Создаём динамический ответ для локаций с прогресс-барами
     locations_info = "🗺 **Список локаций и ресурсов:**\n\n"
     for loc_id, loc in LOCATIONS.items():
@@ -1521,6 +1515,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
