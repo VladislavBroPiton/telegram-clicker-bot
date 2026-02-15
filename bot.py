@@ -1079,7 +1079,12 @@ async def show_tasks(q, ctx):
     if daily:
         for t in daily:
             _, n, desc, g, prog, com, rg, re = t
-            st = "✅" if com else f"{prog}/{g}"
+            if com:
+                st = "✅"
+            else:
+                percent = int(prog / g * 100) if g > 0 else 0
+                bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
+                st = f"{prog}/{g} {bar}"
             name = escape_markdown(n, version=1)
             desc_esc = escape_markdown(desc, version=1)
             txt += f"🔹 {name}: {desc_esc}\n   Прогресс: {st}\n   Награда: {rg}💰 + {re}✨\n\n"
@@ -1089,7 +1094,12 @@ async def show_tasks(q, ctx):
     if weekly:
         for t in weekly:
             _, n, desc, g, prog, com, rg, re = t
-            st = "✅" if com else f"{prog}/{g}"
+            if com:
+                st = "✅"
+            else:
+                percent = int(prog / g * 100) if g > 0 else 0
+                bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
+                st = f"{prog}/{g} {bar}"
             name = escape_markdown(n, version=1)
             desc_esc = escape_markdown(desc, version=1)
             txt += f"🔸 {name}: {desc_esc}\n   Прогресс: {st}\n   Награда: {rg}💰 + {re}✨\n\n"
@@ -1448,4 +1458,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
