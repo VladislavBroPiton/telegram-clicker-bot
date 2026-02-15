@@ -136,13 +136,13 @@ ACHIEVEMENTS = [
     Achievement('clicks_100', 'Трудоголик', 'Сделать 100 кликов', cond_clicks_100, 50, 20),
     Achievement('gold_1000', 'Золотая жила', 'Добыть 1000 золота', cond_gold_1000, 100, 50),
     Achievement('crits_50', 'Критическая масса', 'Получить 50 критических ударов', cond_crits_50, 80, 30),
-    Achievement('crit_streak_5', 'Везунчик', 'Серия критов 5', cond_crit_streak_5, 60, 25),
+    Achievement('crit_streak_5', 'Везунчик', 'Достичь серии критов в 5', cond_crit_streak_5, 60, 25),
     Achievement('resources_50', 'Коллекционер', 'Собрать 50 ресурсов', cond_resources_50, 70, 35),
     Achievement('smith', 'Кузнец', 'Улучшить любой инструмент до 5 уровня', condition_smith, 150, 50),
     Achievement('millionaire', 'Миллионер', 'Накопить 10 000 золота', condition_millionaire, 500, 200),
     Achievement('explorer', 'Исследователь', 'Достичь максимального уровня и открыть все локации', condition_explorer, 300, 150),
-    Achievement('hardworker', 'Трудоголик', 'Выполнить 50 заданий', condition_hardworker, 200, 100),
-    Achievement('collector_all', 'Коллекционер', 'Собрать не менее 100 каждого ресурса', condition_collector_all, 400, 200),
+    Achievement('hardworker', 'Трудяга', 'Выполнить 50 заданий', condition_hardworker, 200, 100),
+    Achievement('collector_all', 'Абсолютный коллекционер', 'Собрать не менее 100 каждого ресурса', condition_collector_all, 400, 200),
     Achievement('crit_master', 'Критический удар', 'Получить 100 критических ударов', condition_crit_master, 250, 120),
     Achievement('tool_master', 'Мастер инструментов', 'Все инструменты минимум 3 уровня', condition_tool_master, 350, 180)
 ]
@@ -1343,3 +1343,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
