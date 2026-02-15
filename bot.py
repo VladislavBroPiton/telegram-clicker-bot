@@ -160,9 +160,9 @@ def cond_first_click(uid): s=get_player_stats(uid); return s['clicks']>=1, s['cl
 def cond_clicks_100(uid): s=get_player_stats(uid); return s['clicks']>=100, s['clicks'], 100
 def cond_gold_1000(uid): s=get_player_stats(uid); return s['total_gold']>=1000, s['total_gold'], 1000
 def cond_crits_50(uid):
-    conn=sqlite3.connect('game.db'); c=conn.cursor(); c.execute("SELECT total_crits FROM players WHERE user_id=?",(uid,)); r=c.fetchone()[0]; conn.close(); return r>=50, r, 50
+    conn=get_db(); c=conn.cursor(); c.execute("SELECT total_crits FROM players WHERE user_id=?",(uid,)); r=c.fetchone()[0]; conn.close(); return r>=50, r, 50
 def cond_crit_streak_5(uid):
-    conn=sqlite3.connect('game.db'); c=conn.cursor(); c.execute("SELECT max_crit_streak FROM players WHERE user_id=?",(uid,)); r=c.fetchone()[0]; conn.close(); return r>=5, r, 5
+    conn=get_db(); c=conn.cursor(); c.execute("SELECT max_crit_streak FROM players WHERE user_id=?",(uid,)); r=c.fetchone()[0]; conn.close(); return r>=5, r, 5
 def cond_resources_50(uid): inv=get_inventory(uid); total=sum(inv.values()); return total>=50, total, 50
 
 ACHIEVEMENTS = [
@@ -174,8 +174,14 @@ ACHIEVEMENTS = [
     Achievement('resources_50', 'Коллекционер', 'Собрать 50 ресурсов', cond_resources_50, 70, 35)
 ]
 
-def init_db():
+# Новая функция для получения соединения с WAL
+def get_db():
     conn = sqlite3.connect('game.db')
+    conn.execute('PRAGMA journal_mode=WAL')
+    return conn
+
+def init_db():
+    conn = get_db()
     c = conn.cursor()
     
     c.execute('''CREATE TABLE IF NOT EXISTS players
@@ -258,7 +264,7 @@ def init_db():
     conn.close()
 
 def get_player(uid, username=None):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT * FROM players WHERE user_id=?", (uid,))
     p = c.fetchone()
@@ -282,7 +288,7 @@ def get_player(uid, username=None):
     return p
 
 def update_player(uid, **kwargs):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     set_clause = ', '.join([f"{k}=?" for k in kwargs])
     vals = list(kwargs.values()) + [uid]
@@ -291,7 +297,7 @@ def update_player(uid, **kwargs):
     conn.close()
 
 def get_upgrade_level(uid, uid2):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT level FROM upgrades WHERE user_id=? AND upgrade_id=?", (uid, uid2))
     r = c.fetchone()
@@ -299,7 +305,7 @@ def get_upgrade_level(uid, uid2):
     return r[0] if r else 0
 
 def set_upgrade_level(uid, uid2, lvl):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("UPDATE upgrades SET level=? WHERE user_id=? AND upgrade_id=?", (lvl, uid, uid2))
     conn.commit()
@@ -308,23 +314,25 @@ def set_upgrade_level(uid, uid2, lvl):
 def generate_daily_tasks(uid, conn=None):
     close = False
     if conn is None:
-        conn = sqlite3.connect('game.db')
+        conn = get_db()
         close = True
     c = conn.cursor()
     today = datetime.date.today().isoformat()
+    # Удаляем старые задания за сегодня
     c.execute("DELETE FROM daily_tasks WHERE user_id=? AND date=?", (uid, today))
     templates = random.sample(DAILY_TASK_TEMPLATES, min(3, len(DAILY_TASK_TEMPLATES)))
     for i, t in enumerate(templates):
         goal = random.randint(*t['goal'])
         desc = t['description'].format(goal)
-        c.execute("INSERT INTO daily_tasks (user_id, task_id, task_name, description, goal, reward_gold, reward_exp, date) VALUES (?,?,?,?,?,?,?,?)",
+        # Используем INSERT OR REPLACE для надёжности
+        c.execute("INSERT OR REPLACE INTO daily_tasks (user_id, task_id, task_name, description, goal, reward_gold, reward_exp, date) VALUES (?,?,?,?,?,?,?,?)",
                   (uid, i, t['name'], desc, goal, t['reward_gold'], t['reward_exp'], today))
     conn.commit()
     if close:
         conn.close()
 
 def check_daily_reset(uid):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT last_daily_reset FROM players WHERE user_id=?", (uid,))
     r = c.fetchone()
@@ -338,7 +346,7 @@ def check_daily_reset(uid):
     conn.close()
 
 def get_daily_tasks(uid):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     today = datetime.date.today().isoformat()
     c.execute("SELECT task_id, task_name, description, goal, progress, completed, reward_gold, reward_exp FROM daily_tasks WHERE user_id=? AND date=?", (uid, today))
@@ -347,7 +355,7 @@ def get_daily_tasks(uid):
     return tasks
 
 def update_daily_task_progress(uid, name_contains, delta):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     today = datetime.date.today().isoformat()
     c.execute("UPDATE daily_tasks SET progress=progress+? WHERE user_id=? AND date=? AND completed=0 AND task_name LIKE ?",
@@ -373,7 +381,7 @@ def get_week_number(d=None):
 def generate_weekly_tasks(uid, conn=None):
     close = False
     if conn is None:
-        conn = sqlite3.connect('game.db')
+        conn = get_db()
         close = True
     c = conn.cursor()
     week = get_week_number()
@@ -382,14 +390,14 @@ def generate_weekly_tasks(uid, conn=None):
     for i, t in enumerate(templates):
         goal = random.randint(*t['goal'])
         desc = t['description'].format(goal)
-        c.execute("INSERT INTO weekly_tasks (user_id, task_id, task_name, description, goal, reward_gold, reward_exp, week) VALUES (?,?,?,?,?,?,?,?)",
+        c.execute("INSERT OR REPLACE INTO weekly_tasks (user_id, task_id, task_name, description, goal, reward_gold, reward_exp, week) VALUES (?,?,?,?,?,?,?,?)",
                   (uid, i, t['name'], desc, goal, t['reward_gold'], t['reward_exp'], week))
     conn.commit()
     if close:
         conn.close()
 
 def check_weekly_reset(uid):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT last_weekly_reset FROM players WHERE user_id=?", (uid,))
     r = c.fetchone()
@@ -403,7 +411,7 @@ def check_weekly_reset(uid):
     conn.close()
 
 def get_weekly_tasks(uid):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     week = get_week_number()
     c.execute("SELECT task_id, task_name, description, goal, progress, completed, reward_gold, reward_exp FROM weekly_tasks WHERE user_id=? AND week=?", (uid, week))
@@ -412,7 +420,7 @@ def get_weekly_tasks(uid):
     return tasks
 
 def update_weekly_task_progress(uid, name_contains, delta):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     week = get_week_number()
     c.execute("UPDATE weekly_tasks SET progress=progress+? WHERE user_id=? AND week=? AND completed=0 AND task_name LIKE ?",
@@ -430,7 +438,7 @@ def update_weekly_task_progress(uid, name_contains, delta):
     conn.close()
 
 def get_inventory(uid):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT resource_id, amount FROM inventory WHERE user_id=?", (uid,))
     rows = c.fetchall()
@@ -438,14 +446,14 @@ def get_inventory(uid):
     return {rid: amt for rid, amt in rows}
 
 def add_resource(uid, rid, amt=1):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("UPDATE inventory SET amount=amount+? WHERE user_id=? AND resource_id=?", (amt, uid, rid))
     conn.commit()
     conn.close()
 
 def remove_resource(uid, rid, amt=1):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT amount FROM inventory WHERE user_id=? AND resource_id=?", (uid, rid))
     r = c.fetchone()
@@ -458,7 +466,7 @@ def remove_resource(uid, rid, amt=1):
     return True
 
 def get_player_tools(uid):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT tool_id, level FROM player_tools WHERE user_id=?", (uid,))
     rows = c.fetchall()
@@ -466,14 +474,14 @@ def get_player_tools(uid):
     return {tid: lvl for tid, lvl in rows}
 
 def add_tool(uid, tid):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("INSERT OR IGNORE INTO player_tools (user_id, tool_id, level, experience) VALUES (?,?,1,0)", (uid, tid))
     conn.commit()
     conn.close()
 
 def has_tool(uid, tid):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT 1 FROM player_tools WHERE user_id=? AND tool_id=?", (uid, tid))
     r = c.fetchone()
@@ -481,7 +489,7 @@ def has_tool(uid, tid):
     return r is not None
 
 def get_tool_level(uid, tid):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT level FROM player_tools WHERE user_id=? AND tool_id=?", (uid, tid))
     r = c.fetchone()
@@ -517,7 +525,7 @@ def upgrade_tool(uid, tid):
     if not can_upgrade_tool(uid, tid):
         return False
     cost = get_upgrade_cost(uid, tid)
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     for res, need in cost.items():
         c.execute("UPDATE inventory SET amount = amount - ? WHERE user_id = ? AND resource_id = ?", (need, uid, res))
@@ -527,7 +535,7 @@ def upgrade_tool(uid, tid):
     return True
 
 def get_active_tool(uid):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT active_tool FROM players WHERE user_id=?", (uid,))
     r = c.fetchone()
@@ -535,14 +543,14 @@ def get_active_tool(uid):
     return r[0] if r else 'wooden_pickaxe'
 
 def set_active_tool(uid, tid):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("UPDATE players SET active_tool=? WHERE user_id=?", (tid, uid))
     conn.commit()
     conn.close()
 
 def get_player_current_location(uid):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT current_location FROM players WHERE user_id=?", (uid,))
     r = c.fetchone()
@@ -550,14 +558,14 @@ def get_player_current_location(uid):
     return r[0] if r else 'coal_mine'
 
 def set_player_location(uid, loc):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("UPDATE players SET current_location=? WHERE user_id=?", (loc, uid))
     conn.commit()
     conn.close()
 
 def get_player_stats(uid):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT level, exp, gold, total_clicks, total_gold_earned, total_crits, current_crit_streak, max_crit_streak FROM players WHERE user_id=?", (uid,))
     r = c.fetchone()
@@ -599,7 +607,7 @@ def get_click_reward(uid):
     return gold, be, is_crit
 
 def level_up_if_needed(uid):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT level, exp FROM players WHERE user_id=?", (uid,))
     lvl, exp = c.fetchone()
@@ -611,7 +619,7 @@ def level_up_if_needed(uid):
     conn.close()
 
 async def check_achievements(uid, ctx):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT achievement_id FROM user_achievements WHERE user_id=?", (uid,))
     unlocked = {r[0] for r in c.fetchall()}
@@ -869,7 +877,7 @@ async def mine_action(q, ctx):
             multiplier = 1 + (tool_power - 1) * 0.2
             amt = int(amt * multiplier)
             amt = max(1, amt)
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("UPDATE players SET gold=gold+?, exp=exp+?, total_clicks=total_clicks+1, total_gold_earned=total_gold_earned+? WHERE user_id=?",
               (gold, exp, gold, uid))
@@ -1039,7 +1047,7 @@ async def process_buy(q, ctx):
         if stats['gold'] < tool['price']:
             await q.answer("❌ Недостаточно золота!", show_alert=True)
             return
-        conn = sqlite3.connect('game.db')
+        conn = get_db()
         c = conn.cursor()
         c.execute("UPDATE players SET gold=gold-? WHERE user_id=?", (tool['price'], uid))
         c.execute("INSERT OR IGNORE INTO player_tools (user_id, tool_id, level, experience) VALUES (?,?,1,0)", (uid, tid))
@@ -1056,7 +1064,7 @@ async def process_buy(q, ctx):
     if stats['gold'] < price:
         await q.edit_message_text("❌ Недостаточно золота!")
         return
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("UPDATE players SET gold=gold-? WHERE user_id=?", (price, uid))
     c.execute("UPDATE upgrades SET level=level+1 WHERE user_id=? AND upgrade_id=?", (uid, uid2))
@@ -1160,7 +1168,7 @@ async def show_profile(q, ctx):
            f"• Сила клика: ур.**{stats['upgrades']['click_power']}**\n"
            f"• Шанс крита: ур.**{stats['upgrades']['crit_chance']}**\n"
            f"• Автокликер: ур.**{stats['upgrades']['auto_clicker']}**\n")
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id=? ORDER BY unlocked_at DESC LIMIT 5", (uid,))
     recent = c.fetchall()
@@ -1214,7 +1222,7 @@ async def show_leaderboard_menu(q, ctx):
             logger.error(f"Error: {e}")
 
 async def show_leaderboard_level(q, ctx):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT username, level, exp FROM players ORDER BY level DESC, exp DESC LIMIT 10")
     top = c.fetchall()
@@ -1234,7 +1242,7 @@ async def show_leaderboard_level(q, ctx):
             logger.error(f"Error: {e}")
 
 async def show_leaderboard_gold(q, ctx):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT username, gold FROM players ORDER BY gold DESC LIMIT 10")
     top = c.fetchall()
@@ -1254,7 +1262,7 @@ async def show_leaderboard_gold(q, ctx):
             logger.error(f"Error: {e}")
 
 async def show_leaderboard_resource(q, ctx, rid, rname):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT p.username, i.amount FROM inventory i JOIN players p ON i.user_id=p.user_id WHERE i.resource_id=? ORDER BY i.amount DESC LIMIT 10", (rid,))
     top = c.fetchall()
@@ -1281,7 +1289,7 @@ async def show_leaderboard_diamond(q, ctx): await show_leaderboard_resource(q, c
 async def show_leaderboard_mithril(q, ctx): await show_leaderboard_resource(q, ctx, 'mithril', 'Мифрил')
 
 async def show_leaderboard_achievements(q, ctx):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute('''SELECT p.username, COUNT(ua.achievement_id) as cnt
                  FROM players p
@@ -1306,7 +1314,7 @@ async def show_leaderboard_achievements(q, ctx):
             logger.error(f"Error: {e}")
 
 async def show_leaderboard_total_resources(q, ctx):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute('''SELECT p.username, SUM(i.amount) as total
                  FROM players p
@@ -1331,7 +1339,7 @@ async def show_leaderboard_total_resources(q, ctx):
             logger.error(f"Error: {e}")
 
 async def show_leaderboard_tools(q, ctx):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute('''SELECT p.username, SUM(pt.level) as total
                  FROM players p
@@ -1356,7 +1364,7 @@ async def show_leaderboard_tools(q, ctx):
             logger.error(f"Error: {e}")
 
 async def show_leaderboard_tasks_completed(q, ctx):
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute('''SELECT user_id, COUNT(*) as cnt FROM daily_tasks WHERE completed = 1 GROUP BY user_id''')
     daily = dict(c.fetchall())
@@ -1437,7 +1445,7 @@ async def process_sell(q, ctx):
     rid = parts[1]
     sell_type = parts[2]
     uid = q.from_user.id
-    conn = sqlite3.connect('game.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT amount FROM inventory WHERE user_id=? AND resource_id=?", (uid, rid))
     r = c.fetchone()
