@@ -221,6 +221,76 @@ def get_db():
     conn.execute('PRAGMA journal_mode=WAL')
     return conn
 
+def get_week_number(d=None):
+    if d is None:
+        d = datetime.date.today()
+    y, w, _ = d.isocalendar()
+    return f"{y}-{w:02d}"
+
+def generate_daily_tasks(uid, conn=None):
+    close = False
+    if conn is None:
+        conn = get_db()
+        close = True
+    c = conn.cursor()
+    today = datetime.date.today().isoformat()
+    c.execute("DELETE FROM daily_tasks WHERE user_id=? AND date=?", (uid, today))
+    templates = random.sample(DAILY_TASK_TEMPLATES, min(3, len(DAILY_TASK_TEMPLATES)))
+    for i, t in enumerate(templates):
+        goal = random.randint(*t['goal'])
+        desc = t['description'].format(goal)
+        c.execute("INSERT OR REPLACE INTO daily_tasks (user_id, task_id, task_name, description, goal, reward_gold, reward_exp, date) VALUES (?,?,?,?,?,?,?,?)",
+                  (uid, i, t['name'], desc, goal, t['reward_gold'], t['reward_exp'], today))
+    conn.commit()
+    if close:
+        conn.close()
+
+def check_daily_reset(uid):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT last_daily_reset FROM players WHERE user_id=?", (uid,))
+    r = c.fetchone()
+    if r:
+        last = r[0]
+        today = datetime.date.today().isoformat()
+        if last != today:
+            generate_daily_tasks(uid, conn)
+            c.execute("UPDATE players SET last_daily_reset=? WHERE user_id=?", (today, uid))
+            conn.commit()
+    conn.close()
+
+def generate_weekly_tasks(uid, conn=None):
+    close = False
+    if conn is None:
+        conn = get_db()
+        close = True
+    c = conn.cursor()
+    week = get_week_number()
+    c.execute("DELETE FROM weekly_tasks WHERE user_id=? AND week=?", (uid, week))
+    templates = random.sample(WEEKLY_TASK_TEMPLATES, min(2, len(WEEKLY_TASK_TEMPLATES)))
+    for i, t in enumerate(templates):
+        goal = random.randint(*t['goal'])
+        desc = t['description'].format(goal)
+        c.execute("INSERT OR REPLACE INTO weekly_tasks (user_id, task_id, task_name, description, goal, reward_gold, reward_exp, week) VALUES (?,?,?,?,?,?,?,?)",
+                  (uid, i, t['name'], desc, goal, t['reward_gold'], t['reward_exp'], week))
+    conn.commit()
+    if close:
+        conn.close()
+
+def check_weekly_reset(uid):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT last_weekly_reset FROM players WHERE user_id=?", (uid,))
+    r = c.fetchone()
+    if r:
+        last = r[0]
+        cur = get_week_number()
+        if last != cur:
+            generate_weekly_tasks(uid, conn)
+            c.execute("UPDATE players SET last_weekly_reset=? WHERE user_id=?", (cur, uid))
+            conn.commit()
+    conn.close()
+
 def init_db():
     conn = get_db()
     c = conn.cursor()
@@ -1310,5 +1380,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
