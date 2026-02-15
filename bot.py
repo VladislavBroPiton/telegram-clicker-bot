@@ -85,28 +85,6 @@ FAQ = [
     {"question": "🔄 Как сменить активный инструмент?", "answer": "В магазине в категории «🧰 Инструменты» нажми кнопку «🔨 Сделать активным» рядом с нужным инструментом. Активный инструмент используется при добыче."}
 ]
 
-FAQ_CATEGORIES = {
-    "🪨 Основное": [
-        "🪨 Как добывать ресурсы?",
-        "🧰 Зачем нужны инструменты?",
-        "⚡ Как увеличить доход за клик?"
-    ],
-    "🗺 Локации": [
-        "🗺 Как открыть новые локации?",
-        "🗺 Какие локации существуют и что там добывают?"
-    ],
-    "📋 Задания": [
-        "📋 Что такое ежедневные и еженедельные задания?"
-    ],
-    "💰 Экономика": [
-        "💰 Как продать ресурсы?",
-        "🏆 Что такое достижения?"
-    ],
-    "🔄 Инструменты": [
-        "🔄 Как сменить активный инструмент?"
-    ]
-}
-
 class Achievement:
     def __init__(self, id, name, desc, cond, reward_gold=0, reward_exp=0):
         self.id, self.name, self.description, self.condition_func, self.reward_gold, self.reward_exp = id, name, desc, cond, reward_gold, reward_exp
@@ -712,10 +690,7 @@ async def cmd_leaderboard(update, ctx):
     await show_leaderboard_menu(FakeQuery(update.message, u), ctx)
 
 async def cmd_faq(update, ctx):
-    u = update.effective_user
-    get_player(u.id, u.username)
-    fake = FakeQuery(update.message, u)
-    await show_faq_menu(fake, ctx)
+    faq_dict = {item["question"]: item["answer"] for item in FAQ}
     
     # Создаём динамический ответ для локаций
     locations_info = "🗺 **Список локаций и ресурсов:**\n\n"
@@ -772,87 +747,6 @@ async def cmd_faq(update, ctx):
 async def cmd_achievements(update, ctx):
     uid = update.effective_user.id
     await send_achievements(uid, ctx)
-
-# ==================== ИНТЕРАКТИВНЫЙ FAQ ====================
-async def show_faq_menu(query, ctx):
-    """Главное меню FAQ с категориями."""
-    kb = [
-        [InlineKeyboardButton("🪨 Основное", callback_data='faq_category_basic')],
-        [InlineKeyboardButton("🗺 Локации", callback_data='faq_category_locations')],
-        [InlineKeyboardButton("📋 Задания", callback_data='faq_category_tasks')],
-        [InlineKeyboardButton("💰 Экономика", callback_data='faq_category_economy')],
-        [InlineKeyboardButton("🔄 Инструменты", callback_data='faq_category_tools')],
-        [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]
-    ]
-    txt = "📚 **Часто задаваемые вопросы**\n\nВыберите категорию:"
-    try:
-        await query.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
-    except BadRequest as e:
-        if "Message is not modified" not in str(e):
-            logger.error(f"Error in show_faq_menu: {e}")
-
-async def show_faq_category(query, ctx, category_name, questions):
-    """Показывает вопросы выбранной категории в виде кнопок."""
-    text = f"📚 **{category_name}**\n\n"
-    kb = []
-    for idx, q_text in enumerate(questions):
-        # Создаём кнопку с текстом вопроса
-        kb.append([InlineKeyboardButton(q_text, callback_data=f'faq_q_{idx}')])
-    kb.append([InlineKeyboardButton("🔙 К категориям", callback_data='faq_menu')])
-    try:
-        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(kb))
-    except BadRequest as e:
-        if "Message is not modified" not in str(e):
-            logger.error(f"Error in show_faq_category: {e}")
-
-async def show_faq_locations(query, ctx):
-    """Показывает все локации с прогресс-барами."""
-    uid = query.from_user.id
-    stats = get_player_stats(uid)
-    lvl = stats['level']
-    text = "🗺 **Локации**\n\n"
-    for loc_id, loc in LOCATIONS.items():
-        emoji = "🪨" if 'coal' in loc_id else "⚙️" if 'iron' in loc_id else "🟡" if 'gold' in loc_id else "💎" if 'diamond' in loc_id else "🔮"
-        name = loc['name']
-        req = loc['min_level']
-        status = "✅" if lvl >= req else "🔒"
-        progress = min(lvl, req)
-        percent = int(progress / req * 100) if req > 0 else 0
-        bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
-        text += f"{emoji} **{name}** {status}\n"
-        text += f"   Требуется уровень: {req}\n"
-        if lvl < req:
-            text += f"   Прогресс: {bar} {lvl}/{req}\n"
-        else:
-            text += f"   Доступна! (ваш уровень {lvl})\n"
-        text += "\n"
-    kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='faq_menu')]]
-    try:
-        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
-    except BadRequest as e:
-        if "Message is not modified" not in str(e):
-            logger.error(f"Error in show_faq_locations: {e}")
-
-async def show_faq_answer(query, ctx, qid):
-    """Показывает ответ на выбранный вопрос."""
-    # Собираем все вопросы из всех категорий в один список
-    all_questions = []
-    for cat_questions in FAQ_CATEGORIES.values():
-        all_questions.extend(cat_questions)
-    if 0 <= qid < len(all_questions):
-        q_text = all_questions[qid]
-        answer = next((item['answer'] for item in FAQ if item['question'] == q_text), "Ответ не найден.")
-        q_esc = escape_markdown(q_text, version=1)
-        a_esc = escape_markdown(answer, version=1)
-        text = f"❓ **{q_esc}**\n\n{a_esc}"
-        kb = [[InlineKeyboardButton("🔙 К категории", callback_data='faq_menu')]]
-        try:
-            await query.edit_message_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
-        except BadRequest as e:
-            if "Message is not modified" not in str(e):
-                logger.error(f"Error in show_faq_answer: {e}")
-    else:
-        await query.answer("Вопрос не найден", show_alert=True)
 
 async def cmd_help(update, ctx):
     txt = ("🪨 **Шахтёрский бот**\n\nТы начинающий шахтёр. Кликай, добывай ресурсы, продавай их, улучшай инструменты и открывай новые локации.\n\n**Команды:**\n/start - главное меню\n/mine - копнуть в текущей локации\n/locations - выбрать локацию\n/shop - магазин улучшений\n/tasks - задания\n/profile - твой профиль\n/inventory - ресурсы\n/market - продать ресурсы\n/leaderboard - топ игроков\n/achievements - мои достижения\n/faq - часто задаваемые вопросы\n/help - это сообщение")
@@ -927,22 +821,6 @@ async def button_handler(update: Update, ctx):
         await process_sell(q, ctx)
     elif data.startswith('goto_'):
         await goto_location(q, ctx)
-        # FAQ
-    elif data == 'faq_menu':
-        await show_faq_menu(q, ctx)
-    elif data == 'faq_category_basic':
-        await show_faq_category(q, ctx, "🪨 Основное", FAQ_CATEGORIES["🪨 Основное"])
-    elif data == 'faq_category_locations':
-        await show_faq_locations(q, ctx)
-    elif data == 'faq_category_tasks':
-        await show_faq_category(q, ctx, "📋 Задания", FAQ_CATEGORIES["📋 Задания"])
-    elif data == 'faq_category_economy':
-        await show_faq_category(q, ctx, "💰 Экономика", FAQ_CATEGORIES["💰 Экономика"])
-    elif data == 'faq_category_tools':
-        await show_faq_category(q, ctx, "🔄 Инструменты", FAQ_CATEGORIES["🔄 Инструменты"])
-    elif data.startswith('faq_q_'):
-        qid = int(data.replace('faq_q_', ''))
-        await show_faq_answer(q, ctx, qid)
     elif data == 'back_to_menu':
         await show_main_menu_from_query(q)
 
@@ -1201,12 +1079,7 @@ async def show_tasks(q, ctx):
     if daily:
         for t in daily:
             _, n, desc, g, prog, com, rg, re = t
-            if com:
-                st = "✅"
-            else:
-                percent = int(prog / g * 100) if g > 0 else 0
-                bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
-                st = f"{prog}/{g} {bar}"
+            st = "✅" if com else f"{prog}/{g}"
             name = escape_markdown(n, version=1)
             desc_esc = escape_markdown(desc, version=1)
             txt += f"🔹 {name}: {desc_esc}\n   Прогресс: {st}\n   Награда: {rg}💰 + {re}✨\n\n"
@@ -1216,12 +1089,7 @@ async def show_tasks(q, ctx):
     if weekly:
         for t in weekly:
             _, n, desc, g, prog, com, rg, re = t
-            if com:
-                st = "✅"
-            else:
-                percent = int(prog / g * 100) if g > 0 else 0
-                bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
-                st = f"{prog}/{g} {bar}"
+            st = "✅" if com else f"{prog}/{g}"
             name = escape_markdown(n, version=1)
             desc_esc = escape_markdown(desc, version=1)
             txt += f"🔸 {name}: {desc_esc}\n   Прогресс: {st}\n   Награда: {rg}💰 + {re}✨\n\n"
@@ -1580,10 +1448,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
 
