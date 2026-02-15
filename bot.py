@@ -927,6 +927,22 @@ async def button_handler(update: Update, ctx):
         await process_sell(q, ctx)
     elif data.startswith('goto_'):
         await goto_location(q, ctx)
+        # FAQ
+    elif data == 'faq_menu':
+        await show_faq_menu(q, ctx)
+    elif data == 'faq_category_basic':
+        await show_faq_category(q, ctx, "🪨 Основное", FAQ_CATEGORIES["🪨 Основное"])
+    elif data == 'faq_category_locations':
+        await show_faq_locations(q, ctx)
+    elif data == 'faq_category_tasks':
+        await show_faq_category(q, ctx, "📋 Задания", FAQ_CATEGORIES["📋 Задания"])
+    elif data == 'faq_category_economy':
+        await show_faq_category(q, ctx, "💰 Экономика", FAQ_CATEGORIES["💰 Экономика"])
+    elif data == 'faq_category_tools':
+        await show_faq_category(q, ctx, "🔄 Инструменты", FAQ_CATEGORIES["🔄 Инструменты"])
+    elif data.startswith('faq_q_'):
+        qid = int(data.replace('faq_q_', ''))
+        await show_faq_answer(q, ctx, qid)
     elif data == 'back_to_menu':
         await show_main_menu_from_query(q)
 
@@ -1554,6 +1570,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
