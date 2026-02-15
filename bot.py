@@ -690,7 +690,70 @@ async def cmd_leaderboard(update, ctx):
     await show_leaderboard_menu(FakeQuery(update.message, u), ctx)
 
 async def cmd_faq(update, ctx):
+    uid = update.effective_user.id
+    stats = get_player_stats(uid)
+    lvl = stats['level']
     faq_dict = {item["question"]: item["answer"] for item in FAQ}
+    
+    # Создаём динамический ответ для локаций с прогресс-барами
+    locations_info = "🗺 **Список локаций и ресурсов:**\n\n"
+    for loc_id, loc in LOCATIONS.items():
+        emoji = "🪨" if 'coal' in loc_id else "⚙️" if 'iron' in loc_id else "🟡" if 'gold' in loc_id else "💎" if 'diamond' in loc_id else "🔮"
+        locations_info += f"{emoji} **{loc['name']}** (треб. ур. {loc['min_level']})\n"
+        for res in loc['resources']:
+            res_name = RESOURCES[res['res_id']]['name']
+            prob_percent = int(res['prob'] * 100)
+            amount_range = f"{res['min']}-{res['max']}" if res['min'] != res['max'] else str(res['min'])
+            locations_info += f"   • {res_name}: {prob_percent}% ({amount_range} шт.)\n"
+        # Прогресс-бар для локации
+        if lvl >= loc['min_level']:
+            locations_info += f"   ✅ Доступна! (ваш уровень {lvl})\n"
+        else:
+            progress = lvl
+            percent = int(progress / loc['min_level'] * 100) if loc['min_level'] > 0 else 0
+            bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
+            locations_info += f"   Прогресс открытия: {bar} {lvl}/{loc['min_level']}\n"
+        locations_info += "\n"
+    
+    # Категории вопросов
+    categories = {
+        "🪨 **Основное**": [
+            "🪨 Как добывать ресурсы?",
+            "🧰 Зачем нужны инструменты?",
+            "⚡ Как увеличить доход за клик?"
+        ],
+        "🗺 **Локации**": [
+            "🗺 Как открыть новые локации?",
+            "🗺 Какие локации существуют и что там добывают?"  # новый вопрос
+        ],
+        "📋 **Задания**": [
+            "📋 Что такое ежедневные и еженедельные задания?"
+        ],
+        "💰 **Экономика**": [
+            "💰 Как продать ресурсы?",
+            "🏆 Что такое достижения?"
+        ],
+        "🔄 **Инструменты**": [
+            "🔄 Как сменить активный инструмент?"
+        ]
+    }
+    
+    text = "📚 **Часто задаваемые вопросы**\n\n"
+    
+    for category, questions in categories.items():
+        text += f"{category}\n" + "─" * 25 + "\n\n"
+        for q in questions:
+            if q == "🗺 Какие локации существуют и что там добывают?":
+                # Используем сгенерированную информацию с прогресс-барами
+                q_esc = escape_markdown(q, version=1)
+                text += f"❓ **{q_esc}**\n{locations_info}\n\n"
+            elif q in faq_dict:
+                q_esc = escape_markdown(q, version=1)
+                a_esc = escape_markdown(faq_dict[q], version=1)
+                text += f"❓ **{q_esc}**\n{a_esc}\n\n"
+        text += "\n"
+    
+    await update.message.reply_text(text, parse_mode='Markdown')
     
     # Создаём динамический ответ для локаций
     locations_info = "🗺 **Список локаций и ресурсов:**\n\n"
@@ -1448,4 +1511,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
