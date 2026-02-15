@@ -85,28 +85,6 @@ FAQ = [
     {"question": "🔄 Как сменить активный инструмент?", "answer": "В магазине в категории «🧰 Инструменты» нажми кнопку «🔨 Сделать активным» рядом с нужным инструментом. Активный инструмент используется при добыче."}
 ]
 
-FAQ_CATEGORIES = {
-    "🪨 Основное": [
-        "🪨 Как добывать ресурсы?",
-        "🧰 Зачем нужны инструменты?",
-        "⚡ Как увеличить доход за клик?"
-    ],
-    "🗺 Локации": [
-        "🗺 Как открыть новые локации?",
-        "🗺 Какие локации существуют и что там добывают?"
-    ],
-    "📋 Задания": [
-        "📋 Что такое ежедневные и еженедельные задания?"
-    ],
-    "💰 Экономика": [
-        "💰 Как продать ресурсы?",
-        "🏆 Что такое достижения?"
-    ],
-    "🔄 Инструменты": [
-        "🔄 Как сменить активный инструмент?"
-    ]
-}
-
 class Achievement:
     def __init__(self, id, name, desc, cond, reward_gold=0, reward_exp=0):
         self.id, self.name, self.description, self.condition_func, self.reward_gold, self.reward_exp = id, name, desc, cond, reward_gold, reward_exp
@@ -688,11 +666,131 @@ async def cmd_leaderboard(update, ctx):
     get_player(u.id, u.username)
     await show_leaderboard_menu(FakeQuery(update.message, u), ctx)
 
+# ==================== МОДИФИЦИРОВАННАЯ ФУНКЦИЯ FAQ ====================
 async def cmd_faq(update, ctx):
-    u = update.effective_user
-    get_player(u.id, u.username)
-    fake = FakeQuery(update.message, u)
-    await show_faq_menu(fake, ctx)
+    uid = update.effective_user.id
+    stats = get_player_stats(uid)
+    lvl = stats['level']
+    faq_dict = {item["question"]: item["answer"] for item in FAQ}
+    
+    categories = {
+        "🪨 **Основное**": [
+            "🪨 Как добывать ресурсы?",
+            "🧰 Зачем нужны инструменты?",
+            "⚡ Как увеличить доход за клик?"
+        ],
+        "🗺 **Локации**": [
+            "🗺 Как открыть новые локации?",
+            "🗺 Какие локации существуют и что там добывают?"
+        ],
+        "📋 **Задания**": [
+            "📋 Что такое ежедневные и еженедельные задания?"
+        ],
+        "💰 **Экономика**": [
+            "💰 Как продать ресурсы?",
+            "🏆 Что такое достижения?"
+        ],
+        "🔄 **Инструменты**": [
+            "🔄 Как сменить активный инструмент?"
+        ]
+    }
+    
+    text = "📚 **Часто задаваемые вопросы**\n\n"
+    
+    for category, questions in categories.items():
+        text += f"{category}\n" + "─" * 25 + "\n\n"
+        for q in questions:
+            if q in faq_dict:
+                q_esc = escape_markdown(q, version=1)
+                a_esc = escape_markdown(faq_dict[q], version=1)
+                text += f"❓ **{q_esc}**\n{a_esc}\n\n"
+        text += "\n"
+    
+    # Добавляем кнопку для перехода к разделу локаций
+    kb = [[InlineKeyboardButton("🗺 Локации", callback_data='faq_locations')]]
+    await update.message.reply_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+
+# ==================== НОВЫЕ ФУНКЦИИ ДЛЯ РАЗДЕЛА ЛОКАЦИЙ ====================
+async def show_faq_locations(query, ctx):
+    """Показывает все локации с прогресс-барами."""
+    uid = query.from_user.id
+    stats = get_player_stats(uid)
+    lvl = stats['level']
+    text = "🗺 **Локации**\n\n"
+    for loc_id, loc in LOCATIONS.items():
+        emoji = "🪨" if 'coal' in loc_id else "⚙️" if 'iron' in loc_id else "🟡" if 'gold' in loc_id else "💎" if 'diamond' in loc_id else "🔮"
+        name = loc['name']
+        req = loc['min_level']
+        status = "✅" if lvl >= req else "🔒"
+        progress = min(lvl, req)
+        percent = int(progress / req * 100) if req > 0 else 0
+        bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
+        text += f"{emoji} **{name}** {status}\n"
+        text += f"   Требуется уровень: {req}\n"
+        if lvl < req:
+            text += f"   Прогресс: {bar} {lvl}/{req}\n"
+        else:
+            text += f"   Доступна! (ваш уровень {lvl})\n"
+        # Добавляем информацию о ресурсах
+        for res in loc['resources']:
+            res_name = RESOURCES[res['res_id']]['name']
+            prob_percent = int(res['prob'] * 100)
+            amount_range = f"{res['min']}-{res['max']}" if res['min'] != res['max'] else str(res['min'])
+            text += f"      • {res_name}: {prob_percent}% ({amount_range} шт.)\n"
+        text += "\n"
+    kb = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_faq')]]
+    try:
+        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+    except BadRequest as e:
+        if "Message is not modified" not in str(e):
+            logger.error(f"Error in show_faq_locations: {e}")
+
+async def back_to_faq(query, ctx):
+    """Возвращает к основному FAQ."""
+    uid = query.from_user.id
+    stats = get_player_stats(uid)
+    lvl = stats['level']
+    faq_dict = {item["question"]: item["answer"] for item in FAQ}
+    
+    categories = {
+        "🪨 **Основное**": [
+            "🪨 Как добывать ресурсы?",
+            "🧰 Зачем нужны инструменты?",
+            "⚡ Как увеличить доход за клик?"
+        ],
+        "🗺 **Локации**": [
+            "🗺 Как открыть новые локации?",
+            "🗺 Какие локации существуют и что там добывают?"
+        ],
+        "📋 **Задания**": [
+            "📋 Что такое ежедневные и еженедельные задания?"
+        ],
+        "💰 **Экономика**": [
+            "💰 Как продать ресурсы?",
+            "🏆 Что такое достижения?"
+        ],
+        "🔄 **Инструменты**": [
+            "🔄 Как сменить активный инструмент?"
+        ]
+    }
+    
+    text = "📚 **Часто задаваемые вопросы**\n\n"
+    
+    for category, questions in categories.items():
+        text += f"{category}\n" + "─" * 25 + "\n\n"
+        for q in questions:
+            if q in faq_dict:
+                q_esc = escape_markdown(q, version=1)
+                a_esc = escape_markdown(faq_dict[q], version=1)
+                text += f"❓ **{q_esc}**\n{a_esc}\n\n"
+        text += "\n"
+    
+    kb = [[InlineKeyboardButton("🗺 Локации", callback_data='faq_locations')]]
+    try:
+        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+    except BadRequest as e:
+        if "Message is not modified" not in str(e):
+            logger.error(f"Error in back_to_faq: {e}")
 
 async def cmd_achievements(update, ctx):
     uid = update.effective_user.id
@@ -710,7 +808,6 @@ async def button_handler(update: Update, ctx):
     check_daily_reset(uid)
     check_weekly_reset(uid)
 
-    # Основные действия
     if data == 'mine':
         await mine_action(q, ctx)
     elif data == 'locations':
@@ -737,17 +834,6 @@ async def button_handler(update: Update, ctx):
         await show_profile(q, ctx)
     elif data == 'profile_achievements':
         await send_achievements(uid, ctx)
-    elif data == 'inventory':
-        await show_inventory(q, ctx)
-    elif data == 'market':
-        await show_market(q, ctx)
-    elif data.startswith('buy_'):
-        await process_buy(q, ctx)
-    elif data.startswith('sell_'):
-        await process_sell(q, ctx)
-    elif data.startswith('goto_'):
-        await goto_location(q, ctx)
-    # Лидеры
     elif data == 'leaderboard_menu':
         await show_leaderboard_menu(q, ctx)
     elif data == 'leaderboard_resources_menu':
@@ -775,21 +861,20 @@ async def button_handler(update: Update, ctx):
     elif data == 'leaderboard_total_resources':
         await show_leaderboard_total_resources(q, ctx)
     # FAQ
-    elif data == 'faq_menu':
-        await show_faq_menu(q, ctx)
-    elif data == 'faq_category_basic':
-        await show_faq_category(q, ctx, "🪨 Основное", FAQ_CATEGORIES["🪨 Основное"])
-    elif data == 'faq_category_locations':
+    elif data == 'faq_locations':
         await show_faq_locations(q, ctx)
-    elif data == 'faq_category_tasks':
-        await show_faq_category(q, ctx, "📋 Задания", FAQ_CATEGORIES["📋 Задания"])
-    elif data == 'faq_category_economy':
-        await show_faq_category(q, ctx, "💰 Экономика", FAQ_CATEGORIES["💰 Экономика"])
-    elif data == 'faq_category_tools':
-        await show_faq_category(q, ctx, "🔄 Инструменты", FAQ_CATEGORIES["🔄 Инструменты"])
-    elif data.startswith('faq_q_'):
-        qid = int(data.replace('faq_q_', ''))
-        await show_faq_answer(q, ctx, qid)
+    elif data == 'back_to_faq':
+        await back_to_faq(q, ctx)
+    elif data == 'inventory':
+        await show_inventory(q, ctx)
+    elif data == 'market':
+        await show_market(q, ctx)
+    elif data.startswith('buy_'):
+        await process_buy(q, ctx)
+    elif data.startswith('sell_'):
+        await process_sell(q, ctx)
+    elif data.startswith('goto_'):
+        await goto_location(q, ctx)
     elif data == 'back_to_menu':
         await show_main_menu_from_query(q)
 
@@ -1118,77 +1203,6 @@ async def show_profile(q, ctx):
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
 
-async def show_inventory(q, ctx):
-    uid = q.from_user.id
-    inv = get_inventory(uid)
-    txt = "🎒 **Инвентарь**\n\nВот что ты накопал:\n\n"
-    has = False
-    for rid, info in RESOURCES.items():
-        amt = inv.get(rid, 0)
-        emoji = "🪨" if rid == 'coal' else "⚙️" if rid == 'iron' else "🟡" if rid == 'gold' else "💎" if rid == 'diamond' else "🔮"
-        name = escape_markdown(info['name'], version=1)
-        txt += f"{emoji} {name}: **{amt}** шт.\n"
-        if amt > 0:
-            has = True
-    if not has:
-        txt = "🎒 **Инвентарь**\n\nТвой инвентарь пока пуст. Иди добывай!\n\n"
-    txt += "\n─────────────────────────\nПродать ресурсы можно на рынке (/market)."
-    kb = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
-    try:
-        await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
-    except BadRequest as e:
-        if "Message is not modified" not in str(e):
-            logger.error(f"Error: {e}")
-
-async def show_market(q, ctx):
-    uid = q.from_user.id
-    inv = get_inventory(uid)
-    txt = "💰 **Рынок ресурсов**\n\nТвои запасы и текущие цены:\n\n"
-    kb = []
-    for rid, info in RESOURCES.items():
-        amt = inv.get(rid, 0)
-        price = info['base_price']
-        emoji = "🪨" if rid == 'coal' else "⚙️" if rid == 'iron' else "🟡" if rid == 'gold' else "💎" if rid == 'diamond' else "🔮"
-        name = escape_markdown(info['name'], version=1)
-        txt += f"{emoji} {name}: **{amt}** шт. | 💰 Цена: {price} за шт.\n"
-        if amt > 0:
-            kb.append([InlineKeyboardButton(f"Продать 1 {name}", callback_data=f'sell_{rid}_1'), InlineKeyboardButton(f"Продать всё", callback_data=f'sell_{rid}_all')])
-    txt += "\n─────────────────────────\nВыбери, что и сколько продать."
-    kb.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
-    try:
-        await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
-    except BadRequest as e:
-        if "Message is not modified" not in str(e):
-            logger.error(f"Error: {e}")
-
-async def process_sell(q, ctx):
-    data = q.data
-    parts = data.split('_')
-    rid = parts[1]
-    sell_type = parts[2]
-    uid = q.from_user.id
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT amount FROM inventory WHERE user_id=? AND resource_id=?", (uid, rid))
-    r = c.fetchone()
-    if not r or r[0] == 0:
-        await q.answer("Нет ресурса!", show_alert=True)
-        conn.close()
-        return
-    avail = r[0]
-    qty = avail if sell_type == 'all' else 1
-    price = RESOURCES[rid]['base_price']
-    total = qty * price
-    c.execute("UPDATE inventory SET amount=amount-? WHERE user_id=? AND resource_id=?", (qty, uid, rid))
-    c.execute("UPDATE players SET gold=gold+? WHERE user_id=?", (total, uid))
-    conn.commit()
-    conn.close()
-    update_daily_task_progress(uid, 'Продавец', total)
-    update_weekly_task_progress(uid, 'Торговец', total)
-    await q.answer(f"✅ Продано {qty} {RESOURCES[rid]['name']} за {total}💰", show_alert=False)
-    await show_market(q, ctx)
-
-# ==================== ТАБЛИЦА ЛИДЕРОВ ====================
 async def show_leaderboard_menu(q, ctx):
     kb = [
         [InlineKeyboardButton("📊 По уровню", callback_data='leaderboard_level')],
@@ -1381,87 +1395,76 @@ async def show_leaderboard_total_resources(q, ctx):
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
 
-# ==================== ИНТЕРАКТИВНЫЙ FAQ ====================
-async def show_faq_menu(query, ctx):
-    """Главное меню FAQ с категориями."""
-    kb = [
-        [InlineKeyboardButton("🪨 Основное", callback_data='faq_category_basic')],
-        [InlineKeyboardButton("🗺 Локации", callback_data='faq_category_locations')],
-        [InlineKeyboardButton("📋 Задания", callback_data='faq_category_tasks')],
-        [InlineKeyboardButton("💰 Экономика", callback_data='faq_category_economy')],
-        [InlineKeyboardButton("🔄 Инструменты", callback_data='faq_category_tools')],
-        [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]
-    ]
-    txt = "📚 **Часто задаваемые вопросы**\n\nВыберите категорию:"
+async def show_inventory(q, ctx):
+    uid = q.from_user.id
+    inv = get_inventory(uid)
+    txt = "🎒 **Инвентарь**\n\nВот что ты накопал:\n\n"
+    has = False
+    for rid, info in RESOURCES.items():
+        amt = inv.get(rid, 0)
+        emoji = "🪨" if rid == 'coal' else "⚙️" if rid == 'iron' else "🟡" if rid == 'gold' else "💎" if rid == 'diamond' else "🔮"
+        name = escape_markdown(info['name'], version=1)
+        txt += f"{emoji} {name}: **{amt}** шт.\n"
+        if amt > 0:
+            has = True
+    if not has:
+        txt = "🎒 **Инвентарь**\n\nТвой инвентарь пока пуст. Иди добывай!\n\n"
+    txt += "\n─────────────────────────\nПродать ресурсы можно на рынке (/market)."
+    kb = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
     try:
-        await query.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+        await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e):
-            logger.error(f"Error in show_faq_menu: {e}")
+            logger.error(f"Error: {e}")
 
-async def show_faq_category(query, ctx, category_name, questions):
-    """Показывает вопросы выбранной категории в виде кнопок."""
-    text = f"📚 **{category_name}**\n\n"
+async def show_market(q, ctx):
+    uid = q.from_user.id
+    inv = get_inventory(uid)
+    txt = "💰 **Рынок ресурсов**\n\nТвои запасы и текущие цены:\n\n"
     kb = []
-    for idx, q_text in enumerate(questions):
-        kb.append([InlineKeyboardButton(q_text, callback_data=f'faq_q_{idx}')])
-    kb.append([InlineKeyboardButton("🔙 К категориям", callback_data='faq_menu')])
+    for rid, info in RESOURCES.items():
+        amt = inv.get(rid, 0)
+        price = info['base_price']
+        emoji = "🪨" if rid == 'coal' else "⚙️" if rid == 'iron' else "🟡" if rid == 'gold' else "💎" if rid == 'diamond' else "🔮"
+        name = escape_markdown(info['name'], version=1)
+        txt += f"{emoji} {name}: **{amt}** шт. | 💰 Цена: {price} за шт.\n"
+        if amt > 0:
+            kb.append([InlineKeyboardButton(f"Продать 1 {name}", callback_data=f'sell_{rid}_1'), InlineKeyboardButton(f"Продать всё", callback_data=f'sell_{rid}_all')])
+    txt += "\n─────────────────────────\nВыбери, что и сколько продать."
+    kb.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
     try:
-        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(kb))
+        await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e):
-            logger.error(f"Error in show_faq_category: {e}")
+            logger.error(f"Error: {e}")
 
-async def show_faq_locations(query, ctx):
-    """Показывает все локации с прогресс-барами."""
-    uid = query.from_user.id
-    stats = get_player_stats(uid)
-    lvl = stats['level']
-    text = "🗺 **Локации**\n\n"
-    for loc_id, loc in LOCATIONS.items():
-        emoji = "🪨" if 'coal' in loc_id else "⚙️" if 'iron' in loc_id else "🟡" if 'gold' in loc_id else "💎" if 'diamond' in loc_id else "🔮"
-        name = loc['name']
-        req = loc['min_level']
-        status = "✅" if lvl >= req else "🔒"
-        progress = min(lvl, req)
-        percent = int(progress / req * 100) if req > 0 else 0
-        bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
-        text += f"{emoji} **{name}** {status}\n"
-        text += f"   Требуется уровень: {req}\n"
-        if lvl < req:
-            text += f"   Прогресс: {bar} {lvl}/{req}\n"
-        else:
-            text += f"   Доступна! (ваш уровень {lvl})\n"
-        text += "\n"
-    kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='faq_menu')]]
-    try:
-        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
-    except BadRequest as e:
-        if "Message is not modified" not in str(e):
-            logger.error(f"Error in show_faq_locations: {e}")
+async def process_sell(q, ctx):
+    data = q.data
+    parts = data.split('_')
+    rid = parts[1]
+    sell_type = parts[2]
+    uid = q.from_user.id
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT amount FROM inventory WHERE user_id=? AND resource_id=?", (uid, rid))
+    r = c.fetchone()
+    if not r or r[0] == 0:
+        await q.answer("Нет ресурса!", show_alert=True)
+        conn.close()
+        return
+    avail = r[0]
+    qty = avail if sell_type == 'all' else 1
+    price = RESOURCES[rid]['base_price']
+    total = qty * price
+    c.execute("UPDATE inventory SET amount=amount-? WHERE user_id=? AND resource_id=?", (qty, uid, rid))
+    c.execute("UPDATE players SET gold=gold+? WHERE user_id=?", (total, uid))
+    conn.commit()
+    conn.close()
+    update_daily_task_progress(uid, 'Продавец', total)
+    update_weekly_task_progress(uid, 'Торговец', total)
+    await q.answer(f"✅ Продано {qty} {RESOURCES[rid]['name']} за {total}💰", show_alert=False)
+    await show_market(q, ctx)
 
-async def show_faq_answer(query, ctx, qid):
-    """Показывает ответ на выбранный вопрос."""
-    # Собираем все вопросы из всех категорий в один список
-    all_questions = []
-    for cat_questions in FAQ_CATEGORIES.values():
-        all_questions.extend(cat_questions)
-    if 0 <= qid < len(all_questions):
-        q_text = all_questions[qid]
-        answer = next((item['answer'] for item in FAQ if item['question'] == q_text), "Ответ не найден.")
-        q_esc = escape_markdown(q_text, version=1)
-        a_esc = escape_markdown(answer, version=1)
-        text = f"❓ **{q_esc}**\n\n{a_esc}"
-        kb = [[InlineKeyboardButton("🔙 К категории", callback_data='faq_menu')]]
-        try:
-            await query.edit_message_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
-        except BadRequest as e:
-            if "Message is not modified" not in str(e):
-                logger.error(f"Error in show_faq_answer: {e}")
-    else:
-        await query.answer("Вопрос не найден", show_alert=True)
-
-# ==================== ВЕБ-СЕРВЕР ====================
 async def run_bot():
     logger.info("Starting bot polling...")
     app = Application.builder().token(TOKEN).build()
