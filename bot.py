@@ -1169,62 +1169,54 @@ async def show_faq_category(q, ctx, category_name, questions):
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
 
-async def show_faq_locations(q, ctx):
+async def button_handler(update: Update, ctx):
+    q = update.callback_query
+    await q.answer()
     uid = q.from_user.id
-    stats = get_player_stats(uid)
-    lvl = stats['level']
-    text = "🗺 **Локации**\n\n"
-    for loc_id, loc in LOCATIONS.items():
-        emoji = "🪨" if 'coal' in loc_id else "⚙️" if 'iron' in loc_id else "🟡" if 'gold' in loc_id else "💎" if 'diamond' in loc_id else "🔮"
-        name = loc['name']
-        req = loc['min_level']
-        status = "✅" if lvl >= req else "🔒"
-        progress = min(lvl, req)
-        percent = int(progress / req * 100) if req > 0 else 0
-        bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
-        text += f"{emoji} **{name}** {status}\n"
-        text += f"   Требуется уровень: {req}\n"
-        if lvl < req:
-            text += f"   Прогресс: {bar} {lvl}/{req}\n"
-        else:
-            text += f"   Доступна! (ваш уровень {lvl})\n"
-        text += "\n"
-    kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='faq_menu')]]
-    try:
-        await q.edit_message_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
-    except BadRequest as e:
-        if "Message is not modified" not in str(e):
-            logger.error(f"Error: {e}")
+    data = q.data
+    check_daily_reset(uid)
+    check_weekly_reset(uid)
 
-async def show_faq_answer(q, ctx, qid):
-    # Собираем все вопросы из всех категорий в один список
-    all_questions = []
-    for cat_questions in FAQ_CATEGORIES.values():
-        all_questions.extend(cat_questions)
-    if 0 <= qid < len(all_questions):
-        q_text = all_questions[qid]
-        answer = next((item['answer'] for item in FAQ if item['question'] == q_text), "Ответ не найден.")
-        q_esc = escape_markdown(q_text, version=1)
-        a_esc = escape_markdown(answer, version=1)
-        text = f"❓ **{q_esc}**\n\n{a_esc}"
-        kb = [[InlineKeyboardButton("🔙 К категории", callback_data='faq_menu')]]
-        try:
-            await q.edit_message_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
-        except BadRequest as e:
-            if "Message is not modified" not in str(e):
-                logger.error(f"Error: {e}")
-    else:
-        await q.answer("Вопрос не найден", show_alert=True)
+    # Основные действия
+    if data == 'mine':
+        await mine_action(q, ctx)
+    elif data == 'locations':
+        await show_locations(q, ctx)
+    elif data == 'shop':
+        await show_shop_menu(q, ctx)
+    elif data == 'shop_category_upgrades':
+        await show_shop_upgrades(q, ctx)
+    elif data == 'shop_category_tools':
+        await show_shop_tools(q, ctx)
+    elif data == 'back_to_shop_menu':
+        await show_shop_menu(q, ctx)
+    elif data == 'back_to_shop_tools':
+        await show_shop_tools(q, ctx)
+    elif data.startswith('activate_tool_'):
+        await activate_tool(q, ctx)
+    elif data.startswith('upgrade_tool_'):
+        await upgrade_tool_handler(q, ctx)
+    elif data.startswith('confirm_upgrade_'):
+        await confirm_upgrade(q, ctx)
+    elif data == 'tasks':
+        await show_tasks(q, ctx)
+    elif data == 'profile':
+        await show_profile(q, ctx)
+    elif data == 'profile_achievements':
+        await send_achievements(uid, ctx)
+    elif data == 'inventory':
+        await show_inventory(q, ctx)
+    elif data == 'market':
+        await show_market(q, ctx)
+    elif data.startswith('buy_'):
+        await process_buy(q, ctx)
+    elif data.startswith('sell_'):
+        await process_sell(q, ctx)
+    elif data.startswith('goto_'):
+        await goto_location(q, ctx)
+    elif data == 'back_to_menu':
+        await show_main_menu_from_query(q)
 
-# ==================== ДОБАВЛЕНИЕ В button_handler (продолжение) ====================
-# В функции button_handler (часть 2) мы должны добавить новые ветки для FAQ и лидеров.
-# Поскольку в части 2 мы уже определили button_handler без этих веток, нам нужно дополнить его.
-# Для целостности кода лучше объединить, но поскольку мы разбили на части, я представлю дополнение к button_handler,
-# которое нужно вставить после существующих веток (например, после elif data == 'back_to_menu').
-
-# ВАЖНО: В реальном коде все эти ветки должны быть внутри button_handler. Я покажу их как продолжение.
-
-# Дополнение для button_handler (вставьте после всех существующих веток, но до конца функции):
     # Лидеры
     elif data == 'leaderboard_menu':
         await show_leaderboard_menu(q, ctx)
@@ -1252,6 +1244,7 @@ async def show_faq_answer(q, ctx, qid):
         await show_leaderboard_mithril(q, ctx)
     elif data == 'leaderboard_total_resources':
         await show_leaderboard_total_resources(q, ctx)
+
     # FAQ
     elif data == 'faq_menu':
         await show_faq_menu(q, ctx)
@@ -1317,4 +1310,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
