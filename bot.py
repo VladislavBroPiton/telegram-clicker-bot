@@ -849,6 +849,10 @@ async def button_handler(update: Update, ctx):
         await confirm_upgrade(q, ctx)
     elif data == 'tasks':
         await show_tasks(q, ctx)
+    elif data == 'show_weekly':
+        await show_weekly_tasks(q, ctx)
+    elif data == 'back_to_daily':
+        await show_daily_tasks(q, ctx)
     elif data == 'profile':
         await show_profile(q, ctx)
     elif data == 'profile_achievements':
@@ -1547,6 +1551,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
