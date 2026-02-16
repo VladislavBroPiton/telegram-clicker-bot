@@ -284,7 +284,7 @@ def generate_daily_tasks(uid, conn=None):
     c = conn.cursor()
     today = datetime.date.today().isoformat()
     c.execute("DELETE FROM daily_tasks WHERE user_id=? AND date=?", (uid, today))
-    templates = random.sample(DAILY_TASK_TEMPLATES, min(3, len(DAILY_TASK_TEMPLATES)))
+    templates = random.sample(DAILY_TASK_TEMPLATES, min(4, len(DAILY_TASK_TEMPLATES)))
     for i, t in enumerate(templates):
         goal = random.randint(*t['goal'])
         desc = t['description'].format(goal)
@@ -1521,6 +1521,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
