@@ -662,7 +662,8 @@ async def cmd_shop(update, ctx):
 async def cmd_tasks(update, ctx):
     u = update.effective_user
     get_player(u.id, u.username)
-    await show_tasks(FakeQuery(update.message, u), ctx)
+    fake = FakeQuery(update.message, u)
+    await show_daily_tasks(fake, ctx)
 
 async def cmd_profile(update, ctx):
     u = update.effective_user
@@ -1546,6 +1547,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
