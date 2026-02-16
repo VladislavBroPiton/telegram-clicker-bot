@@ -1079,6 +1079,9 @@ async def process_buy(q, ctx):
             await q.answer("Ошибка!", show_alert=True)
             return
         stats = get_player_stats(uid)
+        if not stats:
+            await q.edit_message_text("Ошибка: не удалось получить данные игрока.")
+            return
         if stats['level'] < tool['required_level']:
             await q.answer(f"❌ Требуется уровень {tool['required_level']}", show_alert=True)
             return
@@ -1095,13 +1098,19 @@ async def process_buy(q, ctx):
         await ctx.bot.send_message(chat_id=uid, text=f"✅ Ты купил {tool['name']}!")
         await show_shop_tools(q, ctx)
         return
+    # Обработка улучшений (обычная покупка)
     uid2 = data.replace('buy_', '')
     uid = q.from_user.id
     stats = get_player_stats(uid)
+    if not stats:
+        await q.edit_message_text("Ошибка: не удалось получить данные игрока.")
+        return
     lvl = stats['upgrades'][uid2]
     price = int(UPGRADES[uid2]['base_price'] * (UPGRADES[uid2]['price_mult'] ** lvl))
     if stats['gold'] < price:
-        await q.edit_message_text("❌ Недостаточно золота!")
+        # Добавляем кнопку "Назад" для единообразия
+        kb = [[InlineKeyboardButton("🔙 Назад", callback_data='shop_category_upgrades')]]
+        await q.edit_message_text("❌ Недостаточно золота!", reply_markup=InlineKeyboardMarkup(kb))
         return
     conn = get_db()
     c = conn.cursor()
@@ -1552,6 +1561,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
