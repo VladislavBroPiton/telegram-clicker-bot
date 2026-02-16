@@ -349,7 +349,7 @@ def generate_weekly_tasks(uid, conn=None):
     c = conn.cursor()
     week = get_week_number()
     c.execute("DELETE FROM weekly_tasks WHERE user_id=? AND week=?", (uid, week))
-    templates = random.sample(WEEKLY_TASK_TEMPLATES, min(2, len(WEEKLY_TASK_TEMPLATES)))
+    templates = random.sample(WEEKLY_TASK_TEMPLATES, min(4, len(WEEKLY_TASK_TEMPLATES)))
     for i, t in enumerate(templates):
         goal = random.randint(*t['goal'])
         desc = t['description'].format(goal)
@@ -1530,6 +1530,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
