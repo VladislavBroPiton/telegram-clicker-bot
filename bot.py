@@ -50,12 +50,21 @@ DAILY_TASK_TEMPLATES = [
 ]
 
 WEEKLY_TASK_TEMPLATES = [
+    # Существующие 6 заданий
     {'name': 'Шахтёр-неделя', 'description': 'Совершить {} кликов', 'goal': (200, 500), 'reward_gold': 500, 'reward_exp': 200},
     {'name': 'Золотая лихорадка', 'description': 'Заработать {} золота', 'goal': (2000, 5000), 'reward_gold': 1000, 'reward_exp': 500},
     {'name': 'Магнат', 'description': 'Купить улучшений на {} золота', 'goal': (1500, 3000), 'reward_gold': 800, 'reward_exp': 400},
     {'name': 'Критический удар', 'description': 'Получить {} критических ударов', 'goal': (20, 50), 'reward_gold': 600, 'reward_exp': 300},
     {'name': 'Коллекционер', 'description': 'Добыть {} ресурсов', 'goal': (50, 150), 'reward_gold': 700, 'reward_exp': 350},
-    {'name': 'Торговец', 'description': 'Продать ресурсов на {} золота', 'goal': (2000, 5000), 'reward_gold': 900, 'reward_exp': 450}
+    {'name': 'Торговец', 'description': 'Продать ресурсов на {} золота', 'goal': (2000, 5000), 'reward_gold': 900, 'reward_exp': 450},
+    
+    # Новые 6 заданий
+    {'name': 'Шахтёр-профи', 'description': 'Совершить {} кликов', 'goal': (500, 1000), 'reward_gold': 1000, 'reward_exp': 400},
+    {'name': 'Золотой дождь', 'description': 'Заработать {} золота', 'goal': (5000, 10000), 'reward_gold': 2000, 'reward_exp': 1000},
+    {'name': 'Олигарх', 'description': 'Купить улучшений на {} золота', 'goal': (3000, 6000), 'reward_gold': 1500, 'reward_exp': 800},
+    {'name': 'Крит-мастер', 'description': 'Получить {} критических ударов', 'goal': (50, 100), 'reward_gold': 1200, 'reward_exp': 600},
+    {'name': 'Скряга', 'description': 'Добыть {} ресурсов', 'goal': (150, 300), 'reward_gold': 1400, 'reward_exp': 700},
+    {'name': 'Биржевой игрок', 'description': 'Продать ресурсов на {} золота', 'goal': (5000, 10000), 'reward_gold': 1800, 'reward_exp': 900},
 ]
 
 RESOURCES = {
@@ -1521,6 +1530,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
