@@ -1072,29 +1072,29 @@ async def show_shop_tools(q, ctx):
 async def process_buy(q, ctx):
     data = q.data
     if data.startswith('buy_tool_'):
-    tid = data.replace('buy_tool_', '')
-    uid = q.from_user.id
-    tool = TOOLS.get(tid)
-    if not tool:
-        await q.answer("Ошибка!", show_alert=True)
+        tid = data.replace('buy_tool_', '')
+        uid = q.from_user.id
+        tool = TOOLS.get(tid)
+        if not tool:
+            await q.answer("Ошибка!", show_alert=True)
+            return
+        stats = get_player_stats(uid)
+        if stats['level'] < tool['required_level']:
+            await q.answer(f"❌ Требуется уровень {tool['required_level']}", show_alert=True)
+            return
+        if stats['gold'] < tool['price']:
+            kb = [[InlineKeyboardButton("🔙 Назад", callback_data='shop_category_tools')]]
+            await q.edit_message_text("❌ Недостаточно золота!", reply_markup=InlineKeyboardMarkup(kb))
+            return
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("UPDATE players SET gold=gold-? WHERE user_id=?", (tool['price'], uid))
+        c.execute("INSERT OR IGNORE INTO player_tools (user_id, tool_id, level, experience) VALUES (?,?,1,0)", (uid, tid))
+        conn.commit()
+        conn.close()
+        await ctx.bot.send_message(chat_id=uid, text=f"✅ Ты купил {tool['name']}!")
+        await show_shop_tools(q, ctx)
         return
-    stats = get_player_stats(uid)
-    if stats['level'] < tool['required_level']:
-        await q.answer(f"❌ Требуется уровень {tool['required_level']}", show_alert=True)
-        return
-    if stats['gold'] < tool['price']:
-        kb = [[InlineKeyboardButton("🔙 Назад", callback_data='shop_category_tools')]]
-        await q.edit_message_text("❌ Недостаточно золота!", reply_markup=InlineKeyboardMarkup(kb))
-        return
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("UPDATE players SET gold=gold-? WHERE user_id=?", (tool['price'], uid))
-    c.execute("INSERT OR IGNORE INTO player_tools (user_id, tool_id, level, experience) VALUES (?,?,1,0)", (uid, tid))
-    conn.commit()
-    conn.close()
-    await ctx.bot.send_message(chat_id=uid, text=f"✅ Ты купил {tool['name']}!")
-    await show_shop_tools(q, ctx)
-    return
     uid2 = data.replace('buy_', '')
     uid = q.from_user.id
     stats = get_player_stats(uid)
@@ -1552,6 +1552,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
