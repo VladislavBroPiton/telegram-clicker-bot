@@ -21,7 +21,7 @@ TOKEN = os.environ.get('BOT_TOKEN')
 if not TOKEN:
     raise ValueError("No BOT_TOKEN environment variable set")
 
-BASE_CLICK_REWARD = (5, 15)
+BASE_CLICK_REWARD = (3, 9)
 BASE_EXP_REWARD = (1, 3)
 EXP_PER_LEVEL = 100
 
@@ -1530,6 +1530,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
