@@ -1143,10 +1143,10 @@ async def confirm_upgrade(q, ctx):
         await q.answer("❌ Ошибка при улучшении", show_alert=True)
     await show_shop_tools(q, ctx)
 
-async def show_tasks(q, ctx):
-    uid = q.from_user.id
+async def show_daily_tasks(query, ctx):
+    """Показывает только ежедневные задания с кнопками перехода."""
+    uid = query.from_user.id
     daily = get_daily_tasks(uid)
-    weekly = get_weekly_tasks(uid)
     txt = "📋 **Ежедневные задания**\n\n"
     if daily:
         for t in daily:
@@ -1162,7 +1162,22 @@ async def show_tasks(q, ctx):
             txt += f"🔹 {name}: {desc_esc}\n   Прогресс: {st}\n   Награда: {rg}💰 + {re}✨\n\n"
     else:
         txt += "Нет заданий на сегодня.\n\n"
-    txt += "─────────────────────────\n📅 **Еженедельные задания**\n\n"
+    # Кнопки: переход к еженедельным и назад в главное меню
+    kb = [
+        [InlineKeyboardButton("📅 Еженедельные", callback_data='show_weekly')],
+        [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]
+    ]
+    try:
+        await query.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+    except BadRequest as e:
+        if "Message is not modified" not in str(e):
+            logger.error(f"Error in show_daily_tasks: {e}")
+
+async def show_weekly_tasks(query, ctx):
+    """Показывает только еженедельные задания с кнопкой возврата."""
+    uid = query.from_user.id
+    weekly = get_weekly_tasks(uid)
+    txt = "📅 **Еженедельные задания**\n\n"
     if weekly:
         for t in weekly:
             _, n, desc, g, prog, com, rg, re = t
@@ -1177,12 +1192,13 @@ async def show_tasks(q, ctx):
             txt += f"🔸 {name}: {desc_esc}\n   Прогресс: {st}\n   Награда: {rg}💰 + {re}✨\n\n"
     else:
         txt += "Нет заданий на эту неделю.\n\n"
-    kb = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
+    # Кнопка возврата к ежедневным
+    kb = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_daily')]]
     try:
-        await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(kb))
+        await query.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     except BadRequest as e:
         if "Message is not modified" not in str(e):
-            logger.error(f"Error: {e}")
+            logger.error(f"Error in show_weekly_tasks: {e}")
 
 async def show_profile(q, ctx):
     uid = q.from_user.id
@@ -1530,6 +1546,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
