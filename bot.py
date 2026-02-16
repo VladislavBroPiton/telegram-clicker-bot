@@ -1083,7 +1083,8 @@ async def process_buy(q, ctx):
             await q.answer(f"❌ Требуется уровень {tool['required_level']}", show_alert=True)
             return
         if stats['gold'] < tool['price']:
-            await q.answer("❌ Недостаточно золота!", show_alert=True)
+        kb = [[InlineKeyboardButton("🔙 Назад", callback_data='shop_category_tools')]]
+            await q.edit_message_text("❌ Недостаточно золота!", reply_markup=InlineKeyboardMarkup(kb))
             return
         conn = get_db()
         c = conn.cursor()
@@ -1551,6 +1552,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
