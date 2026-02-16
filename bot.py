@@ -32,12 +32,21 @@ UPGRADES = {
 }
 
 DAILY_TASK_TEMPLATES = [
-    {'name': 'Труженик', 'description': 'Совершить {} кликов', 'goal': (50, 80), 'reward_gold': 70, 'reward_exp': 20},
+    # Существующие 6 заданий
+    {'name': 'Труженик', 'description': 'Совершить {} кликов', 'goal': (10, 30), 'reward_gold': 50, 'reward_exp': 20},
     {'name': 'Золотоискатель', 'description': 'Заработать {} золота', 'goal': (100, 500), 'reward_gold': 100, 'reward_exp': 30},
     {'name': 'Покупатель', 'description': 'Купить улучшений на {} золота', 'goal': (150, 300), 'reward_gold': 80, 'reward_exp': 25},
     {'name': 'Везунчик', 'description': 'Получить {} критических ударов', 'goal': (3, 8), 'reward_gold': 70, 'reward_exp': 40},
     {'name': 'Рудокоп', 'description': 'Добыть {} ресурсов', 'goal': (5, 15), 'reward_gold': 60, 'reward_exp': 35},
-    {'name': 'Продавец', 'description': 'Продать ресурсов на {} золота', 'goal': (200, 500), 'reward_gold': 90, 'reward_exp': 45}
+    {'name': 'Продавец', 'description': 'Продать ресурсов на {} золота', 'goal': (200, 500), 'reward_gold': 90, 'reward_exp': 45},
+    
+    # Новые 6 заданий
+    {'name': 'Ударник труда', 'description': 'Совершить {} кликов', 'goal': (80, 120), 'reward_gold': 90, 'reward_exp': 30},
+    {'name': 'Золотая жила', 'description': 'Заработать {} золота', 'goal': (500, 1000), 'reward_gold': 150, 'reward_exp': 50},
+    {'name': 'Транжира', 'description': 'Купить улучшений на {} золота', 'goal': (300, 600), 'reward_gold': 120, 'reward_exp': 40},
+    {'name': 'Счастливчик', 'description': 'Получить {} критических ударов', 'goal': (8, 15), 'reward_gold': 100, 'reward_exp': 60},
+    {'name': 'Горняк', 'description': 'Добыть {} ресурсов', 'goal': (15, 30), 'reward_gold': 90, 'reward_exp': 45},
+    {'name': 'Торговый магнат', 'description': 'Продать ресурсов на {} золота', 'goal': (500, 1000), 'reward_gold': 150, 'reward_exp': 70},
 ]
 
 WEEKLY_TASK_TEMPLATES = [
@@ -1512,4 +1521,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
