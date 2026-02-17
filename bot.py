@@ -221,23 +221,92 @@ def get_db():
     conn.execute('PRAGMA journal_mode=WAL')
     return conn
 
-def init_db():
-    conn = get_db()
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS players (user_id INTEGER PRIMARY KEY, username TEXT, level INTEGER DEFAULT 1, exp INTEGER DEFAULT 0, gold INTEGER DEFAULT 0, total_clicks INTEGER DEFAULT 0, total_gold_earned INTEGER DEFAULT 0, total_crits INTEGER DEFAULT 0, current_crit_streak INTEGER DEFAULT 0, max_crit_streak INTEGER DEFAULT 0, last_daily_reset DATE, last_weekly_reset DATE, current_location TEXT DEFAULT 'coal_mine', active_tool TEXT DEFAULT 'wooden_pickaxe')''')
-    try:
-        c.execute("ALTER TABLE players ADD COLUMN active_tool TEXT DEFAULT 'wooden_pickaxe'")
-        logger.info("Column 'active_tool' added to players table.")
-    except sqlite3.OperationalError:
-        pass
-    c.execute('''CREATE TABLE IF NOT EXISTS upgrades (user_id INTEGER, upgrade_id TEXT, level INTEGER DEFAULT 0, PRIMARY KEY (user_id, upgrade_id))''')
-    c.execute('''CREATE TABLE IF NOT EXISTS daily_tasks (user_id INTEGER, task_id INTEGER, task_name TEXT, description TEXT, goal INTEGER, progress INTEGER DEFAULT 0, completed BOOLEAN DEFAULT 0, reward_gold INTEGER, reward_exp INTEGER, date DATE, PRIMARY KEY (user_id, task_id))''')
-    c.execute('''CREATE TABLE IF NOT EXISTS weekly_tasks (user_id INTEGER, task_id INTEGER, task_name TEXT, description TEXT, goal INTEGER, progress INTEGER DEFAULT 0, completed BOOLEAN DEFAULT 0, reward_gold INTEGER, reward_exp INTEGER, week TEXT, PRIMARY KEY (user_id, task_id, week))''')
-    c.execute('''CREATE TABLE IF NOT EXISTS user_achievements (user_id INTEGER, achievement_id TEXT, unlocked_at DATE, progress INTEGER, max_progress INTEGER, PRIMARY KEY (user_id, achievement_id))''')
-    c.execute('''CREATE TABLE IF NOT EXISTS inventory (user_id INTEGER, resource_id TEXT, amount INTEGER DEFAULT 0, PRIMARY KEY (user_id, resource_id))''')
-    c.execute('''CREATE TABLE IF NOT EXISTS player_tools (user_id INTEGER, tool_id TEXT, level INTEGER DEFAULT 1, experience INTEGER DEFAULT 0, PRIMARY KEY (user_id, tool_id))''')
-    conn.commit()
-    conn.close()
+async def init_db():
+    async with db_pool.acquire() as conn:
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS players (
+                user_id BIGINT PRIMARY KEY,
+                username TEXT,
+                level INTEGER DEFAULT 1,
+                exp INTEGER DEFAULT 0,
+                gold INTEGER DEFAULT 0,
+                total_clicks INTEGER DEFAULT 0,
+                total_gold_earned INTEGER DEFAULT 0,
+                total_crits INTEGER DEFAULT 0,
+                current_crit_streak INTEGER DEFAULT 0,
+                max_crit_streak INTEGER DEFAULT 0,
+                last_daily_reset DATE,
+                last_weekly_reset TEXT,
+                current_location TEXT DEFAULT 'coal_mine',
+                active_tool TEXT DEFAULT 'wooden_pickaxe'
+            )
+        ''')
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS upgrades (
+                user_id BIGINT,
+                upgrade_id TEXT,
+                level INTEGER DEFAULT 0,
+                PRIMARY KEY (user_id, upgrade_id)
+            )
+        ''')
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS daily_tasks (
+                user_id BIGINT,
+                task_id INTEGER,
+                task_name TEXT,
+                description TEXT,
+                goal INTEGER,
+                progress INTEGER DEFAULT 0,
+                completed BOOLEAN DEFAULT FALSE,
+                reward_gold INTEGER,
+                reward_exp INTEGER,
+                date DATE,
+                PRIMARY KEY (user_id, task_id, date)
+            )
+        ''')
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS weekly_tasks (
+                user_id BIGINT,
+                task_id INTEGER,
+                task_name TEXT,
+                description TEXT,
+                goal INTEGER,
+                progress INTEGER DEFAULT 0,
+                completed BOOLEAN DEFAULT FALSE,
+                reward_gold INTEGER,
+                reward_exp INTEGER,
+                week TEXT,
+                PRIMARY KEY (user_id, task_id, week)
+            )
+        ''')
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS user_achievements (
+                user_id BIGINT,
+                achievement_id TEXT,
+                unlocked_at DATE,
+                progress INTEGER,
+                max_progress INTEGER,
+                PRIMARY KEY (user_id, achievement_id)
+            )
+        ''')
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS inventory (
+                user_id BIGINT,
+                resource_id TEXT,
+                amount INTEGER DEFAULT 0,
+                PRIMARY KEY (user_id, resource_id)
+            )
+        ''')
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS player_tools (
+                user_id BIGINT,
+                tool_id TEXT,
+                level INTEGER DEFAULT 1,
+                experience INTEGER DEFAULT 0,
+                PRIMARY KEY (user_id, tool_id)
+            )
+        ''')
+        logger.info("Database tables initialized (if not existed)")
 
 def get_player(uid, username=None):
     conn = get_db()
@@ -1681,6 +1750,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
