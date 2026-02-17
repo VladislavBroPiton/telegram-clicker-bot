@@ -1532,7 +1532,9 @@ async def show_market(q, ctx):
         name = escape_markdown(info['name'], version=1)
         txt += f"{emoji} {name}: **{amt}** шт. | 💰 Цена: {price} за шт.\n"
         if amt > 0:
-            kb.append([InlineKeyboardButton(f"Продать 1 {name}", callback_data=f'sell_{rid}_1'), InlineKeyboardButton(f"Продать всё", callback_data=f'sell_{rid}_all')])
+            # ИЗМЕНЕНО: теперь callback_data начинается с sell_confirm_
+            kb.append([InlineKeyboardButton(f"Продать 1 {name}", callback_data=f'sell_confirm_{rid}_1'),
+                       InlineKeyboardButton(f"Продать всё", callback_data=f'sell_confirm_{rid}_all')])
     txt += "\n─────────────────────────\nВыбери, что и сколько продать."
     kb.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
     try:
@@ -1615,3 +1617,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
