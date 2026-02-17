@@ -1731,6 +1731,42 @@ async def healthcheck(request):
 async def startup_event():
     logger.info("Starting up...")
     global db_pool
+    
+    # --- НАЧАЛО ДИАГНОСТИКИ ---
+    try:
+        # Импортируем urllib для разбора URL (можно в начале файла, но здесь для наглядности)
+        import urllib.parse
+        parsed = urllib.parse.urlparse(DATABASE_URL)
+        host = parsed.hostname
+        port = parsed.port or 5432
+        logger.info(f"DATABASE_URL parsed: host={host}, port={port}")
+        
+        # Проверка DNS
+        import socket
+        addr = socket.gethostbyname(host)
+        logger.info(f"DNS resolution successful: {host} -> {addr}")
+        
+        # Проверка TCP-соединения (асинхронно)
+        import asyncio
+        try:
+            # Попытка открыть соединение с таймаутом 10 секунд
+            reader, writer = await asyncio.wait_for(
+                asyncio.open_connection(host, port),
+                timeout=10
+            )
+            logger.info(f"TCP connection to {host}:{port} successful")
+            writer.close()
+            await writer.wait_closed()
+        except asyncio.TimeoutError:
+            logger.error(f"TCP connection timeout to {host}:{port}")
+        except Exception as e:
+            logger.error(f"TCP connection failed: {e}")
+            
+    except Exception as e:
+        logger.error(f"Diagnostic error: {e}")
+    # --- КОНЕЦ ДИАГНОСТИКИ ---
+    
+    # Далее создаём пул (эта строка останется, но если диагностика покажет проблемы, пул может не создаться)
     db_pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=10)
     await init_db()
     asyncio.create_task(run_bot())
@@ -1752,3 +1788,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
