@@ -931,8 +931,11 @@ async def button_handler(update: Update, ctx):
         # Внутри process_buy уже есть await q.answer() с текстом или без
         await process_buy(q, ctx)
         answered = True
-    elif data.startswith('sell_'):
-        await process_sell(q, ctx)
+    elif data.startswith('sell_confirm_'):
+        await show_sell_confirmation(q, ctx)
+        answered = True
+    elif data.startswith('sell_execute_'):
+        await process_sell_execute(q, ctx)
         answered = True
     elif data.startswith('goto_'):
         await goto_location(q, ctx)
@@ -1666,6 +1669,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
