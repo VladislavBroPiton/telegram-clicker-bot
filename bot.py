@@ -1543,6 +1543,41 @@ async def show_market(q, ctx):
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
 
+async def show_sell_confirmation(q, ctx):
+    data = q.data
+    # Формат: sell_confirm_coal_1 или sell_confirm_coal_all
+    parts = data.split('_')
+    # parts: ['sell', 'confirm', rid, type]
+    rid = parts[2]
+    sell_type = parts[3]  # '1' или 'all'
+    uid = q.from_user.id
+
+    # Получаем актуальное количество
+    inv = get_inventory(uid)
+    avail = inv.get(rid, 0)
+    if avail == 0:
+        await q.answer("❌ У вас нет этого ресурса!", show_alert=True)
+        await show_market(q, ctx)
+        return
+
+    qty = avail if sell_type == 'all' else 1
+    price = RESOURCES[rid]['base_price']
+    total = qty * price
+    resource_name = RESOURCES[rid]['name']
+
+    text = (f"⚠️ **Подтверждение продажи**\n\n"
+            f"Товар: {resource_name}\n"
+            f"Количество: {qty} шт.\n"
+            f"Цена за шт.: {price}💰\n"
+            f"Итого: {total}💰\n\n"
+            f"Подтверждаете?")
+
+    kb = [
+        [InlineKeyboardButton("✅ Да, продать", callback_data=f'sell_execute_{rid}_{sell_type}')],
+        [InlineKeyboardButton("❌ Нет, вернуться", callback_data='market')]
+    ]
+    await q.edit_message_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+
 async def process_sell(q, ctx):
     data = q.data
     parts = data.split('_')
@@ -1617,4 +1652,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
