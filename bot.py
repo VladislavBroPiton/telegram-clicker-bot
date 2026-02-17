@@ -1578,6 +1578,47 @@ async def show_sell_confirmation(q, ctx):
     ]
     await q.edit_message_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
 
+async def process_sell_execute(q, ctx):
+    data = q.data
+    parts = data.split('_')
+    # parts: ['sell', 'execute', rid, type]
+    rid = parts[2]
+    sell_type = parts[3]  # '1' или 'all'
+    uid = q.from_user.id
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT amount FROM inventory WHERE user_id=? AND resource_id=?", (uid, rid))
+    r = c.fetchone()
+    if not r or r[0] == 0:
+        await q.answer("❌ Ресурс закончился!", show_alert=True)
+        conn.close()
+        await show_market(q, ctx)
+        return
+
+    avail = r[0]
+    qty = avail if sell_type == 'all' else 1
+    if qty > avail:
+        await q.answer("❌ Количество изменилось. Попробуйте снова.", show_alert=True)
+        conn.close()
+        await show_market(q, ctx)
+        return
+
+    price = RESOURCES[rid]['base_price']
+    total = qty * price
+
+    # Выполняем продажу
+    c.execute("UPDATE inventory SET amount=amount-? WHERE user_id=? AND resource_id=?", (qty, uid, rid))
+    c.execute("UPDATE players SET gold=gold+? WHERE user_id=?", (total, uid))
+    conn.commit()
+    conn.close()
+
+    update_daily_task_progress(uid, 'Продавец', total)
+    update_weekly_task_progress(uid, 'Торговец', total)
+
+    await q.answer(f"✅ Продано {qty} {RESOURCES[rid]['name']} за {total}💰", show_alert=False)
+    await show_market(q, ctx)
+
 async def process_sell(q, ctx):
     data = q.data
     parts = data.split('_')
@@ -1652,5 +1693,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
