@@ -821,7 +821,7 @@ async def cmd_help(update, ctx):
 
 async def button_handler(update: Update, ctx):
     q = update.callback_query
-    await q.answer()
+    # ВНИМАНИЕ: удалена строка await q.answer() – теперь всплывающие уведомления будут работать
     uid = q.from_user.id
     data = q.data
     check_daily_reset(uid)
@@ -1571,3 +1571,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
