@@ -308,26 +308,26 @@ async def init_db():
         ''')
         logger.info("Database tables initialized (if not existed)")
 
-def get_player(uid, username=None):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT * FROM players WHERE user_id=?", (uid,))
-    p = c.fetchone()
-    if not p:
-        today = datetime.date.today().isoformat()
-        cur_week = get_week_number()
-        c.execute("INSERT INTO players (user_id, username, last_daily_reset, last_weekly_reset) VALUES (?,?,?,?)", (uid, username, today, cur_week))
-        for uid2 in UPGRADES: c.execute("INSERT INTO upgrades (user_id, upgrade_id, level) VALUES (?,?,0)", (uid, uid2))
-        for rid in RESOURCES: c.execute("INSERT INTO inventory (user_id, resource_id, amount) VALUES (?,?,0)", (uid, rid))
-        c.execute("INSERT INTO player_tools (user_id, tool_id, level, experience) VALUES (?,?,1,0)", (uid, 'wooden_pickaxe'))
-        conn.commit()
-        generate_daily_tasks(uid, conn)
-        generate_weekly_tasks(uid, conn)
-        conn.commit()
-        c.execute("SELECT * FROM players WHERE user_id=?", (uid,))
-        p = c.fetchone()
-    conn.close()
-    return p
+async def get_player(uid, username=None):
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT * FROM players WHERE user_id = $1", uid)
+        if not row:
+            today = datetime.date.today().isoformat()
+            cur_week = get_week_number()
+            await conn.execute("INSERT INTO players (user_id, username, last_daily_reset, last_weekly_reset) VALUES ($1, $2, $3, $4)",
+                               uid, username, today, cur_week)
+            # Добавляем начальные улучшения
+            for up_id in UPGRADES:
+                await conn.execute("INSERT INTO upgrades (user_id, upgrade_id, level) VALUES ($1, $2, 0)", uid, up_id)
+            for rid in RESOURCES:
+                await conn.execute("INSERT INTO inventory (user_id, resource_id, amount) VALUES ($1, $2, 0)", uid, rid)
+            await conn.execute("INSERT INTO player_tools (user_id, tool_id, level, experience) VALUES ($1, $2, 1, 0)", uid, 'wooden_pickaxe')
+            # Генерация заданий
+            await generate_daily_tasks(uid, conn)
+            await generate_weekly_tasks(uid, conn)
+            # Получаем свежую запись
+            row = await conn.fetchrow("SELECT * FROM players WHERE user_id = $1", uid)
+        return dict(row)  # asyncpg возвращает запись как dict-like объект, можно преобразовать в dict
 
 def update_player(uid, **kwargs):
     conn = get_db()
@@ -1750,6 +1750,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
