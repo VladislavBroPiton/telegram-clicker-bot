@@ -1619,33 +1619,6 @@ async def process_sell_execute(q, ctx):
     await q.answer(f"✅ Продано {qty} {RESOURCES[rid]['name']} за {total}💰", show_alert=False)
     await show_market(q, ctx)
 
-async def process_sell(q, ctx):
-    data = q.data
-    parts = data.split('_')
-    rid = parts[1]
-    sell_type = parts[2]
-    uid = q.from_user.id
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT amount FROM inventory WHERE user_id=? AND resource_id=?", (uid, rid))
-    r = c.fetchone()
-    if not r or r[0] == 0:
-        await q.answer("Нет ресурса!", show_alert=True)
-        conn.close()
-        return
-    avail = r[0]
-    qty = avail if sell_type == 'all' else 1
-    price = RESOURCES[rid]['base_price']
-    total = qty * price
-    c.execute("UPDATE inventory SET amount=amount-? WHERE user_id=? AND resource_id=?", (qty, uid, rid))
-    c.execute("UPDATE players SET gold=gold+? WHERE user_id=?", (total, uid))
-    conn.commit()
-    conn.close()
-    update_daily_task_progress(uid, 'Продавец', total)
-    update_weekly_task_progress(uid, 'Торговец', total)
-    await q.answer(f"✅ Продано {qty} {RESOURCES[rid]['name']} за {total}💰", show_alert=False)
-    await show_market(q, ctx)
-
 async def run_bot():
     logger.info("Starting bot polling...")
     app = Application.builder().token(TOKEN).build()
@@ -1693,6 +1666,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
