@@ -391,22 +391,18 @@ def get_daily_tasks(uid):
     conn.close()
     return tasks
 
-def update_daily_task_progress(uid, name_contains, delta):
-    conn = get_db()
-    c = conn.cursor()
-    today = datetime.date.today().isoformat()
-    c.execute("UPDATE daily_tasks SET progress=progress+? WHERE user_id=? AND date=? AND completed=0 AND task_name LIKE ?", (delta, uid, today, f'%{name_contains}%'))
-    conn.commit()
-    c.execute("SELECT task_id, goal, reward_gold, reward_exp FROM daily_tasks WHERE user_id=? AND date=? AND completed=0", (uid, today))
-    tasks = c.fetchall()
-    for tid, goal, rg, re in tasks:
-        c.execute("SELECT progress FROM daily_tasks WHERE user_id=? AND task_id=? AND date=?", (uid, tid, today))
-        prog = c.fetchone()[0]
-        if prog >= goal:
-            c.execute("UPDATE daily_tasks SET completed=1 WHERE user_id=? AND task_id=? AND date=?", (uid, tid, today))
-            c.execute("UPDATE players SET gold=gold+?, exp=exp+? WHERE user_id=?", (rg, re, uid))
-    conn.commit()
-    conn.close()
+async def update_daily_task_progress(uid, name_contains, delta):
+    async with db_pool.acquire() as conn:
+        today = datetime.date.today().isoformat()
+        await conn.execute("UPDATE daily_tasks SET progress = progress + $1 WHERE user_id = $2 AND date = $3 AND completed = FALSE AND task_name LIKE $4",
+                           delta, uid, today, f'%{name_contains}%')
+        # Проверяем выполненные
+        rows = await conn.fetch("SELECT task_id, goal, reward_gold, reward_exp FROM daily_tasks WHERE user_id = $1 AND date = $2 AND completed = FALSE", uid, today)
+        for task_id, goal, rg, re in rows:
+            prog = await conn.fetchval("SELECT progress FROM daily_tasks WHERE user_id = $1 AND task_id = $2 AND date = $3", uid, task_id, today)
+            if prog >= goal:
+                await conn.execute("UPDATE daily_tasks SET completed = TRUE WHERE user_id = $1 AND task_id = $2 AND date = $3", uid, task_id, today)
+                await conn.execute("UPDATE players SET gold = gold + $1, exp = exp + $2 WHERE user_id = $3", rg, re, uid)
 
 def generate_weekly_tasks(uid, conn=None):
     close = False
@@ -1744,6 +1740,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
