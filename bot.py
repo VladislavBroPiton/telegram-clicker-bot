@@ -582,22 +582,18 @@ def set_player_location(uid, loc):
     conn.commit()
     conn.close()
 
-def get_player_stats(uid):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT level, exp, gold, total_clicks, total_gold_earned, total_crits, current_crit_streak, max_crit_streak FROM players WHERE user_id=?", (uid,))
-    r = c.fetchone()
-    if not r:
-        conn.close()
-        return {}
-    lvl, exp, gold, clicks, tg, crits, cstreak, mstreak = r
-    ups = {}
-    for uid2 in UPGRADES:
-        c.execute("SELECT level FROM upgrades WHERE user_id=? AND upgrade_id=?", (uid, uid2))
-        res = c.fetchone()
-        ups[uid2] = res[0] if res else 0
-    conn.close()
-    return {'level': lvl, 'exp': exp, 'exp_next': EXP_PER_LEVEL, 'gold': gold, 'clicks': clicks, 'total_gold': tg, 'total_crits': crits, 'current_crit_streak': cstreak, 'max_crit_streak': mstreak, 'upgrades': ups}
+async def get_player_stats(uid):
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT level, exp, gold, total_clicks, total_gold_earned, total_crits, current_crit_streak, max_crit_streak FROM players WHERE user_id = $1", uid)
+        if not row:
+            return {}
+        lvl, exp, gold, clicks, tg, crits, cstreak, mstreak = row
+        # Получаем уровни улучшений
+        ups = {}
+        for up_id in UPGRADES:
+            level = await conn.fetchval("SELECT level FROM upgrades WHERE user_id = $1 AND upgrade_id = $2", uid, up_id)
+            ups[up_id] = level if level is not None else 0
+        return {'level': lvl, 'exp': exp, 'exp_next': EXP_PER_LEVEL, 'gold': gold, 'clicks': clicks, 'total_gold': tg, 'total_crits': crits, 'current_crit_streak': cstreak, 'max_crit_streak': mstreak, 'upgrades': ups}
 
 def get_click_reward(uid):
     s = get_player_stats(uid)
@@ -1740,6 +1736,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
