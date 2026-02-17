@@ -1625,6 +1625,14 @@ async def process_sell_execute(q, ctx):
 
     await q.answer(f"✅ Продано {qty} {RESOURCES[rid]['name']} за {total}💰", show_alert=False)
     await show_market(q, ctx)
+    
+async def init_db_pool():
+    global db_pool
+    database_url = os.environ.get('DATABASE_URL')
+    if not database_url:
+        raise ValueError("No DATABASE_URL environment variable set")
+    db_pool = await asyncpg.create_pool(database_url, min_size=1, max_size=10)
+    logger.info("Database pool created")
 
 async def run_bot():
     logger.info("Starting bot polling...")
@@ -1673,6 +1681,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
