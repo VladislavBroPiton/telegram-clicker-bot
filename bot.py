@@ -821,85 +821,129 @@ async def cmd_help(update, ctx):
 
 async def button_handler(update: Update, ctx):
     q = update.callback_query
-    # ВНИМАНИЕ: удалена строка await q.answer() – теперь всплывающие уведомления будут работать
     uid = q.from_user.id
     data = q.data
+    # Флаг, отвечали ли мы уже на callback
+    answered = False
+
     check_daily_reset(uid)
     check_weekly_reset(uid)
 
     if data == 'mine':
         await mine_action(q, ctx)
+        answered = True
     elif data == 'locations':
         await show_locations(q, ctx)
+        answered = True
     elif data == 'shop':
         await show_shop_menu(q, ctx)
+        answered = True
     elif data == 'shop_category_upgrades':
         await show_shop_upgrades(q, ctx)
+        answered = True
     elif data == 'shop_category_tools':
         await show_shop_tools(q, ctx)
+        answered = True
     elif data == 'back_to_shop_menu':
         await show_shop_menu(q, ctx)
+        answered = True
     elif data == 'back_to_shop_tools':
         await show_shop_tools(q, ctx)
+        answered = True
     elif data.startswith('activate_tool_'):
         await activate_tool(q, ctx)
+        answered = True
     elif data.startswith('upgrade_tool_'):
         await upgrade_tool_handler(q, ctx)
+        answered = True
     elif data.startswith('confirm_upgrade_'):
         await confirm_upgrade(q, ctx)
+        answered = True
     elif data == 'tasks':
         await show_daily_tasks(q, ctx)
+        answered = True
     elif data == 'show_weekly':
         await show_weekly_tasks(q, ctx)
+        answered = True
     elif data == 'back_to_daily':
         await show_daily_tasks(q, ctx)
+        answered = True
     elif data == 'profile':
         await show_profile(q, ctx)
+        answered = True
     elif data == 'profile_achievements':
         await send_achievements(uid, ctx)
+        # send_achievements отправляет новое сообщение, поэтому нужно ответить на callback
+        await q.answer()
+        answered = True
     elif data == 'leaderboard_menu':
         await show_leaderboard_menu(q, ctx)
+        answered = True
     elif data == 'leaderboard_resources_menu':
         await show_leaderboard_resources_menu(q, ctx)
+        answered = True
     elif data == 'leaderboard_level':
         await show_leaderboard_level(q, ctx)
+        answered = True
     elif data == 'leaderboard_gold':
         await show_leaderboard_gold(q, ctx)
+        answered = True
     elif data == 'leaderboard_achievements':
         await show_leaderboard_achievements(q, ctx)
+        answered = True
     elif data == 'leaderboard_tasks_completed':
         await show_leaderboard_tasks_completed(q, ctx)
+        answered = True
     elif data == 'leaderboard_tools':
         await show_leaderboard_tools(q, ctx)
+        answered = True
     elif data == 'leaderboard_coal':
         await show_leaderboard_coal(q, ctx)
+        answered = True
     elif data == 'leaderboard_iron':
         await show_leaderboard_iron(q, ctx)
+        answered = True
     elif data == 'leaderboard_gold_ore':
         await show_leaderboard_gold_ore(q, ctx)
+        answered = True
     elif data == 'leaderboard_diamond':
         await show_leaderboard_diamond(q, ctx)
+        answered = True
     elif data == 'leaderboard_mithril':
         await show_leaderboard_mithril(q, ctx)
+        answered = True
     elif data == 'leaderboard_total_resources':
         await show_leaderboard_total_resources(q, ctx)
-    # FAQ
+        answered = True
     elif data == 'faq_locations':
         await show_faq_locations(q, ctx)
+        answered = True
     elif data == 'back_to_faq':
         await back_to_faq(q, ctx)
+        answered = True
     elif data == 'inventory':
         await show_inventory(q, ctx)
+        answered = True
     elif data == 'market':
         await show_market(q, ctx)
+        answered = True
     elif data.startswith('buy_'):
+        # Внутри process_buy уже есть await q.answer() с текстом или без
         await process_buy(q, ctx)
+        answered = True
     elif data.startswith('sell_'):
         await process_sell(q, ctx)
+        answered = True
     elif data.startswith('goto_'):
         await goto_location(q, ctx)
+        answered = True
     elif data == 'back_to_menu':
         await show_main_menu_from_query(q)
+        answered = True
+
+    # Если ни одна ветка не ответила на callback, отвечаем пустым подтверждением
+    if not answered:
+        await q.answer()
 
 async def mine_action(q, ctx):
     uid = q.from_user.id
@@ -1571,4 +1615,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
