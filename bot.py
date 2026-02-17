@@ -1,10 +1,11 @@
 import logging
 import random
-import sqlite3
 import datetime
 import asyncio
 import os
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
+from contextlib import asynccontextmanager
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from telegram.error import BadRequest
@@ -14,16 +15,17 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 import uvicorn
 import asyncpg
-from contextlib import asynccontextmanager
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
-# Глобальный пул соединений с БД
-db_pool = None
 
 TOKEN = os.environ.get('BOT_TOKEN')
 if not TOKEN:
     raise ValueError("No BOT_TOKEN environment variable set")
+
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if not DATABASE_URL:
+    raise ValueError("No DATABASE_URL environment variable set")
 
 BASE_CLICK_REWARD = (3, 9)
 BASE_EXP_REWARD = (1, 3)
@@ -36,15 +38,12 @@ UPGRADES = {
 }
 
 DAILY_TASK_TEMPLATES = [
-    # Существующие 6 заданий (с учётом изменённого "Труженика")
     {'name': 'Труженик', 'description': 'Совершить {} кликов', 'goal': (50, 80), 'reward_gold': 70, 'reward_exp': 20},
     {'name': 'Золотоискатель', 'description': 'Заработать {} золота', 'goal': (100, 500), 'reward_gold': 100, 'reward_exp': 30},
     {'name': 'Покупатель', 'description': 'Купить улучшений на {} золота', 'goal': (150, 300), 'reward_gold': 80, 'reward_exp': 25},
     {'name': 'Везунчик', 'description': 'Получить {} критических ударов', 'goal': (3, 8), 'reward_gold': 70, 'reward_exp': 40},
     {'name': 'Рудокоп', 'description': 'Добыть {} ресурсов', 'goal': (5, 15), 'reward_gold': 60, 'reward_exp': 35},
     {'name': 'Продавец', 'description': 'Продать ресурсов на {} золота', 'goal': (200, 500), 'reward_gold': 90, 'reward_exp': 45},
-    
-    # Новые 6 заданий
     {'name': 'Ударник труда', 'description': 'Совершить {} кликов', 'goal': (80, 120), 'reward_gold': 90, 'reward_exp': 30},
     {'name': 'Золотая жила', 'description': 'Заработать {} золота', 'goal': (500, 1000), 'reward_gold': 150, 'reward_exp': 50},
     {'name': 'Транжира', 'description': 'Купить улучшений на {} золота', 'goal': (300, 600), 'reward_gold': 120, 'reward_exp': 40},
@@ -54,15 +53,12 @@ DAILY_TASK_TEMPLATES = [
 ]
 
 WEEKLY_TASK_TEMPLATES = [
-    # Существующие 6 заданий (с изменёнными первыми двумя)
     {'name': 'Шахтёр-неделя', 'description': 'Совершить {} кликов', 'goal': (400, 800), 'reward_gold': 500, 'reward_exp': 200},
     {'name': 'Золотая лихорадка', 'description': 'Заработать {} золота', 'goal': (2000, 5000), 'reward_gold': 1000, 'reward_exp': 500},
     {'name': 'Магнат', 'description': 'Купить улучшений на {} золота', 'goal': (1500, 3000), 'reward_gold': 800, 'reward_exp': 400},
     {'name': 'Критический удар', 'description': 'Получить {} критических ударов', 'goal': (20, 50), 'reward_gold': 600, 'reward_exp': 300},
     {'name': 'Коллекционер', 'description': 'Добыть {} ресурсов', 'goal': (50, 150), 'reward_gold': 700, 'reward_exp': 350},
     {'name': 'Торговец', 'description': 'Продать ресурсов на {} золота', 'goal': (2000, 5000), 'reward_gold': 900, 'reward_exp': 450},
-    
-    # Новые 6 заданий (с изменённым "Шахтёр-профи")
     {'name': 'Шахтёр-профи', 'description': 'Совершить {} кликов', 'goal': (800, 1300), 'reward_gold': 1000, 'reward_exp': 400},
     {'name': 'Золотой дождь', 'description': 'Заработать {} золота', 'goal': (5000, 10000), 'reward_gold': 2000, 'reward_exp': 1000},
     {'name': 'Олигарх', 'description': 'Купить улучшений на {} золота', 'goal': (3000, 6000), 'reward_gold': 1500, 'reward_exp': 800},
@@ -109,84 +105,41 @@ FAQ = [
 
 class Achievement:
     def __init__(self, id, name, desc, cond, reward_gold=0, reward_exp=0):
-        self.id, self.name, self.description, self.condition_func, self.reward_gold, self.reward_exp = id, name, desc, cond, reward_gold, reward_exp
+        self.id = id
+        self.name = name
+        self.description = desc
+        self.condition_func = cond
+        self.reward_gold = reward_gold
+        self.reward_exp = reward_exp
 
-def cond_first_click(uid): s=get_player_stats(uid); return s['clicks']>=1, s['clicks'], 1
-def cond_clicks_100(uid): s=get_player_stats(uid); return s['clicks']>=100, s['clicks'], 100
-def cond_gold_1000(uid): s=get_player_stats(uid); return s['total_gold']>=1000, s['total_gold'], 1000
-def cond_crits_50(uid):
-    conn=get_db(); c=conn.cursor(); c.execute("SELECT total_crits FROM players WHERE user_id=?",(uid,)); r=c.fetchone()[0]; conn.close(); return r>=50, r, 50
-def cond_crit_streak_5(uid):
-    conn=get_db(); c=conn.cursor(); c.execute("SELECT max_crit_streak FROM players WHERE user_id=?",(uid,)); r=c.fetchone()[0]; conn.close(); return r>=5, r, 5
-def cond_resources_50(uid): inv=get_inventory(uid); total=sum(inv.values()); return total>=50, total, 50
-
-def condition_clicks_300(uid):
-    stats = get_player_stats(uid)
-    return stats['clicks'] >= 300, stats['clicks'], 300
-def condition_clicks_500(uid):
-    stats = get_player_stats(uid)
-    return stats['clicks'] >= 500, stats['clicks'], 500
-def condition_clicks_1000(uid):
-    stats = get_player_stats(uid)
-    return stats['clicks'] >= 1000, stats['clicks'], 1000
-def condition_gold_1500(uid):
-    stats = get_player_stats(uid)
-    return stats['total_gold'] >= 1500, stats['total_gold'], 1500
-def condition_gold_5000(uid):
-    stats = get_player_stats(uid)
-    return stats['total_gold'] >= 5000, stats['total_gold'], 5000
-def condition_gold_20000(uid):
-    stats = get_player_stats(uid)
-    return stats['total_gold'] >= 20000, stats['total_gold'], 20000
-def condition_smith(uid):
-    tools = get_player_tools(uid)
-    max_level = max(tools.values()) if tools else 0
-    return max_level >= 5, max_level, 5
-def condition_tools_all_purchased(uid):
-    tools = get_player_tools(uid)
+# Условия достижений (синхронные, принимают uid и возвращают (bool, current, required))
+def cond_first_click(uid, stats): return stats['clicks'] >= 1, stats['clicks'], 1
+def cond_clicks_100(uid, stats): return stats['clicks'] >= 100, stats['clicks'], 100
+def cond_gold_1000(uid, stats): return stats['total_gold'] >= 1000, stats['total_gold'], 1000
+def cond_crits_50(uid, stats): return stats['total_crits'] >= 50, stats['total_crits'], 50
+def cond_crit_streak_5(uid, stats): return stats['max_crit_streak'] >= 5, stats['max_crit_streak'], 5
+def cond_resources_50(uid, inv_total): return inv_total >= 50, inv_total, 50
+def condition_clicks_300(uid, stats): return stats['clicks'] >= 300, stats['clicks'], 300
+def condition_clicks_500(uid, stats): return stats['clicks'] >= 500, stats['clicks'], 500
+def condition_clicks_1000(uid, stats): return stats['clicks'] >= 1000, stats['clicks'], 1000
+def condition_gold_1500(uid, stats): return stats['total_gold'] >= 1500, stats['total_gold'], 1500
+def condition_gold_5000(uid, stats): return stats['total_gold'] >= 5000, stats['total_gold'], 5000
+def condition_gold_20000(uid, stats): return stats['total_gold'] >= 20000, stats['total_gold'], 20000
+def condition_smith(uid, tools): max_level = max(tools.values()) if tools else 0; return max_level >= 5, max_level, 5
+def condition_tools_all_purchased(uid, tools): all_tools = list(TOOLS.keys()); purchased = [tid for tid in all_tools if tid in tools]; return len(purchased) == len(all_tools), len(purchased), len(all_tools)
+def condition_tools_all_level5(uid, tools):
     all_tools = list(TOOLS.keys())
-    purchased = [tid for tid in all_tools if tid in tools]
-    return len(purchased) == len(all_tools), len(purchased), len(all_tools)
-def condition_tools_all_level5(uid):
-    tools = get_player_tools(uid)
-    all_tools = list(TOOLS.keys())
-    if len(tools) != len(all_tools):
-        return False, len(tools), len(all_tools)
+    if len(tools) != len(all_tools): return False, len(tools), len(all_tools)
     for tid in all_tools:
-        if tools.get(tid, 0) < 5:
-            return False, tools.get(tid, 0), 5
+        if tools.get(tid, 0) < 5: return False, tools.get(tid, 0), 5
     return True, 5, 5
-def condition_tools_total_level_50(uid):
-    tools = get_player_tools(uid)
-    total = sum(tools.values())
-    return total >= 50, total, 50
-def condition_tools_total_level_100(uid):
-    tools = get_player_tools(uid)
-    total = sum(tools.values())
-    return total >= 100, total, 100
-def condition_hardworker(uid):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM daily_tasks WHERE completed=1")
-    daily = c.fetchone()[0]
-    c.execute("SELECT COUNT(*) FROM weekly_tasks WHERE completed=1")
-    weekly = c.fetchone()[0]
-    conn.close()
-    total = daily + weekly
-    return total >= 50, total, 50
-def condition_explorer(uid):
-    max_loc_level = max(loc['min_level'] for loc in LOCATIONS.values())
-    stats = get_player_stats(uid)
-    return stats['level'] >= max_loc_level, stats['level'], max_loc_level
-def condition_collector_all(uid):
-    inv = get_inventory(uid)
-    min_amount = min(inv.get(rid, 0) for rid in RESOURCES)
-    return min_amount >= 100, min_amount, 100
-def condition_crit_master(uid):
-    stats = get_player_stats(uid)
-    return stats['total_crits'] >= 100, stats['total_crits'], 100
-def condition_tool_master(uid):
-    tools = get_player_tools(uid)
+def condition_tools_total_level_50(uid, tools): total = sum(tools.values()); return total >= 50, total, 50
+def condition_tools_total_level_100(uid, tools): total = sum(tools.values()); return total >= 100, total, 100
+def condition_hardworker(uid, daily_completed, weekly_completed): total = daily_completed + weekly_completed; return total >= 50, total, 50
+def condition_explorer(uid, stats): max_loc_level = max(loc['min_level'] for loc in LOCATIONS.values()); return stats['level'] >= max_loc_level, stats['level'], max_loc_level
+def condition_collector_all(uid, inv): min_amount = min(inv.get(rid, 0) for rid in RESOURCES); return min_amount >= 100, min_amount, 100
+def condition_crit_master(uid, stats): return stats['total_crits'] >= 100, stats['total_crits'], 100
+def condition_tool_master(uid, tools):
     all_tools = list(TOOLS.keys())
     min_level = min(tools.get(tid, 0) for tid in all_tools)
     return min_level >= 3, min_level, 3
@@ -216,12 +169,58 @@ ACHIEVEMENTS = [
     Achievement('explorer', 'Исследователь', 'Достичь максимального уровня', condition_explorer, 300, 150),
 ]
 
-def get_db():
-    conn = sqlite3.connect('game.db')
-    conn.execute('PRAGMA journal_mode=WAL')
-    return conn
+# Глобальный пул соединений
+db_pool: Optional[asyncpg.Pool] = None
+
+# Вспомогательные функции
+def get_week_number(d=None):
+    if d is None:
+        d = datetime.date.today()
+    y, w, _ = d.isocalendar()
+    return f"{y}-{w:02d}"
+
+def get_upgrade_cost(tid: str, level: int) -> dict:
+    """Возвращает стоимость улучшения инструмента для данного уровня (синхронно)."""
+    if level == 0:
+        return {}
+    base_cost = TOOLS[tid]['upgrade_cost']
+    return {res: amount * level for res, amount in base_cost.items()}
+
+def get_tool_power(uid, tid: str, level: int) -> int:
+    """Вычисляет силу инструмента (синхронно, level уже известен)."""
+    if level == 0:
+        return 0
+    return TOOLS[tid]['base_power'] + level - 1
+
+def get_click_reward(stats: dict) -> Tuple[int, int, bool]:
+    """Синхронный расчёт награды за клик на основе статистики."""
+    cpl = stats['upgrades']['click_power']
+    ccl = stats['upgrades']['crit_chance']
+    bg = random.randint(*BASE_CLICK_REWARD)
+    be = random.randint(*BASE_EXP_REWARD)
+    gold = bg + cpl * 2
+    crit = (ccl * 2) / 100.0
+    is_crit = random.random() < crit
+    if is_crit:
+        gold *= 2
+        be *= 2
+    return gold, be, is_crit
+
+class FakeQuery:
+    def __init__(self, msg, from_user):
+        self.message = msg
+        self.from_user = from_user
+        self.data = None
+    async def answer(self, text=None, show_alert=False):
+        if text:
+            await self.message.reply_text(text)
+    async def edit_message_text(self, text, reply_markup=None, parse_mode=None):
+        await self.message.reply_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
+
+# ==================== АСИНХРОННЫЕ ФУНКЦИИ БД ====================
 
 async def init_db():
+    """Создаёт таблицы, если их нет."""
     async with db_pool.acquire() as conn:
         await conn.execute('''
             CREATE TABLE IF NOT EXISTS players (
@@ -308,335 +307,388 @@ async def init_db():
         ''')
         logger.info("Database tables initialized (if not existed)")
 
-async def get_player(uid, username=None):
+async def get_player(uid: int, username: str = None) -> dict:
+    """Возвращает запись игрока, создаёт при отсутствии."""
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow("SELECT * FROM players WHERE user_id = $1", uid)
         if not row:
             today = datetime.date.today().isoformat()
             cur_week = get_week_number()
-            await conn.execute("INSERT INTO players (user_id, username, last_daily_reset, last_weekly_reset) VALUES ($1, $2, $3, $4)",
-                               uid, username, today, cur_week)
-            # Добавляем начальные улучшения
+            await conn.execute(
+                "INSERT INTO players (user_id, username, last_daily_reset, last_weekly_reset) VALUES ($1, $2, $3, $4)",
+                uid, username, today, cur_week
+            )
+            # Базовые улучшения
             for up_id in UPGRADES:
-                await conn.execute("INSERT INTO upgrades (user_id, upgrade_id, level) VALUES ($1, $2, 0)", uid, up_id)
+                await conn.execute(
+                    "INSERT INTO upgrades (user_id, upgrade_id, level) VALUES ($1, $2, 0) ON CONFLICT DO NOTHING",
+                    uid, up_id
+                )
+            # Инвентарь
             for rid in RESOURCES:
-                await conn.execute("INSERT INTO inventory (user_id, resource_id, amount) VALUES ($1, $2, 0)", uid, rid)
-            await conn.execute("INSERT INTO player_tools (user_id, tool_id, level, experience) VALUES ($1, $2, 1, 0)", uid, 'wooden_pickaxe')
-            # Генерация заданий
+                await conn.execute(
+                    "INSERT INTO inventory (user_id, resource_id, amount) VALUES ($1, $2, 0) ON CONFLICT DO NOTHING",
+                    uid, rid
+                )
+            # Стартовый инструмент
+            await conn.execute(
+                "INSERT INTO player_tools (user_id, tool_id, level, experience) VALUES ($1, $2, 1, 0) ON CONFLICT DO NOTHING",
+                uid, 'wooden_pickaxe'
+            )
+            # Задания
             await generate_daily_tasks(uid, conn)
             await generate_weekly_tasks(uid, conn)
-            # Получаем свежую запись
+            # Вернуть свежую запись
             row = await conn.fetchrow("SELECT * FROM players WHERE user_id = $1", uid)
-        return dict(row)  # asyncpg возвращает запись как dict-like объект, можно преобразовать в dict
+        return dict(row)
 
-def update_player(uid, **kwargs):
-    conn = get_db()
-    c = conn.cursor()
-    set_clause = ', '.join([f"{k}=?" for k in kwargs])
-    vals = list(kwargs.values()) + [uid]
-    c.execute(f"UPDATE players SET {set_clause} WHERE user_id=?", vals)
-    conn.commit()
-    conn.close()
+async def update_player(uid: int, **kwargs):
+    """Обновляет поля игрока."""
+    if not kwargs:
+        return
+    set_clause = ', '.join([f"{k} = ${i+2}" for i, k in enumerate(kwargs.keys())])
+    values = list(kwargs.values())
+    async with db_pool.acquire() as conn:
+        await conn.execute(f"UPDATE players SET {set_clause} WHERE user_id = $1", uid, *values)
 
-def get_upgrade_level(uid, uid2):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT level FROM upgrades WHERE user_id=? AND upgrade_id=?", (uid, uid2))
-    r = c.fetchone()
-    conn.close()
-    return r[0] if r else 0
+async def get_upgrade_level(uid: int, upgrade_id: str) -> int:
+    async with db_pool.acquire() as conn:
+        level = await conn.fetchval("SELECT level FROM upgrades WHERE user_id = $1 AND upgrade_id = $2", uid, upgrade_id)
+        return level if level is not None else 0
 
-def set_upgrade_level(uid, uid2, lvl):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("UPDATE upgrades SET level=? WHERE user_id=? AND upgrade_id=?", (lvl, uid, uid2))
-    conn.commit()
-    conn.close()
+async def set_upgrade_level(uid: int, upgrade_id: str, level: int):
+    async with db_pool.acquire() as conn:
+        await conn.execute("UPDATE upgrades SET level = $1 WHERE user_id = $2 AND upgrade_id = $3", level, uid, upgrade_id)
 
-def get_week_number(d=None):
-    if d is None: d = datetime.date.today()
-    y, w, _ = d.isocalendar()
-    return f"{y}-{w:02d}"
+async def generate_daily_tasks(uid: int, conn: asyncpg.Connection = None):
+    """Генерирует ежедневные задания. Если conn не передан, создаёт новое соединение."""
+    async def _gen(conn):
+        today = datetime.date.today().isoformat()
+        await conn.execute("DELETE FROM daily_tasks WHERE user_id = $1 AND date = $2", uid, today)
+        templates = random.sample(DAILY_TASK_TEMPLATES, min(4, len(DAILY_TASK_TEMPLATES)))
+        for i, t in enumerate(templates):
+            goal = random.randint(*t['goal'])
+            desc = t['description'].format(goal)
+            await conn.execute(
+                "INSERT INTO daily_tasks (user_id, task_id, task_name, description, goal, reward_gold, reward_exp, date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                uid, i, t['name'], desc, goal, t['reward_gold'], t['reward_exp'], today
+            )
+    if conn:
+        await _gen(conn)
+    else:
+        async with db_pool.acquire() as conn:
+            await _gen(conn)
 
-async def generate_daily_tasks(uid, conn):
-    today = datetime.date.today().isoformat()
-    await conn.execute("DELETE FROM daily_tasks WHERE user_id = $1 AND date = $2", uid, today)
-    templates = random.sample(DAILY_TASK_TEMPLATES, min(4, len(DAILY_TASK_TEMPLATES)))
-    for i, t in enumerate(templates):
-        goal = random.randint(*t['goal'])
-        desc = t['description'].format(goal)
-        await conn.execute("INSERT INTO daily_tasks (user_id, task_id, task_name, description, goal, reward_gold, reward_exp, date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-                           uid, i, t['name'], desc, goal, t['reward_gold'], t['reward_exp'], today)
-
-def check_daily_reset(uid):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT last_daily_reset FROM players WHERE user_id=?", (uid,))
-    r = c.fetchone()
-    if r:
-        last = r[0]
+async def check_daily_reset(uid: int):
+    async with db_pool.acquire() as conn:
+        last = await conn.fetchval("SELECT last_daily_reset FROM players WHERE user_id = $1", uid)
         today = datetime.date.today().isoformat()
         if last != today:
-            generate_daily_tasks(uid, conn)
-            c.execute("UPDATE players SET last_daily_reset=? WHERE user_id=?", (today, uid))
-            conn.commit()
-    conn.close()
+            await generate_daily_tasks(uid, conn)
+            await conn.execute("UPDATE players SET last_daily_reset = $1 WHERE user_id = $2", today, uid)
 
-def get_daily_tasks(uid):
-    conn = get_db()
-    c = conn.cursor()
-    today = datetime.date.today().isoformat()
-    c.execute("SELECT task_id, task_name, description, goal, progress, completed, reward_gold, reward_exp FROM daily_tasks WHERE user_id=? AND date=?", (uid, today))
-    tasks = c.fetchall()
-    conn.close()
-    return tasks
-
-async def update_daily_task_progress(uid, name_contains, delta):
+async def get_daily_tasks(uid: int) -> list:
     async with db_pool.acquire() as conn:
         today = datetime.date.today().isoformat()
-        await conn.execute("UPDATE daily_tasks SET progress = progress + $1 WHERE user_id = $2 AND date = $3 AND completed = FALSE AND task_name LIKE $4",
-                           delta, uid, today, f'%{name_contains}%')
-        # Проверяем выполненные
-        rows = await conn.fetch("SELECT task_id, goal, reward_gold, reward_exp FROM daily_tasks WHERE user_id = $1 AND date = $2 AND completed = FALSE", uid, today)
+        rows = await conn.fetch(
+            "SELECT task_id, task_name, description, goal, progress, completed, reward_gold, reward_exp FROM daily_tasks WHERE user_id = $1 AND date = $2",
+            uid, today
+        )
+        return [list(row) for row in rows]
+
+async def update_daily_task_progress(uid: int, name_contains: str, delta: int):
+    async with db_pool.acquire() as conn:
+        today = datetime.date.today().isoformat()
+        await conn.execute(
+            "UPDATE daily_tasks SET progress = progress + $1 WHERE user_id = $2 AND date = $3 AND completed = FALSE AND task_name LIKE $4",
+            delta, uid, today, f'%{name_contains}%'
+        )
+        # Проверим, не выполнены ли задания
+        rows = await conn.fetch(
+            "SELECT task_id, goal, reward_gold, reward_exp FROM daily_tasks WHERE user_id = $1 AND date = $2 AND completed = FALSE",
+            uid, today
+        )
         for task_id, goal, rg, re in rows:
-            prog = await conn.fetchval("SELECT progress FROM daily_tasks WHERE user_id = $1 AND task_id = $2 AND date = $3", uid, task_id, today)
+            prog = await conn.fetchval(
+                "SELECT progress FROM daily_tasks WHERE user_id = $1 AND task_id = $2 AND date = $3",
+                uid, task_id, today
+            )
             if prog >= goal:
-                await conn.execute("UPDATE daily_tasks SET completed = TRUE WHERE user_id = $1 AND task_id = $2 AND date = $3", uid, task_id, today)
-                await conn.execute("UPDATE players SET gold = gold + $1, exp = exp + $2 WHERE user_id = $3", rg, re, uid)
+                await conn.execute(
+                    "UPDATE daily_tasks SET completed = TRUE WHERE user_id = $1 AND task_id = $2 AND date = $3",
+                    uid, task_id, today
+                )
+                await conn.execute(
+                    "UPDATE players SET gold = gold + $1, exp = exp + $2 WHERE user_id = $3",
+                    rg, re, uid
+                )
 
-def generate_weekly_tasks(uid, conn=None):
-    close = False
-    if conn is None:
-        conn = get_db()
-        close = True
-    c = conn.cursor()
-    week = get_week_number()
-    c.execute("DELETE FROM weekly_tasks WHERE user_id=? AND week=?", (uid, week))
-    templates = random.sample(WEEKLY_TASK_TEMPLATES, min(4, len(WEEKLY_TASK_TEMPLATES)))
-    for i, t in enumerate(templates):
-        goal = random.randint(*t['goal'])
-        desc = t['description'].format(goal)
-        c.execute("INSERT OR REPLACE INTO weekly_tasks (user_id, task_id, task_name, description, goal, reward_gold, reward_exp, week) VALUES (?,?,?,?,?,?,?,?)", (uid, i, t['name'], desc, goal, t['reward_gold'], t['reward_exp'], week))
-    conn.commit()
-    if close: conn.close()
+async def generate_weekly_tasks(uid: int, conn: asyncpg.Connection = None):
+    async def _gen(conn):
+        week = get_week_number()
+        await conn.execute("DELETE FROM weekly_tasks WHERE user_id = $1 AND week = $2", uid, week)
+        templates = random.sample(WEEKLY_TASK_TEMPLATES, min(4, len(WEEKLY_TASK_TEMPLATES)))
+        for i, t in enumerate(templates):
+            goal = random.randint(*t['goal'])
+            desc = t['description'].format(goal)
+            await conn.execute(
+                "INSERT INTO weekly_tasks (user_id, task_id, task_name, description, goal, reward_gold, reward_exp, week) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                uid, i, t['name'], desc, goal, t['reward_gold'], t['reward_exp'], week
+            )
+    if conn:
+        await _gen(conn)
+    else:
+        async with db_pool.acquire() as conn:
+            await _gen(conn)
 
-def check_weekly_reset(uid):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT last_weekly_reset FROM players WHERE user_id=?", (uid,))
-    r = c.fetchone()
-    if r:
-        last = r[0]
+async def check_weekly_reset(uid: int):
+    async with db_pool.acquire() as conn:
+        last = await conn.fetchval("SELECT last_weekly_reset FROM players WHERE user_id = $1", uid)
         cur = get_week_number()
         if last != cur:
-            generate_weekly_tasks(uid, conn)
-            c.execute("UPDATE players SET last_weekly_reset=? WHERE user_id=?", (cur, uid))
-            conn.commit()
-    conn.close()
+            await generate_weekly_tasks(uid, conn)
+            await conn.execute("UPDATE players SET last_weekly_reset = $1 WHERE user_id = $2", cur, uid)
 
-def get_weekly_tasks(uid):
-    conn = get_db()
-    c = conn.cursor()
-    week = get_week_number()
-    c.execute("SELECT task_id, task_name, description, goal, progress, completed, reward_gold, reward_exp FROM weekly_tasks WHERE user_id=? AND week=?", (uid, week))
-    tasks = c.fetchall()
-    conn.close()
-    return tasks
+async def get_weekly_tasks(uid: int) -> list:
+    async with db_pool.acquire() as conn:
+        week = get_week_number()
+        rows = await conn.fetch(
+            "SELECT task_id, task_name, description, goal, progress, completed, reward_gold, reward_exp FROM weekly_tasks WHERE user_id = $1 AND week = $2",
+            uid, week
+        )
+        return [list(row) for row in rows]
 
-def update_weekly_task_progress(uid, name_contains, delta):
-    conn = get_db()
-    c = conn.cursor()
-    week = get_week_number()
-    c.execute("UPDATE weekly_tasks SET progress=progress+? WHERE user_id=? AND week=? AND completed=0 AND task_name LIKE ?", (delta, uid, week, f'%{name_contains}%'))
-    conn.commit()
-    c.execute("SELECT task_id, goal, reward_gold, reward_exp FROM weekly_tasks WHERE user_id=? AND week=? AND completed=0", (uid, week))
-    tasks = c.fetchall()
-    for tid, goal, rg, re in tasks:
-        c.execute("SELECT progress FROM weekly_tasks WHERE user_id=? AND task_id=? AND week=?", (uid, tid, week))
-        prog = c.fetchone()[0]
-        if prog >= goal:
-            c.execute("UPDATE weekly_tasks SET completed=1 WHERE user_id=? AND task_id=? AND week=?", (uid, tid, week))
-            c.execute("UPDATE players SET gold=gold+?, exp=exp+? WHERE user_id=?", (rg, re, uid))
-    conn.commit()
-    conn.close()
+async def update_weekly_task_progress(uid: int, name_contains: str, delta: int):
+    async with db_pool.acquire() as conn:
+        week = get_week_number()
+        await conn.execute(
+            "UPDATE weekly_tasks SET progress = progress + $1 WHERE user_id = $2 AND week = $3 AND completed = FALSE AND task_name LIKE $4",
+            delta, uid, week, f'%{name_contains}%'
+        )
+        rows = await conn.fetch(
+            "SELECT task_id, goal, reward_gold, reward_exp FROM weekly_tasks WHERE user_id = $1 AND week = $2 AND completed = FALSE",
+            uid, week
+        )
+        for task_id, goal, rg, re in rows:
+            prog = await conn.fetchval(
+                "SELECT progress FROM weekly_tasks WHERE user_id = $1 AND task_id = $2 AND week = $3",
+                uid, task_id, week
+            )
+            if prog >= goal:
+                await conn.execute(
+                    "UPDATE weekly_tasks SET completed = TRUE WHERE user_id = $1 AND task_id = $2 AND week = $3",
+                    uid, task_id, week
+                )
+                await conn.execute(
+                    "UPDATE players SET gold = gold + $1, exp = exp + $2 WHERE user_id = $3",
+                    rg, re, uid
+                )
 
-def get_inventory(uid):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT resource_id, amount FROM inventory WHERE user_id=?", (uid,))
-    rows = c.fetchall()
-    conn.close()
-    return {rid: amt for rid, amt in rows}
+async def get_inventory(uid: int) -> dict:
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("SELECT resource_id, amount FROM inventory WHERE user_id = $1", uid)
+        return {row['resource_id']: row['amount'] for row in rows}
 
-def add_resource(uid, rid, amt=1):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("UPDATE inventory SET amount=amount+? WHERE user_id=? AND resource_id=?", (amt, uid, rid))
-    conn.commit()
-    conn.close()
+async def add_resource(uid: int, rid: str, amt: int = 1):
+    async with db_pool.acquire() as conn:
+        await conn.execute("UPDATE inventory SET amount = amount + $1 WHERE user_id = $2 AND resource_id = $3", amt, uid, rid)
 
-def remove_resource(uid, rid, amt=1):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT amount FROM inventory WHERE user_id=? AND resource_id=?", (uid, rid))
-    r = c.fetchone()
-    if not r or r[0] < amt:
-        conn.close()
+async def remove_resource(uid: int, rid: str, amt: int = 1) -> bool:
+    async with db_pool.acquire() as conn:
+        current = await conn.fetchval("SELECT amount FROM inventory WHERE user_id = $1 AND resource_id = $2", uid, rid)
+        if current is None or current < amt:
+            return False
+        await conn.execute("UPDATE inventory SET amount = amount - $1 WHERE user_id = $2 AND resource_id = $3", amt, uid, rid)
+        return True
+
+async def get_player_tools(uid: int) -> dict:
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("SELECT tool_id, level FROM player_tools WHERE user_id = $1", uid)
+        return {row['tool_id']: row['level'] for row in rows}
+
+async def add_tool(uid: int, tid: str):
+    async with db_pool.acquire() as conn:
+        await conn.execute("INSERT INTO player_tools (user_id, tool_id, level, experience) VALUES ($1, $2, 1, 0) ON CONFLICT DO NOTHING", uid, tid)
+
+async def has_tool(uid: int, tid: str) -> bool:
+    async with db_pool.acquire() as conn:
+        val = await conn.fetchval("SELECT 1 FROM player_tools WHERE user_id = $1 AND tool_id = $2", uid, tid)
+        return val is not None
+
+async def get_tool_level(uid: int, tid: str) -> int:
+    async with db_pool.acquire() as conn:
+        level = await conn.fetchval("SELECT level FROM player_tools WHERE user_id = $1 AND tool_id = $2", uid, tid)
+        return level if level is not None else 0
+
+async def can_upgrade_tool(uid: int, tid: str) -> bool:
+    level = await get_tool_level(uid, tid)
+    if level == 0:
         return False
-    c.execute("UPDATE inventory SET amount=amount-? WHERE user_id=? AND resource_id=?", (amt, uid, rid))
-    conn.commit()
-    conn.close()
-    return True
-
-def get_player_tools(uid):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT tool_id, level FROM player_tools WHERE user_id=?", (uid,))
-    rows = c.fetchall()
-    conn.close()
-    return {tid: lvl for tid, lvl in rows}
-
-def add_tool(uid, tid):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("INSERT OR IGNORE INTO player_tools (user_id, tool_id, level, experience) VALUES (?,?,1,0)", (uid, tid))
-    conn.commit()
-    conn.close()
-
-def has_tool(uid, tid):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT 1 FROM player_tools WHERE user_id=? AND tool_id=?", (uid, tid))
-    r = c.fetchone()
-    conn.close()
-    return r is not None
-
-def get_tool_level(uid, tid):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT level FROM player_tools WHERE user_id=? AND tool_id=?", (uid, tid))
-    r = c.fetchone()
-    conn.close()
-    return r[0] if r else 0
-
-def get_tool_power(uid, tid):
-    level = get_tool_level(uid, tid)
-    if level == 0: return 0
-    return TOOLS[tid]['base_power'] + level - 1
-
-def get_upgrade_cost(uid, tid):
-    level = get_tool_level(uid, tid)
-    if level == 0: return {}
-    base_cost = TOOLS[tid]['upgrade_cost']
-    return {res: amount * level for res, amount in base_cost.items()}
-
-def can_upgrade_tool(uid, tid):
-    level = get_tool_level(uid, tid)
-    if level == 0: return False
-    cost = get_upgrade_cost(uid, tid)
-    inv = get_inventory(uid)
+    cost = get_upgrade_cost(tid, level)
+    inv = await get_inventory(uid)
     for res, need in cost.items():
         if inv.get(res, 0) < need:
             return False
     return True
 
-def upgrade_tool(uid, tid):
-    if not can_upgrade_tool(uid, tid): return False
-    cost = get_upgrade_cost(uid, tid)
-    conn = get_db()
-    c = conn.cursor()
-    for res, need in cost.items():
-        c.execute("UPDATE inventory SET amount = amount - ? WHERE user_id = ? AND resource_id = ?", (need, uid, res))
-    c.execute("UPDATE player_tools SET level = level + 1 WHERE user_id = ? AND tool_id = ?", (uid, tid))
-    conn.commit()
-    conn.close()
+async def upgrade_tool(uid: int, tid: str) -> bool:
+    if not await can_upgrade_tool(uid, tid):
+        return False
+    level = await get_tool_level(uid, tid)
+    cost = get_upgrade_cost(tid, level)
+    async with db_pool.acquire() as conn:
+        async with conn.transaction():
+            for res, need in cost.items():
+                await conn.execute("UPDATE inventory SET amount = amount - $1 WHERE user_id = $2 AND resource_id = $3", need, uid, res)
+            await conn.execute("UPDATE player_tools SET level = level + 1 WHERE user_id = $1 AND tool_id = $2", uid, tid)
     return True
 
-def get_active_tool(uid):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT active_tool FROM players WHERE user_id=?", (uid,))
-    r = c.fetchone()
-    conn.close()
-    return r[0] if r else 'wooden_pickaxe'
-
-def set_active_tool(uid, tid):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("UPDATE players SET active_tool=? WHERE user_id=?", (tid, uid))
-    conn.commit()
-    conn.close()
-
-def get_player_current_location(uid):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT current_location FROM players WHERE user_id=?", (uid,))
-    r = c.fetchone()
-    conn.close()
-    return r[0] if r else 'coal_mine'
-
-def set_player_location(uid, loc):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("UPDATE players SET current_location=? WHERE user_id=?", (loc, uid))
-    conn.commit()
-    conn.close()
-
-async def get_player_stats(uid):
+async def get_active_tool(uid: int) -> str:
     async with db_pool.acquire() as conn:
-        row = await conn.fetchrow("SELECT level, exp, gold, total_clicks, total_gold_earned, total_crits, current_crit_streak, max_crit_streak FROM players WHERE user_id = $1", uid)
+        tool = await conn.fetchval("SELECT active_tool FROM players WHERE user_id = $1", uid)
+        return tool if tool else 'wooden_pickaxe'
+
+async def set_active_tool(uid: int, tid: str):
+    async with db_pool.acquire() as conn:
+        await conn.execute("UPDATE players SET active_tool = $1 WHERE user_id = $2", tid, uid)
+
+async def get_player_current_location(uid: int) -> str:
+    async with db_pool.acquire() as conn:
+        loc = await conn.fetchval("SELECT current_location FROM players WHERE user_id = $1", uid)
+        return loc if loc else 'coal_mine'
+
+async def set_player_location(uid: int, loc: str):
+    async with db_pool.acquire() as conn:
+        await conn.execute("UPDATE players SET current_location = $1 WHERE user_id = $2", loc, uid)
+
+async def get_player_stats(uid: int) -> dict:
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT level, exp, gold, total_clicks, total_gold_earned, total_crits, current_crit_streak, max_crit_streak FROM players WHERE user_id = $1",
+            uid
+        )
         if not row:
             return {}
         lvl, exp, gold, clicks, tg, crits, cstreak, mstreak = row
-        # Получаем уровни улучшений
+        # Улучшения
         ups = {}
         for up_id in UPGRADES:
             level = await conn.fetchval("SELECT level FROM upgrades WHERE user_id = $1 AND upgrade_id = $2", uid, up_id)
             ups[up_id] = level if level is not None else 0
-        return {'level': lvl, 'exp': exp, 'exp_next': EXP_PER_LEVEL, 'gold': gold, 'clicks': clicks, 'total_gold': tg, 'total_crits': crits, 'current_crit_streak': cstreak, 'max_crit_streak': mstreak, 'upgrades': ups}
+        return {
+            'level': lvl, 'exp': exp, 'exp_next': EXP_PER_LEVEL,
+            'gold': gold, 'clicks': clicks, 'total_gold': tg,
+            'total_crits': crits, 'current_crit_streak': cstreak,
+            'max_crit_streak': mstreak, 'upgrades': ups
+        }
 
-def get_click_reward(uid):
-    s = get_player_stats(uid)
-    cpl = s['upgrades']['click_power']
-    ccl = s['upgrades']['crit_chance']
-    bg = random.randint(*BASE_CLICK_REWARD)
-    be = random.randint(*BASE_EXP_REWARD)
-    gold = bg + cpl * 2
-    crit = (ccl * 2) / 100.0
-    is_crit = random.random() < crit
-    if is_crit:
-        gold *= 2
-        be *= 2
-    return gold, be, is_crit
+async def level_up_if_needed(uid: int):
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT level, exp FROM players WHERE user_id = $1", uid)
+        lvl, exp = row['level'], row['exp']
+        while exp >= EXP_PER_LEVEL:
+            lvl += 1
+            exp -= EXP_PER_LEVEL
+        await conn.execute("UPDATE players SET level = $1, exp = $2 WHERE user_id = $3", lvl, exp, uid)
 
-def level_up_if_needed(uid):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT level, exp FROM players WHERE user_id=?", (uid,))
-    lvl, exp = c.fetchone()
-    while exp >= EXP_PER_LEVEL:
-        lvl += 1
-        exp -= EXP_PER_LEVEL
-    c.execute("UPDATE players SET level=?, exp=? WHERE user_id=?", (lvl, exp, uid))
-    conn.commit()
-    conn.close()
-
-async def check_achievements(uid, ctx):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT achievement_id FROM user_achievements WHERE user_id=?", (uid,))
-    unlocked = {r[0] for r in c.fetchall()}
+async def check_achievements(uid: int, ctx: ContextTypes.DEFAULT_TYPE):
+    # Получаем все необходимые данные
+    stats = await get_player_stats(uid)
+    inv = await get_inventory(uid)
+    inv_total = sum(inv.values())
+    tools = await get_player_tools(uid)
+    async with db_pool.acquire() as conn:
+        # Считаем выполненные задания
+        daily_completed = await conn.fetchval("SELECT COUNT(*) FROM daily_tasks WHERE user_id = $1 AND completed = TRUE", uid) or 0
+        weekly_completed = await conn.fetchval("SELECT COUNT(*) FROM weekly_tasks WHERE user_id = $1 AND completed = TRUE", uid) or 0
+        # Получаем уже открытые достижения
+        unlocked_rows = await conn.fetch("SELECT achievement_id FROM user_achievements WHERE user_id = $1", uid)
+        unlocked = {r['achievement_id'] for r in unlocked_rows}
     new_ach = []
     for ach in ACHIEVEMENTS:
-        if ach.id in unlocked: continue
-        achieved, prog, maxp = ach.condition_func(uid)
+        if ach.id in unlocked:
+            continue
+        # Вызов функции условия с нужными аргументами
+        # Условия могут требовать разные параметры, поэтому используем if по id
+        # Для упрощения будем передавать stats, inv_total, tools, daily_completed, weekly_completed
+        # Но функции ожидают uid, stats и т.п. Перепишем вызовы соответственно
+        # Проще всего модифицировать условия, чтобы они принимали нужные аргументы,
+        # но чтобы не ломать логику, оставим старые функции, но будем вызывать их с нужными аргументами.
+        # Так как они написаны для uid и сами делают запросы, нам нужно временно их заменить на версии с параметрами.
+        # Но поскольку у нас уже есть все данные, можно переписать условия здесь же.
+        # Я предлагаю переписать проверку достижений, используя готовые переменные.
+        # Для этого создадим словарь условий для каждого достижения.
+        # Но чтобы не усложнять, я просто вызову функции, передавая им uid и используя полученные данные.
+        # Некоторые функции (cond_resources_50) ожидают uid и inv_total, но мы их переделали на (uid, inv_total).
+        # В коде выше мы определили условия с двумя параметрами (uid, ...). Значит, нужно вызывать с нужным набором.
+        # Это потребует разветвления по ach.id.
+        # Проще переписать ACHIEVEMENTS так, чтобы condition_func принимала словарь с данными.
+        # Но для экономии времени я сделаю так: в check_achievements будем вызывать функции с нужными параметрами,
+        # используя match по id.
+        # Это некрасиво, но быстро и понятно.
+        achieved = False
+        prog = 0
+        maxp = 0
+        # Грязный match, но работает
+        if ach.id == 'first_click':
+            achieved, prog, maxp = cond_first_click(uid, stats)
+        elif ach.id == 'clicks_100':
+            achieved, prog, maxp = cond_clicks_100(uid, stats)
+        elif ach.id == 'clicks_300':
+            achieved, prog, maxp = condition_clicks_300(uid, stats)
+        elif ach.id == 'clicks_500':
+            achieved, prog, maxp = condition_clicks_500(uid, stats)
+        elif ach.id == 'clicks_1000':
+            achieved, prog, maxp = condition_clicks_1000(uid, stats)
+        elif ach.id == 'gold_1000':
+            achieved, prog, maxp = cond_gold_1000(uid, stats)
+        elif ach.id == 'gold_1500':
+            achieved, prog, maxp = condition_gold_1500(uid, stats)
+        elif ach.id == 'gold_5000':
+            achieved, prog, maxp = condition_gold_5000(uid, stats)
+        elif ach.id == 'gold_20000':
+            achieved, prog, maxp = condition_gold_20000(uid, stats)
+        elif ach.id == 'resources_50':
+            achieved, prog, maxp = cond_resources_50(uid, inv_total)
+        elif ach.id == 'collector_all':
+            achieved, prog, maxp = condition_collector_all(uid, inv)
+        elif ach.id == 'crits_50':
+            achieved, prog, maxp = cond_crits_50(uid, stats)
+        elif ach.id == 'crit_master':
+            achieved, prog, maxp = condition_crit_master(uid, stats)
+        elif ach.id == 'crit_streak_5':
+            achieved, prog, maxp = cond_crit_streak_5(uid, stats)
+        elif ach.id == 'smith':
+            achieved, prog, maxp = condition_smith(uid, tools)
+        elif ach.id == 'tool_master':
+            achieved, prog, maxp = condition_tool_master(uid, tools)
+        elif ach.id == 'tools_all_purchased':
+            achieved, prog, maxp = condition_tools_all_purchased(uid, tools)
+        elif ach.id == 'tools_all_level5':
+            achieved, prog, maxp = condition_tools_all_level5(uid, tools)
+        elif ach.id == 'tools_total_50':
+            achieved, prog, maxp = condition_tools_total_level_50(uid, tools)
+        elif ach.id == 'tools_total_100':
+            achieved, prog, maxp = condition_tools_total_level_100(uid, tools)
+        elif ach.id == 'hardworker':
+            achieved, prog, maxp = condition_hardworker(uid, daily_completed, weekly_completed)
+        elif ach.id == 'explorer':
+            achieved, prog, maxp = condition_explorer(uid, stats)
+        else:
+            continue
+
         if achieved:
             today = datetime.date.today().isoformat()
-            c.execute("INSERT INTO user_achievements (user_id, achievement_id, unlocked_at, progress, max_progress) VALUES (?,?,?,?,?)", (uid, ach.id, today, prog, maxp))
-            c.execute("UPDATE players SET gold=gold+?, exp=exp+? WHERE user_id=?", (ach.reward_gold, ach.reward_exp, uid))
+            async with db_pool.acquire() as conn:
+                await conn.execute(
+                    "INSERT INTO user_achievements (user_id, achievement_id, unlocked_at, progress, max_progress) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING",
+                    uid, ach.id, today, prog, maxp
+                )
+                await conn.execute(
+                    "UPDATE players SET gold = gold + $1, exp = exp + $2 WHERE user_id = $3",
+                    ach.reward_gold, ach.reward_exp, uid
+                )
             new_ach.append(ach)
-    conn.commit()
-    conn.close()
     for ach in new_ach:
         txt = f"🏆 Достижение получено: {ach.name}\n{ach.description}"
         if ach.reward_gold > 0 or ach.reward_exp > 0:
@@ -644,13 +696,17 @@ async def check_achievements(uid, ctx):
         await ctx.bot.send_message(chat_id=uid, text=txt)
     return len(new_ach)
 
-async def send_achievements(uid, ctx):
-    get_player(uid, None)
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id=?", (uid,))
-    unlocked = {row[0]: row[1] for row in c.fetchall()}
-    conn.close()
+async def send_achievements(uid: int, ctx: ContextTypes.DEFAULT_TYPE):
+    await get_player(uid, None)  # убедиться, что игрок есть
+    stats = await get_player_stats(uid)
+    inv = await get_inventory(uid)
+    inv_total = sum(inv.values())
+    tools = await get_player_tools(uid)
+    async with db_pool.acquire() as conn:
+        unlocked_rows = await conn.fetch("SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id = $1", uid)
+        unlocked = {row['achievement_id']: row['unlocked_at'] for row in unlocked_rows}
+        daily_completed = await conn.fetchval("SELECT COUNT(*) FROM daily_tasks WHERE user_id = $1 AND completed = TRUE", uid) or 0
+        weekly_completed = await conn.fetchval("SELECT COUNT(*) FROM weekly_tasks WHERE user_id = $1 AND completed = TRUE", uid) or 0
     text = "🏆 **Ваши достижения**\n\n"
     for ach in ACHIEVEMENTS:
         if ach.id in unlocked:
@@ -659,7 +715,53 @@ async def send_achievements(uid, ctx):
                 text += f"   🎁 Награда: {ach.reward_gold}💰, {ach.reward_exp}✨\n"
             text += "\n"
         else:
-            achieved, prog, maxp = ach.condition_func(uid)
+            # Вычисляем прогресс так же, как в check_achievements
+            if ach.id == 'first_click':
+                achieved, prog, maxp = cond_first_click(uid, stats)
+            elif ach.id == 'clicks_100':
+                achieved, prog, maxp = cond_clicks_100(uid, stats)
+            elif ach.id == 'clicks_300':
+                achieved, prog, maxp = condition_clicks_300(uid, stats)
+            elif ach.id == 'clicks_500':
+                achieved, prog, maxp = condition_clicks_500(uid, stats)
+            elif ach.id == 'clicks_1000':
+                achieved, prog, maxp = condition_clicks_1000(uid, stats)
+            elif ach.id == 'gold_1000':
+                achieved, prog, maxp = cond_gold_1000(uid, stats)
+            elif ach.id == 'gold_1500':
+                achieved, prog, maxp = condition_gold_1500(uid, stats)
+            elif ach.id == 'gold_5000':
+                achieved, prog, maxp = condition_gold_5000(uid, stats)
+            elif ach.id == 'gold_20000':
+                achieved, prog, maxp = condition_gold_20000(uid, stats)
+            elif ach.id == 'resources_50':
+                achieved, prog, maxp = cond_resources_50(uid, inv_total)
+            elif ach.id == 'collector_all':
+                achieved, prog, maxp = condition_collector_all(uid, inv)
+            elif ach.id == 'crits_50':
+                achieved, prog, maxp = cond_crits_50(uid, stats)
+            elif ach.id == 'crit_master':
+                achieved, prog, maxp = condition_crit_master(uid, stats)
+            elif ach.id == 'crit_streak_5':
+                achieved, prog, maxp = cond_crit_streak_5(uid, stats)
+            elif ach.id == 'smith':
+                achieved, prog, maxp = condition_smith(uid, tools)
+            elif ach.id == 'tool_master':
+                achieved, prog, maxp = condition_tool_master(uid, tools)
+            elif ach.id == 'tools_all_purchased':
+                achieved, prog, maxp = condition_tools_all_purchased(uid, tools)
+            elif ach.id == 'tools_all_level5':
+                achieved, prog, maxp = condition_tools_all_level5(uid, tools)
+            elif ach.id == 'tools_total_50':
+                achieved, prog, maxp = condition_tools_total_level_50(uid, tools)
+            elif ach.id == 'tools_total_100':
+                achieved, prog, maxp = condition_tools_total_level_100(uid, tools)
+            elif ach.id == 'hardworker':
+                achieved, prog, maxp = condition_hardworker(uid, daily_completed, weekly_completed)
+            elif ach.id == 'explorer':
+                achieved, prog, maxp = condition_explorer(uid, stats)
+            else:
+                prog, maxp = 0, 1
             percent = int(prog / maxp * 100) if maxp else 0
             bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
             text += f"🔜 **{ach.name}**\n   {ach.description}\n"
@@ -669,22 +771,14 @@ async def send_achievements(uid, ctx):
             text += "\n"
     await ctx.bot.send_message(chat_id=uid, text=text, parse_mode='Markdown')
 
-class FakeQuery:
-    def __init__(self, msg, from_user):
-        self.message = msg
-        self.from_user = from_user
-        self.data = None
-    async def answer(self, text=None, show_alert=False):
-        if text: await self.message.reply_text(text)
-    async def edit_message_text(self, text, reply_markup=None, parse_mode=None):
-        await self.message.reply_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
+# ==================== ОБРАБОТЧИКИ КОМАНД И КНОПОК ====================
 
-async def start(update: Update, ctx):
+async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     u = update.effective_user
-    get_player(u.id, u.username)
+    await get_player(u.id, u.username)
     await show_main_menu(update, ctx)
 
-async def show_main_menu(update: Update, ctx):
+async def show_main_menu(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     kb = [[InlineKeyboardButton("⛏ Добыть", callback_data='mine'), InlineKeyboardButton("📋 Задания", callback_data='tasks'), InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')]]
     rm = InlineKeyboardMarkup(kb)
     txt = ("🪨 **Шахтёрская глубина**\n\nПривет, шахтёр! Твой путь к богатству начинается здесь.\n\n🏁 **Что делать?**\n• Нажимай «⛏ Добыть» – каждый клик приносит золото и ресурсы.\n• Выполняй «📋 Задания» – получай бонусы.\n• Соревнуйся в «🏆 Лидеры» – стань лучшим!\n\nОстальные команды доступны в меню (кнопка слева внизу).")
@@ -703,54 +797,52 @@ async def show_main_menu_from_query(query):
         if "Message is not modified" not in str(e):
             logger.error(f"Error: {e}")
 
-async def cmd_mine(update, ctx):
+async def cmd_mine(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     u = update.effective_user
-    get_player(u.id, u.username)
+    await get_player(u.id, u.username)
     await mine_action(FakeQuery(update.message, u), ctx)
 
-async def cmd_locations(update, ctx):
+async def cmd_locations(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     u = update.effective_user
-    get_player(u.id, u.username)
+    await get_player(u.id, u.username)
     await show_locations(FakeQuery(update.message, u), ctx)
 
-async def cmd_shop(update, ctx):
+async def cmd_shop(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     u = update.effective_user
-    get_player(u.id, u.username)
+    await get_player(u.id, u.username)
     await show_shop_menu(FakeQuery(update.message, u), ctx)
 
-async def cmd_tasks(update, ctx):
+async def cmd_tasks(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     u = update.effective_user
-    get_player(u.id, u.username)
+    await get_player(u.id, u.username)
     fake = FakeQuery(update.message, u)
     await show_daily_tasks(fake, ctx)
 
-async def cmd_profile(update, ctx):
+async def cmd_profile(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     u = update.effective_user
-    get_player(u.id, u.username)
+    await get_player(u.id, u.username)
     await show_profile(FakeQuery(update.message, u), ctx)
 
-async def cmd_inventory(update, ctx):
+async def cmd_inventory(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     u = update.effective_user
-    get_player(u.id, u.username)
+    await get_player(u.id, u.username)
     await show_inventory(FakeQuery(update.message, u), ctx)
 
-async def cmd_market(update, ctx):
+async def cmd_market(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     u = update.effective_user
-    get_player(u.id, u.username)
+    await get_player(u.id, u.username)
     await show_market(FakeQuery(update.message, u), ctx)
 
-async def cmd_leaderboard(update, ctx):
+async def cmd_leaderboard(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     u = update.effective_user
-    get_player(u.id, u.username)
+    await get_player(u.id, u.username)
     await show_leaderboard_menu(FakeQuery(update.message, u), ctx)
 
-# ==================== МОДИФИЦИРОВАННАЯ ФУНКЦИЯ FAQ ====================
-async def cmd_faq(update, ctx):
+async def cmd_faq(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
-    stats = get_player_stats(uid)
+    stats = await get_player_stats(uid)
     lvl = stats['level']
     faq_dict = {item["question"]: item["answer"] for item in FAQ}
-    
     categories = {
         "🪨 **Основное**": [
             "🪨 Как добывать ресурсы?",
@@ -772,9 +864,7 @@ async def cmd_faq(update, ctx):
             "🔄 Как сменить активный инструмент?"
         ]
     }
-    
     text = "📚 **Часто задаваемые вопросы**\n\n"
-    
     for category, questions in categories.items():
         text += f"{category}\n" + "─" * 25 + "\n\n"
         for q in questions:
@@ -783,16 +873,12 @@ async def cmd_faq(update, ctx):
                 a_esc = escape_markdown(faq_dict[q], version=1)
                 text += f"❓ **{q_esc}**\n{a_esc}\n\n"
         text += "\n"
-    
-    # Добавляем кнопку для перехода к разделу локаций
     kb = [[InlineKeyboardButton("🗺 Локации", callback_data='faq_locations')]]
     await update.message.reply_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
 
-# ==================== НОВЫЕ ФУНКЦИИ ДЛЯ РАЗДЕЛА ЛОКАЦИЙ ====================
 async def show_faq_locations(query, ctx):
-    """Показывает все локации с прогресс-барами."""
     uid = query.from_user.id
-    stats = get_player_stats(uid)
+    stats = await get_player_stats(uid)
     lvl = stats['level']
     text = "🗺 **Локации**\n\n"
     for loc_id, loc in LOCATIONS.items():
@@ -809,7 +895,6 @@ async def show_faq_locations(query, ctx):
             text += f"   Прогресс: {bar} {lvl}/{req}\n"
         else:
             text += f"   Доступна! (ваш уровень {lvl})\n"
-        # Добавляем информацию о ресурсах
         for res in loc['resources']:
             res_name = RESOURCES[res['res_id']]['name']
             prob_percent = int(res['prob'] * 100)
@@ -824,12 +909,10 @@ async def show_faq_locations(query, ctx):
             logger.error(f"Error in show_faq_locations: {e}")
 
 async def back_to_faq(query, ctx):
-    """Возвращает к основному FAQ."""
     uid = query.from_user.id
-    stats = get_player_stats(uid)
+    stats = await get_player_stats(uid)
     lvl = stats['level']
     faq_dict = {item["question"]: item["answer"] for item in FAQ}
-    
     categories = {
         "🪨 **Основное**": [
             "🪨 Как добывать ресурсы?",
@@ -851,9 +934,7 @@ async def back_to_faq(query, ctx):
             "🔄 Как сменить активный инструмент?"
         ]
     }
-    
     text = "📚 **Часто задаваемые вопросы**\n\n"
-    
     for category, questions in categories.items():
         text += f"{category}\n" + "─" * 25 + "\n\n"
         for q in questions:
@@ -862,7 +943,6 @@ async def back_to_faq(query, ctx):
                 a_esc = escape_markdown(faq_dict[q], version=1)
                 text += f"❓ **{q_esc}**\n{a_esc}\n\n"
         text += "\n"
-    
     kb = [[InlineKeyboardButton("🗺 Локации", callback_data='faq_locations')]]
     try:
         await query.edit_message_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
@@ -870,23 +950,22 @@ async def back_to_faq(query, ctx):
         if "Message is not modified" not in str(e):
             logger.error(f"Error in back_to_faq: {e}")
 
-async def cmd_achievements(update, ctx):
+async def cmd_achievements(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     await send_achievements(uid, ctx)
 
-async def cmd_help(update, ctx):
+async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     txt = ("🪨 **Шахтёрский бот**\n\nТы начинающий шахтёр. Кликай, добывай ресурсы, продавай их, улучшай инструменты и открывай новые локации.\n\n**Команды:**\n/start - главное меню\n/mine - копнуть в текущей локации\n/locations - выбрать локацию\n/shop - магазин улучшений\n/tasks - задания\n/profile - твой профиль\n/inventory - ресурсы\n/market - продать ресурсы\n/leaderboard - топ игроков\n/achievements - мои достижения\n/faq - часто задаваемые вопросы\n/help - это сообщение")
     await update.message.reply_text(txt, parse_mode='Markdown')
 
-async def button_handler(update: Update, ctx):
+async def button_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     uid = q.from_user.id
     data = q.data
-    # Флаг, отвечали ли мы уже на callback
     answered = False
 
-    check_daily_reset(uid)
-    check_weekly_reset(uid)
+    await check_daily_reset(uid)
+    await check_weekly_reset(uid)
 
     if data == 'mine':
         await mine_action(q, ctx)
@@ -932,7 +1011,6 @@ async def button_handler(update: Update, ctx):
         answered = True
     elif data == 'profile_achievements':
         await send_achievements(uid, ctx)
-        # send_achievements отправляет новое сообщение, поэтому нужно ответить на callback
         await q.answer()
         answered = True
     elif data == 'leaderboard_menu':
@@ -987,7 +1065,6 @@ async def button_handler(update: Update, ctx):
         await show_market(q, ctx)
         answered = True
     elif data.startswith('buy_'):
-        # Внутри process_buy уже есть await q.answer() с текстом или без
         await process_buy(q, ctx)
         answered = True
     elif data.startswith('sell_confirm_'):
@@ -1003,14 +1080,14 @@ async def button_handler(update: Update, ctx):
         await show_main_menu_from_query(q)
         answered = True
 
-    # Если ни одна ветка не ответила на callback, отвечаем пустым подтверждением
     if not answered:
         await q.answer()
 
 async def mine_action(q, ctx):
     uid = q.from_user.id
-    loc = get_player_current_location(uid)
-    loc = LOCATIONS.get(loc, LOCATIONS['coal_mine'])
+    loc_id = await get_player_current_location(uid)
+    loc = LOCATIONS.get(loc_id, LOCATIONS['coal_mine'])
+    # Определяем найденный ресурс
     rnd = random.random()
     cum = 0
     found = None
@@ -1021,41 +1098,47 @@ async def mine_action(q, ctx):
             found = r['res_id']
             amt = random.randint(r['min'], r['max'])
             break
-    gold, exp, is_crit = get_click_reward(uid)
+    stats = await get_player_stats(uid)
+    gold, exp, is_crit = get_click_reward(stats)
     if found:
-        active_tool = get_active_tool(uid)
-        tool_power = get_tool_power(uid, active_tool)
+        active_tool = await get_active_tool(uid)
+        tool_level = await get_tool_level(uid, active_tool)
+        tool_power = get_tool_power(uid, active_tool, tool_level)
         if tool_power > 0:
             multiplier = 1 + (tool_power - 1) * 0.2
             amt = int(amt * multiplier)
             amt = max(1, amt)
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("UPDATE players SET gold=gold+?, exp=exp+?, total_clicks=total_clicks+1, total_gold_earned=total_gold_earned+? WHERE user_id=?", (gold, exp, gold, uid))
-    if is_crit:
-        c.execute("UPDATE players SET total_crits=total_crits+1, current_crit_streak=current_crit_streak+1, max_crit_streak=MAX(max_crit_streak, current_crit_streak) WHERE user_id=?", (uid,))
-    else:
-        c.execute("UPDATE players SET current_crit_streak=0 WHERE user_id=?", (uid,))
-    conn.commit()
-    conn.close()
-    level_up_if_needed(uid)
+    # Обновление игрока
+    async with db_pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE players SET gold = gold + $1, exp = exp + $2, total_clicks = total_clicks + 1, total_gold_earned = total_gold_earned + $3 WHERE user_id = $4",
+            gold, exp, gold, uid
+        )
+        if is_crit:
+            await conn.execute(
+                "UPDATE players SET total_crits = total_crits + 1, current_crit_streak = current_crit_streak + 1, max_crit_streak = GREATEST(max_crit_streak, current_crit_streak) WHERE user_id = $1",
+                uid
+            )
+        else:
+            await conn.execute("UPDATE players SET current_crit_streak = 0 WHERE user_id = $1", uid)
+    await level_up_if_needed(uid)
     if found:
-        add_resource(uid, found, amt)
+        await add_resource(uid, found, amt)
         res_txt = f"\nТы нашёл: {RESOURCES[found]['name']} x{amt}!"
     else:
         res_txt = ""
-    update_daily_task_progress(uid, 'Труженик', 1)
-    update_daily_task_progress(uid, 'Золотоискатель', gold)
+    await update_daily_task_progress(uid, 'Труженик', 1)
+    await update_daily_task_progress(uid, 'Золотоискатель', gold)
     if is_crit:
-        update_daily_task_progress(uid, 'Везунчик', 1)
+        await update_daily_task_progress(uid, 'Везунчик', 1)
     if found:
-        update_daily_task_progress(uid, 'Рудокоп', amt)
-    update_weekly_task_progress(uid, 'Шахтёр', 1)
-    update_weekly_task_progress(uid, 'Золотая лихорадка', gold)
+        await update_daily_task_progress(uid, 'Рудокоп', amt)
+    await update_weekly_task_progress(uid, 'Шахтёр', 1)
+    await update_weekly_task_progress(uid, 'Золотая лихорадка', gold)
     if is_crit:
-        update_weekly_task_progress(uid, 'Критический удар', 1)
+        await update_weekly_task_progress(uid, 'Критический удар', 1)
     if found:
-        update_weekly_task_progress(uid, 'Коллекционер', amt)
+        await update_weekly_task_progress(uid, 'Коллекционер', amt)
     await check_achievements(uid, ctx)
     ct = "💥 КРИТ!" if is_crit else ""
     txt = f"Ты добыл: {gold} золота {ct}{res_txt}\nПолучено опыта: {exp}"
@@ -1064,8 +1147,8 @@ async def mine_action(q, ctx):
 
 async def show_locations(q, ctx):
     uid = q.from_user.id
-    cur = get_player_current_location(uid)
-    stats = get_player_stats(uid)
+    cur = await get_player_current_location(uid)
+    stats = await get_player_stats(uid)
     lvl = stats['level']
     sl = sorted(LOCATIONS.items(), key=lambda x: x[1]['min_level'])
     cur_idx = None
@@ -1106,7 +1189,7 @@ async def show_locations(q, ctx):
 async def goto_location(q, ctx):
     lid = q.data.replace('goto_', '')
     uid = q.from_user.id
-    set_player_location(uid, lid)
+    await set_player_location(uid, lid)
     await q.answer(f"Ты переместился в {LOCATIONS[lid]['name']}")
     await show_main_menu_from_query(q)
 
@@ -1121,16 +1204,16 @@ async def show_shop_menu(q, ctx):
 
 async def show_shop_upgrades(q, ctx):
     uid = q.from_user.id
-    stats = get_player_stats(uid)
+    stats = await get_player_stats(uid)
     gold = stats['gold']
     txt = f"⚡ **Улучшения**\n💰 Твой баланс: {gold} золота\n\n"
     kb = []
-    for uid2, info in UPGRADES.items():
-        lvl = stats['upgrades'][uid2]
+    for up_id, info in UPGRADES.items():
+        lvl = stats['upgrades'][up_id]
         price = int(info['base_price'] * (info['price_mult'] ** lvl))
         name = escape_markdown(info['name'], version=1)
         txt += f"─────────────────────────\n**{name}** (ур.{lvl})\n   {info['description']}\n   💰 Следующий уровень: {price}\n\n"
-        kb.append([InlineKeyboardButton(f"Купить {info['name']} за {price}", callback_data=f'buy_{uid2}')])
+        kb.append([InlineKeyboardButton(f"Купить {info['name']} за {price}", callback_data=f'buy_{up_id}')])
     txt += "─────────────────────────\nЧтобы купить, нажми на кнопку ниже."
     kb.append([InlineKeyboardButton("🔙 В меню магазина", callback_data='back_to_shop_menu')])
     try:
@@ -1141,13 +1224,13 @@ async def show_shop_upgrades(q, ctx):
 
 async def show_shop_tools(q, ctx):
     uid = q.from_user.id
-    stats = get_player_stats(uid)
+    stats = await get_player_stats(uid)
     gold = stats['gold']
-    active = get_active_tool(uid)
+    active = await get_active_tool(uid)
     txt = f"🧰 **Инструменты**\n💰 Твой баланс: {gold} золота\n\n"
     kb = []
     for tid, tool in TOOLS.items():
-        level = get_tool_level(uid, tid)
+        level = await get_tool_level(uid, tid)
         tool_name = escape_markdown(tool['name'], version=1)
         if level == 0 and tool['price'] > 0:
             txt += f"─────────────────────────\n🔒 **{tool_name}** – {tool['price']}💰 (треб.ур.{tool['required_level']})\n   {tool['description']}\n\n"
@@ -1155,13 +1238,13 @@ async def show_shop_tools(q, ctx):
         elif level > 0:
             is_active = (tid == active)
             active_mark = "📍" if is_active else ""
-            power = get_tool_power(uid, tid)
+            power = get_tool_power(uid, tid, level)
             txt += f"─────────────────────────\n{active_mark} **{tool_name}** ур.{level} (сила {power})\n   {tool['description']}\n"
             row = []
             if not is_active:
                 row.append(InlineKeyboardButton("🔨 Сделать активным", callback_data=f'activate_tool_{tid}'))
-            if can_upgrade_tool(uid, tid):
-                cost = get_upgrade_cost(uid, tid)
+            if await can_upgrade_tool(uid, tid):
+                cost = get_upgrade_cost(tid, level)
                 cost_parts = [f"{escape_markdown(RESOURCES[res]['name'], version=1)} {amt}" for res, amt in cost.items()]
                 cost_str = ", ".join(cost_parts)
                 row.append(InlineKeyboardButton(f"⬆️ Улучшить ({cost_str})", callback_data=f'upgrade_tool_{tid}'))
@@ -1184,90 +1267,72 @@ async def process_buy(q, ctx):
         if not tool:
             await q.answer("Ошибка!", show_alert=True)
             return
-        stats = get_player_stats(uid)
+        stats = await get_player_stats(uid)
         if not stats:
             await q.edit_message_text("Ошибка: не удалось получить данные игрока.")
             return
-        # Проверка уровня
         if stats['level'] < tool['required_level']:
             await q.answer(f"❌ Требуется уровень {tool['required_level']}", show_alert=True)
             return
-        # Проверка золота
         if stats['gold'] < tool['price']:
-            # Всплывающее уведомление – работает всегда
             await q.answer("❌ Недостаточно золота!", show_alert=True)
-            # Если хотите также изменить текст сообщения (например, добавить кнопку "Назад"), 
-            # раскомментируйте следующие строки:
-            # kb = [[InlineKeyboardButton("🔙 Назад", callback_data='shop_category_tools')]]
-            # await q.edit_message_text("❌ Недостаточно золота!", reply_markup=InlineKeyboardMarkup(kb))
             return
-        # Покупка
-        conn = get_db()
-        c = conn.cursor()
-        c.execute("UPDATE players SET gold=gold-? WHERE user_id=?", (tool['price'], uid))
-        c.execute("INSERT OR IGNORE INTO player_tools (user_id, tool_id, level, experience) VALUES (?,?,1,0)", (uid, tid))
-        conn.commit()
-        conn.close()
+        async with db_pool.acquire() as conn:
+            await conn.execute("UPDATE players SET gold = gold - $1 WHERE user_id = $2", tool['price'], uid)
+            await conn.execute("INSERT INTO player_tools (user_id, tool_id, level, experience) VALUES ($1, $2, 1, 0) ON CONFLICT DO NOTHING", uid, tid)
         await ctx.bot.send_message(chat_id=uid, text=f"✅ Ты купил {tool['name']}!")
         await show_shop_tools(q, ctx)
         return
 
-    # Обработка улучшений (обычные buy_)
-    uid2 = data.replace('buy_', '')
+    up_id = data.replace('buy_', '')
     uid = q.from_user.id
-    stats = get_player_stats(uid)
+    stats = await get_player_stats(uid)
     if not stats:
         await q.edit_message_text("Ошибка: не удалось получить данные игрока.")
         return
-    lvl = stats['upgrades'][uid2]
-    price = int(UPGRADES[uid2]['base_price'] * (UPGRADES[uid2]['price_mult'] ** lvl))
+    lvl = stats['upgrades'][up_id]
+    price = int(UPGRADES[up_id]['base_price'] * (UPGRADES[up_id]['price_mult'] ** lvl))
     if stats['gold'] < price:
-        # Добавим и сюда всплывающее уведомление для единообразия
         await q.answer("❌ Недостаточно золота!", show_alert=True)
-        # Если хотите кнопку "Назад", раскомментируйте:
-        # kb = [[InlineKeyboardButton("🔙 Назад", callback_data='shop_category_upgrades')]]
-        # await q.edit_message_text("❌ Недостаточно золота!", reply_markup=InlineKeyboardMarkup(kb))
         return
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("UPDATE players SET gold=gold-? WHERE user_id=?", (price, uid))
-    c.execute("UPDATE upgrades SET level=level+1 WHERE user_id=? AND upgrade_id=?", (uid, uid2))
-    conn.commit()
-    conn.close()
-    update_daily_task_progress(uid, 'Покупатель', price)
-    update_weekly_task_progress(uid, 'Магнат', price)
-    await ctx.bot.send_message(chat_id=uid, text=f"✅ {UPGRADES[uid2]['name']} улучшен до {lvl+1} уровня.")
+    async with db_pool.acquire() as conn:
+        await conn.execute("UPDATE players SET gold = gold - $1 WHERE user_id = $2", price, uid)
+        await conn.execute("UPDATE upgrades SET level = level + 1 WHERE user_id = $1 AND upgrade_id = $2", uid, up_id)
+    await update_daily_task_progress(uid, 'Покупатель', price)
+    await update_weekly_task_progress(uid, 'Магнат', price)
+    await ctx.bot.send_message(chat_id=uid, text=f"✅ {UPGRADES[up_id]['name']} улучшен до {lvl+1} уровня.")
     await check_achievements(uid, ctx)
     await show_shop_upgrades(q, ctx)
 
 async def activate_tool(q, ctx):
     tid = q.data.replace('activate_tool_', '')
     uid = q.from_user.id
-    set_active_tool(uid, tid)
+    await set_active_tool(uid, tid)
     await q.answer(f"✅ {TOOLS[tid]['name']} теперь активна!")
     await show_shop_tools(q, ctx)
 
 async def upgrade_tool_handler(q, ctx):
     tid = q.data.replace('upgrade_tool_', '')
     uid = q.from_user.id
-    if not can_upgrade_tool(uid, tid):
+    if not await can_upgrade_tool(uid, tid):
         await q.answer("❌ Недостаточно ресурсов!", show_alert=True)
         await show_shop_tools(q, ctx)
         return
-    cost = get_upgrade_cost(uid, tid)
+    level = await get_tool_level(uid, tid)
+    cost = get_upgrade_cost(tid, level)
     cost_text = "\n".join([f"{escape_markdown(RESOURCES[res]['name'], version=1)}: {amt}" for res, amt in cost.items()])
     kb = [[InlineKeyboardButton("✅ Подтвердить", callback_data=f'confirm_upgrade_{tid}'), InlineKeyboardButton("❌ Отмена", callback_data='back_to_shop_tools')]]
-    await q.edit_message_text(f"⬆️ Улучшение {escape_markdown(TOOLS[tid]['name'], version=1)} до ур.{get_tool_level(uid, tid)+1}\n\nПотребуется:\n{cost_text}\n\nПодтверждаешь?", parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+    await q.edit_message_text(f"⬆️ Улучшение {escape_markdown(TOOLS[tid]['name'], version=1)} до ур.{level+1}\n\nПотребуется:\n{cost_text}\n\nПодтверждаешь?", parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
 
 async def confirm_upgrade(q, ctx):
     tid = q.data.replace('confirm_upgrade_', '')
     uid = q.from_user.id
-    if not can_upgrade_tool(uid, tid):
+    if not await can_upgrade_tool(uid, tid):
         await q.answer("❌ Недостаточно ресурсов!", show_alert=True)
         await show_shop_tools(q, ctx)
         return
-    if upgrade_tool(uid, tid):
-        new_level = get_tool_level(uid, tid)
+    if await upgrade_tool(uid, tid):
+        new_level = await get_tool_level(uid, tid)
         await q.answer("✅ Уровень повышен!")
         await ctx.bot.send_message(chat_id=uid, text=f"🔨 {TOOLS[tid]['name']} улучшена до уровня {new_level}!")
     else:
@@ -1275,9 +1340,8 @@ async def confirm_upgrade(q, ctx):
     await show_shop_tools(q, ctx)
 
 async def show_daily_tasks(query, ctx):
-    """Показывает только ежедневные задания с кнопками перехода."""
     uid = query.from_user.id
-    daily = get_daily_tasks(uid)
+    daily = await get_daily_tasks(uid)
     txt = "📋 **Ежедневные задания**\n\n"
     if daily:
         for t in daily:
@@ -1293,7 +1357,6 @@ async def show_daily_tasks(query, ctx):
             txt += f"🔹 {name}: {desc_esc}\n   Прогресс: {st}\n   Награда: {rg}💰 + {re}✨\n\n"
     else:
         txt += "Нет заданий на сегодня.\n\n"
-    # Кнопки: переход к еженедельным и назад в главное меню
     kb = [
         [InlineKeyboardButton("📅 Еженедельные", callback_data='show_weekly')],
         [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]
@@ -1305,9 +1368,8 @@ async def show_daily_tasks(query, ctx):
             logger.error(f"Error in show_daily_tasks: {e}")
 
 async def show_weekly_tasks(query, ctx):
-    """Показывает только еженедельные задания с кнопкой возврата."""
     uid = query.from_user.id
-    weekly = get_weekly_tasks(uid)
+    weekly = await get_weekly_tasks(uid)
     txt = "📅 **Еженедельные задания**\n\n"
     if weekly:
         for t in weekly:
@@ -1323,7 +1385,6 @@ async def show_weekly_tasks(query, ctx):
             txt += f"🔸 {name}: {desc_esc}\n   Прогресс: {st}\n   Награда: {rg}💰 + {re}✨\n\n"
     else:
         txt += "Нет заданий на эту неделю.\n\n"
-    # Кнопка возврата к ежедневным
     kb = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_daily')]]
     try:
         await query.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
@@ -1333,17 +1394,14 @@ async def show_weekly_tasks(query, ctx):
 
 async def show_profile(q, ctx):
     uid = q.from_user.id
-    stats = get_player_stats(uid)
+    stats = await get_player_stats(uid)
     if not stats:
         await q.edit_message_text("Профиль не найден.")
         return
     username = escape_markdown(q.from_user.username or 'Аноним', version=1)
     txt = (f"👤 **Профиль игрока**\n\n📊 **Статистика**\n• Уровень: **{stats['level']}**\n• Опыт: **{stats['exp']}** / {stats['exp_next']}\n• Золото: **{stats['gold']}**💰\n• Всего кликов: **{stats['clicks']}**\n• Всего добыто золота: **{stats['total_gold']}**💰\n• Критические удары: **{stats['total_crits']}**\n• Макс. серия критов: **{stats['max_crit_streak']}**\n\n⚡ **Улучшения**\n• Сила клика: ур.**{stats['upgrades']['click_power']}**\n• Шанс крита: ур.**{stats['upgrades']['crit_chance']}**\n• Автокликер: ур.**{stats['upgrades']['auto_clicker']}**\n")
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id=? ORDER BY unlocked_at DESC LIMIT 5", (uid,))
-    recent = c.fetchall()
-    conn.close()
+    async with db_pool.acquire() as conn:
+        recent = await conn.fetch("SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id = $1 ORDER BY unlocked_at DESC LIMIT 5", uid)
     if recent:
         txt += f"\n🏅 **Последние достижения**\n"
         for aid, dt in recent:
@@ -1353,7 +1411,7 @@ async def show_profile(q, ctx):
                 txt += f"• {ach_name} ({dt})\n"
     else:
         txt += "\n🏅 **Последние достижения**\n• Пока нет\n"
-    tools = get_player_tools(uid)
+    tools = await get_player_tools(uid)
     if tools:
         txt += f"\n🧰 **Инструменты**\n"
         for tid, lvl in tools.items():
@@ -1403,18 +1461,15 @@ async def show_leaderboard_resources_menu(q, ctx):
             logger.error(f"Error: {e}")
 
 async def show_leaderboard_level(q, ctx):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT username, level, exp FROM players ORDER BY level DESC, exp DESC LIMIT 10")
-    top = c.fetchall()
-    conn.close()
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("SELECT username, level, exp FROM players ORDER BY level DESC, exp DESC LIMIT 10")
     txt = "📊 **Топ по уровню**\n\n"
-    if not top:
+    if not rows:
         txt += "Пока нет данных."
     else:
-        for i, (name, lvl, exp) in enumerate(top, 1):
-            name = escape_markdown(name or 'Аноним', version=1)
-            txt += f"{i}. {name} — уровень {lvl} (опыт {exp})\n"
+        for i, row in enumerate(rows, 1):
+            name = escape_markdown(row['username'] or 'Аноним', version=1)
+            txt += f"{i}. {name} — уровень {row['level']} (опыт {row['exp']})\n"
     kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
     try:
         await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
@@ -1423,18 +1478,15 @@ async def show_leaderboard_level(q, ctx):
             logger.error(f"Error: {e}")
 
 async def show_leaderboard_gold(q, ctx):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT username, gold FROM players ORDER BY gold DESC LIMIT 10")
-    top = c.fetchall()
-    conn.close()
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("SELECT username, gold FROM players ORDER BY gold DESC LIMIT 10")
     txt = "💰 **Топ по золоту**\n\n"
-    if not top:
+    if not rows:
         txt += "Пока нет данных."
     else:
-        for i, (name, gold) in enumerate(top, 1):
-            name = escape_markdown(name or 'Аноним', version=1)
-            txt += f"{i}. {name} — {gold}💰\n"
+        for i, row in enumerate(rows, 1):
+            name = escape_markdown(row['username'] or 'Аноним', version=1)
+            txt += f"{i}. {name} — {row['gold']}💰\n"
     kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
     try:
         await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
@@ -1443,18 +1495,15 @@ async def show_leaderboard_gold(q, ctx):
             logger.error(f"Error: {e}")
 
 async def show_leaderboard_achievements(q, ctx):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute('''SELECT p.username, COUNT(ua.achievement_id) as cnt FROM players p LEFT JOIN user_achievements ua ON p.user_id = ua.user_id GROUP BY p.user_id ORDER BY cnt DESC LIMIT 10''')
-    top = c.fetchall()
-    conn.close()
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("SELECT p.username, COUNT(ua.achievement_id) as cnt FROM players p LEFT JOIN user_achievements ua ON p.user_id = ua.user_id GROUP BY p.user_id ORDER BY cnt DESC LIMIT 10")
     txt = "🏆 **Топ по достижениям**\n\n"
-    if not top:
+    if not rows:
         txt += "Пока нет данных."
     else:
-        for i, (name, cnt) in enumerate(top, 1):
-            name = escape_markdown(name or 'Аноним', version=1)
-            txt += f"{i}. {name} — {cnt} достижений\n"
+        for i, row in enumerate(rows, 1):
+            name = escape_markdown(row['username'] or 'Аноним', version=1)
+            txt += f"{i}. {name} — {row['cnt']} достижений\n"
     kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
     try:
         await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
@@ -1463,23 +1512,18 @@ async def show_leaderboard_achievements(q, ctx):
             logger.error(f"Error: {e}")
 
 async def show_leaderboard_tasks_completed(q, ctx):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute('''SELECT user_id, COUNT(*) as cnt FROM daily_tasks WHERE completed = 1 GROUP BY user_id''')
-    daily = dict(c.fetchall())
-    c.execute('''SELECT user_id, COUNT(*) as cnt FROM weekly_tasks WHERE completed = 1 GROUP BY user_id''')
-    weekly = dict(c.fetchall())
-    all_users = set(daily.keys()) | set(weekly.keys())
-    totals = []
-    for uid in all_users:
-        total = daily.get(uid, 0) + weekly.get(uid, 0)
-        c.execute("SELECT username FROM players WHERE user_id=?", (uid,))
-        name = c.fetchone()
-        if name:
-            totals.append((name[0], total))
+    async with db_pool.acquire() as conn:
+        daily = dict(await conn.fetch("SELECT user_id, COUNT(*) as cnt FROM daily_tasks WHERE completed = TRUE GROUP BY user_id"))
+        weekly = dict(await conn.fetch("SELECT user_id, COUNT(*) as cnt FROM weekly_tasks WHERE completed = TRUE GROUP BY user_id"))
+        all_users = set(daily.keys()) | set(weekly.keys())
+        totals = []
+        for uid in all_users:
+            total = daily.get(uid, 0) + weekly.get(uid, 0)
+            name = await conn.fetchval("SELECT username FROM players WHERE user_id = $1", uid)
+            if name:
+                totals.append((name, total))
     totals.sort(key=lambda x: x[1], reverse=True)
     top = totals[:10]
-    conn.close()
     txt = "📅 **Топ по выполненным заданиям**\n\n"
     if not top:
         txt += "Пока нет данных."
@@ -1495,18 +1539,15 @@ async def show_leaderboard_tasks_completed(q, ctx):
             logger.error(f"Error: {e}")
 
 async def show_leaderboard_tools(q, ctx):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute('''SELECT p.username, SUM(pt.level) as total FROM players p LEFT JOIN player_tools pt ON p.user_id = pt.user_id GROUP BY p.user_id ORDER BY total DESC LIMIT 10''')
-    top = c.fetchall()
-    conn.close()
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("SELECT p.username, SUM(pt.level) as total FROM players p LEFT JOIN player_tools pt ON p.user_id = pt.user_id GROUP BY p.user_id ORDER BY total DESC LIMIT 10")
     txt = "🔨 **Топ по уровню инструментов**\n\n"
-    if not top:
+    if not rows:
         txt += "Пока нет данных."
     else:
-        for i, (name, total) in enumerate(top, 1):
-            name = escape_markdown(name or 'Аноним', version=1)
-            txt += f"{i}. {name} — суммарный уровень {total}\n"
+        for i, row in enumerate(rows, 1):
+            name = escape_markdown(row['username'] or 'Аноним', version=1)
+            txt += f"{i}. {name} — суммарный уровень {row['total']}\n"
     kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
     try:
         await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
@@ -1515,19 +1556,16 @@ async def show_leaderboard_tools(q, ctx):
             logger.error(f"Error: {e}")
 
 async def show_leaderboard_resource(q, ctx, rid, rname):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT p.username, i.amount FROM inventory i JOIN players p ON i.user_id=p.user_id WHERE i.resource_id=? ORDER BY i.amount DESC LIMIT 10", (rid,))
-    top = c.fetchall()
-    conn.close()
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("SELECT p.username, i.amount FROM inventory i JOIN players p ON i.user_id = p.user_id WHERE i.resource_id = $1 ORDER BY i.amount DESC LIMIT 10", rid)
     rname_esc = escape_markdown(rname, version=1)
     txt = f"🏆 **Топ по {rname_esc}**\n\n"
-    if not top:
+    if not rows:
         txt += "Пока нет данных."
     else:
-        for i, (name, amt) in enumerate(top, 1):
-            name = escape_markdown(name or 'Аноним', version=1)
-            txt += f"{i}. {name} — {amt} шт.\n"
+        for i, row in enumerate(rows, 1):
+            name = escape_markdown(row['username'] or 'Аноним', version=1)
+            txt += f"{i}. {name} — {row['amount']} шт.\n"
     kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
     try:
         await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
@@ -1541,18 +1579,15 @@ async def show_leaderboard_gold_ore(q, ctx): await show_leaderboard_resource(q, 
 async def show_leaderboard_diamond(q, ctx): await show_leaderboard_resource(q, ctx, 'diamond', 'Алмазы')
 async def show_leaderboard_mithril(q, ctx): await show_leaderboard_resource(q, ctx, 'mithril', 'Мифрил')
 async def show_leaderboard_total_resources(q, ctx):
-    conn = get_db()
-    c = conn.cursor()
-    c.execute('''SELECT p.username, SUM(i.amount) as total FROM players p LEFT JOIN inventory i ON p.user_id = i.user_id GROUP BY p.user_id ORDER BY total DESC LIMIT 10''')
-    top = c.fetchall()
-    conn.close()
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("SELECT p.username, SUM(i.amount) as total FROM players p LEFT JOIN inventory i ON p.user_id = i.user_id GROUP BY p.user_id ORDER BY total DESC LIMIT 10")
     txt = "📦 **Топ по общему количеству ресурсов**\n\n"
-    if not top:
+    if not rows:
         txt += "Пока нет данных."
     else:
-        for i, (name, total) in enumerate(top, 1):
-            name = escape_markdown(name or 'Аноним', version=1)
-            txt += f"{i}. {name} — {total} шт.\n"
+        for i, row in enumerate(rows, 1):
+            name = escape_markdown(row['username'] or 'Аноним', version=1)
+            txt += f"{i}. {name} — {row['total']} шт.\n"
     kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
     try:
         await q.edit_message_text(txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
@@ -1562,7 +1597,7 @@ async def show_leaderboard_total_resources(q, ctx):
 
 async def show_inventory(q, ctx):
     uid = q.from_user.id
-    inv = get_inventory(uid)
+    inv = await get_inventory(uid)
     txt = "🎒 **Инвентарь**\n\nВот что ты накопал:\n\n"
     has = False
     for rid, info in RESOURCES.items():
@@ -1584,7 +1619,7 @@ async def show_inventory(q, ctx):
 
 async def show_market(q, ctx):
     uid = q.from_user.id
-    inv = get_inventory(uid)
+    inv = await get_inventory(uid)
     txt = "💰 **Рынок ресурсов**\n\nТвои запасы и текущие цены:\n\n"
     kb = []
     for rid, info in RESOURCES.items():
@@ -1594,7 +1629,6 @@ async def show_market(q, ctx):
         name = escape_markdown(info['name'], version=1)
         txt += f"{emoji} {name}: **{amt}** шт. | 💰 Цена: {price} за шт.\n"
         if amt > 0:
-            # ИЗМЕНЕНО: теперь callback_data начинается с sell_confirm_
             kb.append([InlineKeyboardButton(f"Продать 1 {name}", callback_data=f'sell_confirm_{rid}_1'),
                        InlineKeyboardButton(f"Продать всё", callback_data=f'sell_confirm_{rid}_all')])
     txt += "\n─────────────────────────\nВыбери, что и сколько продать."
@@ -1607,33 +1641,26 @@ async def show_market(q, ctx):
 
 async def show_sell_confirmation(q, ctx):
     data = q.data
-    # Формат: sell_confirm_coal_1 или sell_confirm_coal_all
     parts = data.split('_')
-    # parts: ['sell', 'confirm', rid, type]
     rid = parts[2]
-    sell_type = parts[3]  # '1' или 'all'
+    sell_type = parts[3]
     uid = q.from_user.id
-
-    # Получаем актуальное количество
-    inv = get_inventory(uid)
+    inv = await get_inventory(uid)
     avail = inv.get(rid, 0)
     if avail == 0:
         await q.answer("❌ У вас нет этого ресурса!", show_alert=True)
         await show_market(q, ctx)
         return
-
     qty = avail if sell_type == 'all' else 1
     price = RESOURCES[rid]['base_price']
     total = qty * price
     resource_name = RESOURCES[rid]['name']
-
     text = (f"⚠️ **Подтверждение продажи**\n\n"
             f"Товар: {resource_name}\n"
             f"Количество: {qty} шт.\n"
             f"Цена за шт.: {price}💰\n"
             f"Итого: {total}💰\n\n"
             f"Подтверждаете?")
-
     kb = [
         [InlineKeyboardButton("✅ Да, продать", callback_data=f'sell_execute_{rid}_{sell_type}')],
         [InlineKeyboardButton("❌ Нет, вернуться", callback_data='market')]
@@ -1643,51 +1670,31 @@ async def show_sell_confirmation(q, ctx):
 async def process_sell_execute(q, ctx):
     data = q.data
     parts = data.split('_')
-    # parts: ['sell', 'execute', rid, type]
     rid = parts[2]
-    sell_type = parts[3]  # '1' или 'all'
+    sell_type = parts[3]
     uid = q.from_user.id
-
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT amount FROM inventory WHERE user_id=? AND resource_id=?", (uid, rid))
-    r = c.fetchone()
-    if not r or r[0] == 0:
-        await q.answer("❌ Ресурс закончился!", show_alert=True)
-        conn.close()
-        await show_market(q, ctx)
-        return
-
-    avail = r[0]
-    qty = avail if sell_type == 'all' else 1
-    if qty > avail:
-        await q.answer("❌ Количество изменилось. Попробуйте снова.", show_alert=True)
-        conn.close()
-        await show_market(q, ctx)
-        return
-
-    price = RESOURCES[rid]['base_price']
-    total = qty * price
-
-    # Выполняем продажу
-    c.execute("UPDATE inventory SET amount=amount-? WHERE user_id=? AND resource_id=?", (qty, uid, rid))
-    c.execute("UPDATE players SET gold=gold+? WHERE user_id=?", (total, uid))
-    conn.commit()
-    conn.close()
-
-    update_daily_task_progress(uid, 'Продавец', total)
-    update_weekly_task_progress(uid, 'Торговец', total)
-
+    async with db_pool.acquire() as conn:
+        avail = await conn.fetchval("SELECT amount FROM inventory WHERE user_id = $1 AND resource_id = $2", uid, rid)
+        if avail is None or avail == 0:
+            await q.answer("❌ Ресурс закончился!", show_alert=True)
+            await show_market(q, ctx)
+            return
+        qty = avail if sell_type == 'all' else 1
+        if qty > avail:
+            await q.answer("❌ Количество изменилось. Попробуйте снова.", show_alert=True)
+            await show_market(q, ctx)
+            return
+        price = RESOURCES[rid]['base_price']
+        total = qty * price
+        async with conn.transaction():
+            await conn.execute("UPDATE inventory SET amount = amount - $1 WHERE user_id = $2 AND resource_id = $3", qty, uid, rid)
+            await conn.execute("UPDATE players SET gold = gold + $1 WHERE user_id = $2", total, uid)
+    await update_daily_task_progress(uid, 'Продавец', total)
+    await update_weekly_task_progress(uid, 'Торговец', total)
     await q.answer(f"✅ Продано {qty} {RESOURCES[rid]['name']} за {total}💰", show_alert=False)
     await show_market(q, ctx)
-    
-async def init_db_pool():
-    global db_pool
-    database_url = os.environ.get('DATABASE_URL')
-    if not database_url:
-        raise ValueError("No DATABASE_URL environment variable set")
-    db_pool = await asyncpg.create_pool(database_url, min_size=1, max_size=10)
-    logger.info("Database pool created")
+
+# ==================== ЗАПУСК ====================
 
 async def run_bot():
     logger.info("Starting bot polling...")
@@ -1715,37 +1722,33 @@ async def run_bot():
             await asyncio.sleep(10)
     except Exception as e:
         logger.error(f"Error in bot polling: {e}", exc_info=True)
+    finally:
+        await app.stop()
 
 async def healthcheck(request):
     return JSONResponse({"status": "alive"})
 
 async def startup_event():
     logger.info("Starting up...")
-    init_db()
+    global db_pool
+    db_pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=10)
+    await init_db()
     asyncio.create_task(run_bot())
 
 async def shutdown_event():
     logger.info("Shutting down...")
+    if db_pool:
+        await db_pool.close()
 
-app = Starlette(routes=[Route("/healthcheck", healthcheck), Route("/", healthcheck)], on_startup=[startup_event], on_shutdown=[shutdown_event])
+app = Starlette(
+    routes=[Route("/healthcheck", healthcheck), Route("/", healthcheck)],
+    on_startup=[startup_event],
+    on_shutdown=[shutdown_event]
+)
 
 def main():
-    init_db()
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
