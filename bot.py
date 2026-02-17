@@ -358,21 +358,15 @@ def get_week_number(d=None):
     y, w, _ = d.isocalendar()
     return f"{y}-{w:02d}"
 
-def generate_daily_tasks(uid, conn=None):
-    close = False
-    if conn is None:
-        conn = get_db()
-        close = True
-    c = conn.cursor()
+async def generate_daily_tasks(uid, conn):
     today = datetime.date.today().isoformat()
-    c.execute("DELETE FROM daily_tasks WHERE user_id=? AND date=?", (uid, today))
+    await conn.execute("DELETE FROM daily_tasks WHERE user_id = $1 AND date = $2", uid, today)
     templates = random.sample(DAILY_TASK_TEMPLATES, min(4, len(DAILY_TASK_TEMPLATES)))
     for i, t in enumerate(templates):
         goal = random.randint(*t['goal'])
         desc = t['description'].format(goal)
-        c.execute("INSERT OR REPLACE INTO daily_tasks (user_id, task_id, task_name, description, goal, reward_gold, reward_exp, date) VALUES (?,?,?,?,?,?,?,?)", (uid, i, t['name'], desc, goal, t['reward_gold'], t['reward_exp'], today))
-    conn.commit()
-    if close: conn.close()
+        await conn.execute("INSERT INTO daily_tasks (user_id, task_id, task_name, description, goal, reward_gold, reward_exp, date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                           uid, i, t['name'], desc, goal, t['reward_gold'], t['reward_exp'], today)
 
 def check_daily_reset(uid):
     conn = get_db()
@@ -1750,6 +1744,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
