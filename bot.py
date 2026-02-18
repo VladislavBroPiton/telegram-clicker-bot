@@ -1496,6 +1496,10 @@ async def goto_location(update_or_query, ctx):
     await update_or_query.answer(f"Ты переместился в {LOCATIONS[lid]['name']}")
     await show_main_menu_from_query(update_or_query)
 
+async def profile_achievements_handler(query, ctx):
+    uid = query.from_user.id
+    await send_achievements(uid, ctx)
+
 # ==================== ДИСПЕТЧЕР CALLBACK'ОВ ====================
 
 SIMPLE_CALLBACK_HANDLERS = {
@@ -1627,4 +1631,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
