@@ -1514,7 +1514,7 @@ SIMPLE_CALLBACK_HANDLERS = {
     'show_weekly': show_weekly_tasks,
     'back_to_daily': show_daily_tasks,
     'profile': show_profile,
-    'profile_achievements': send_achievements,
+    'profile_achievements': profile_achievements_handler,
     'leaderboard_menu': show_leaderboard_menu,
     'leaderboard_resources_menu': show_leaderboard_resources_menu,
     'leaderboard_level': show_leaderboard_level,
@@ -1631,5 +1631,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
