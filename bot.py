@@ -312,7 +312,7 @@ async def get_player(uid: int, username: str = None) -> dict:
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow("SELECT * FROM players WHERE user_id = $1", uid)
         if not row:
-            today = datetime.date.today().isoformat()
+            today = datetime.date.today()                # ← ИСПРАВЛЕНО: объект date, не строка
             cur_week = get_week_number()
             await conn.execute(
                 "INSERT INTO players (user_id, username, last_daily_reset, last_weekly_reset) VALUES ($1, $2, $3, $4)",
@@ -363,7 +363,7 @@ async def set_upgrade_level(uid: int, upgrade_id: str, level: int):
 async def generate_daily_tasks(uid: int, conn: asyncpg.Connection = None):
     """Генерирует ежедневные задания. Если conn не передан, создаёт новое соединение."""
     async def _gen(conn):
-        today = datetime.date.today().isoformat()
+        today = datetime.date.today()                    # ← ИСПРАВЛЕНО
         await conn.execute("DELETE FROM daily_tasks WHERE user_id = $1 AND date = $2", uid, today)
         templates = random.sample(DAILY_TASK_TEMPLATES, min(4, len(DAILY_TASK_TEMPLATES)))
         for i, t in enumerate(templates):
@@ -382,14 +382,14 @@ async def generate_daily_tasks(uid: int, conn: asyncpg.Connection = None):
 async def check_daily_reset(uid: int):
     async with db_pool.acquire() as conn:
         last = await conn.fetchval("SELECT last_daily_reset FROM players WHERE user_id = $1", uid)
-        today = datetime.date.today().isoformat()
+        today = datetime.date.today()                    # ← ИСПРАВЛЕНО
         if last != today:
             await generate_daily_tasks(uid, conn)
             await conn.execute("UPDATE players SET last_daily_reset = $1 WHERE user_id = $2", today, uid)
 
 async def get_daily_tasks(uid: int) -> list:
     async with db_pool.acquire() as conn:
-        today = datetime.date.today().isoformat()
+        today = datetime.date.today()                    # ← ИСПРАВЛЕНО
         rows = await conn.fetch(
             "SELECT task_id, task_name, description, goal, progress, completed, reward_gold, reward_exp FROM daily_tasks WHERE user_id = $1 AND date = $2",
             uid, today
@@ -398,7 +398,7 @@ async def get_daily_tasks(uid: int) -> list:
 
 async def update_daily_task_progress(uid: int, name_contains: str, delta: int):
     async with db_pool.acquire() as conn:
-        today = datetime.date.today().isoformat()
+        today = datetime.date.today()                    # ← ИСПРАВЛЕНО
         await conn.execute(
             "UPDATE daily_tasks SET progress = progress + $1 WHERE user_id = $2 AND date = $3 AND completed = FALSE AND task_name LIKE $4",
             delta, uid, today, f'%{name_contains}%'
@@ -425,7 +425,7 @@ async def update_daily_task_progress(uid: int, name_contains: str, delta: int):
 
 async def generate_weekly_tasks(uid: int, conn: asyncpg.Connection = None):
     async def _gen(conn):
-        week = get_week_number()
+        week = get_week_number()                         # строка, ок
         await conn.execute("DELETE FROM weekly_tasks WHERE user_id = $1 AND week = $2", uid, week)
         templates = random.sample(WEEKLY_TASK_TEMPLATES, min(4, len(WEEKLY_TASK_TEMPLATES)))
         for i, t in enumerate(templates):
@@ -443,8 +443,8 @@ async def generate_weekly_tasks(uid: int, conn: asyncpg.Connection = None):
 
 async def check_weekly_reset(uid: int):
     async with db_pool.acquire() as conn:
-        last = await conn.fetchval("SELECT last_weekly_reset FROM players WHERE user_id = $1", uid)
-        cur = get_week_number()
+        last = await conn.fetchval("SELECT last_weekly_reset FROM players WHERE user_id = $1", uid)   # строка
+        cur = get_week_number()                                                                       # строка
         if last != cur:
             await generate_weekly_tasks(uid, conn)
             await conn.execute("UPDATE players SET last_weekly_reset = $1 WHERE user_id = $2", cur, uid)
@@ -678,7 +678,7 @@ async def check_achievements(uid: int, ctx: ContextTypes.DEFAULT_TYPE):
             continue
 
         if achieved:
-            today = datetime.date.today().isoformat()
+            today = datetime.date.today()                # ← ИСПРАВЛЕНО
             async with db_pool.acquire() as conn:
                 await conn.execute(
                     "INSERT INTO user_achievements (user_id, achievement_id, unlocked_at, progress, max_progress) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING",
@@ -1734,22 +1734,18 @@ async def startup_event():
     
     # --- НАЧАЛО ДИАГНОСТИКИ ---
     try:
-        # Импортируем urllib для разбора URL (можно в начале файла, но здесь для наглядности)
         import urllib.parse
         parsed = urllib.parse.urlparse(DATABASE_URL)
         host = parsed.hostname
         port = parsed.port or 5432
         logger.info(f"DATABASE_URL parsed: host={host}, port={port}")
         
-        # Проверка DNS
         import socket
         addr = socket.gethostbyname(host)
         logger.info(f"DNS resolution successful: {host} -> {addr}")
         
-        # Проверка TCP-соединения (асинхронно)
         import asyncio
         try:
-            # Попытка открыть соединение с таймаутом 10 секунд
             reader, writer = await asyncio.wait_for(
                 asyncio.open_connection(host, port),
                 timeout=10
@@ -1766,7 +1762,6 @@ async def startup_event():
         logger.error(f"Diagnostic error: {e}")
     # --- КОНЕЦ ДИАГНОСТИКИ ---
     
-    # Далее создаём пул (эта строка останется, но если диагностика покажет проблемы, пул может не создаться)
     db_pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=10)
     await init_db()
     asyncio.create_task(run_bot())
@@ -1788,4 +1783,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
