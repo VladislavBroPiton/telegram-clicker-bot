@@ -1726,7 +1726,14 @@ async def run_bot():
         await app.stop()
 
 async def healthcheck(request):
-    return JSONResponse({"status": "alive"})
+    try:
+        # Выполняем простой запрос к базе, чтобы она не засыпала
+        async with db_pool.acquire() as conn:
+            await conn.fetchval("SELECT 1")
+        return JSONResponse({"status": "alive", "db": "ok"})
+    except Exception as e:
+        logger.error(f"Healthcheck DB error: {e}")
+        return JSONResponse({"status": "alive", "db": "error"}, status_code=500)
 
 async def startup_event():
     logger.info("Starting up...")
@@ -1783,3 +1790,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
