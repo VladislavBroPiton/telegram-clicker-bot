@@ -861,8 +861,8 @@ async def show_main_menu(update_or_query, ctx):
     txt = ("🪨 **Шахтёрская глубина**\n\nПривет, шахтёр! Твой путь к богатству начинается здесь.\n\n🏁 **Что делать?**\n• Нажимай «⛏ Добыть» – каждый клик приносит золото и ресурсы.\n• Выполняй «📋 Задания» – получай бонусы.\n• Соревнуйся в «🏆 Лидеры» – стань лучшим!\n\nОстальные команды доступны в меню (кнопка слева внизу).")
     await reply_or_edit(update_or_query, txt, reply_markup=rm, parse_mode='Markdown')
 
-async def show_main_menu_from_query(query):
-    await show_main_menu(query, None)  # ctx не нужен для edit
+async def show_main_menu_from_query(query, ctx=None):
+    await show_main_menu(query, ctx)
 
 async def show_locations(update_or_query, ctx):
     uid = update_or_query.from_user.id if not isinstance(update_or_query, Update) else update_or_query.effective_user.id
@@ -1627,3 +1627,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
