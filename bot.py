@@ -904,6 +904,7 @@ async def show_locations(update_or_query, ctx):
     cur = await get_player_current_location(uid)
     stats = await get_player_stats(uid)
     lvl = stats['level']
+    tool_level = await get_active_tool_level(uid)  # новая строка
     sl = sorted(LOCATIONS.items(), key=lambda x: x[1]['min_level'])
     cur_idx = None
     for i, (lid, _) in enumerate(sl):
@@ -915,31 +916,44 @@ async def show_locations(update_or_query, ctx):
     idxs = [cur_idx]
     if cur_idx + 1 < len(sl):
         idxs.append(cur_idx + 1)
+    
     txt = "🗺 **Локации**\n\n"
     kb = []
     for i in idxs:
         lid, loc = sl[i]
-        avail = lvl >= loc['min_level']
+        level_ok = lvl >= loc['min_level']
+        tool_ok = tool_level >= loc.get('min_tool_level', 0) if loc.get('min_tool_level', 0) > 0 else True
+        avail = level_ok and tool_ok
         is_cur = (lid == cur)
         status = "✅" if avail else "🔒"
         mark = "📍" if is_cur else ""
         loc_name = escape_markdown(loc['name'], version=1)
+        
+        # Формируем строку с требованиями
         line = f"{mark}{status} **{loc_name}**"
-        if not avail:
-            line += f" (требуется ур.{loc['min_level']})"
+        if not level_ok:
+            line += f" (треб. ур.{loc['min_level']})"
+        elif not tool_ok:
+            line += f" (треб. инстр. {loc['min_tool_level']} ур.)"
         else:
-            line += f" (доступна, ур.{loc['min_level']}+)"
+            line += f" (доступна)"
         txt += line + "\n   " + loc['description'] + "\n"
-        # Добавляем прогресс-бар для недоступной локации
-        if not avail:
+        
+        # Прогресс-бар по уровню, если не хватает уровня
+        if not level_ok:
             progress = lvl
             req = loc['min_level']
             percent = int(progress / req * 100) if req > 0 else 0
             bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
-            txt += f"   Прогресс: {bar} {lvl}/{req}\n"
+            txt += f"   Прогресс уровня: {bar} {lvl}/{req}\n"
+        # Если уровень достаточен, но не хватает инструмента
+        elif not tool_ok:
+            txt += f"   Текущий инструмент: {tool_level} ур., требуется {loc['min_tool_level']} ур.\n"
         txt += "\n"
+        
         if avail and not is_cur:
             kb.append([InlineKeyboardButton(f"Перейти в {loc['name']}", callback_data=f'goto_{lid}')])
+    
     txt += "─────────────────────────\nХочешь сменить локацию? Нажми на кнопку ниже (если она доступна)."
     kb.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
     await reply_or_edit(update_or_query, txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
@@ -1693,6 +1707,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
