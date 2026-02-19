@@ -78,11 +78,41 @@ RESOURCES = {
 
 # Локации
 LOCATIONS = {
-    'coal_mine': {'name': 'Угольная шахта', 'description': 'Мелкая шахта, много угля.', 'min_level': 1, 'resources': [{'res_id': 'coal', 'prob': 0.8, 'min': 1, 'max': 3}, {'res_id': 'iron', 'prob': 0.2, 'min': 1, 'max': 1}]},
-    'iron_mine': {'name': 'Железный рудник', 'description': 'Залежи железной руды.', 'min_level': 3, 'resources': [{'res_id': 'iron', 'prob': 0.7, 'min': 1, 'max': 2}, {'res_id': 'coal', 'prob': 0.3, 'min': 1, 'max': 2}, {'res_id': 'gold', 'prob': 0.1, 'min': 1, 'max': 1}]},
-    'gold_mine': {'name': 'Золотая жила', 'description': 'Богатое месторождение золота.', 'min_level': 5, 'resources': [{'res_id': 'gold', 'prob': 0.6, 'min': 1, 'max': 2}, {'res_id': 'iron', 'prob': 0.3, 'min': 1, 'max': 2}, {'res_id': 'diamond', 'prob': 0.1, 'min': 1, 'max': 1}]},
-    'diamond_cave': {'name': 'Алмазная пещера', 'description': 'Редкие алмазы, опасно.', 'min_level': 10, 'resources': [{'res_id': 'diamond', 'prob': 0.4, 'min': 1, 'max': 1}, {'res_id': 'gold', 'prob': 0.4, 'min': 1, 'max': 2}, {'res_id': 'mithril', 'prob': 0.2, 'min': 1, 'max': 1}]},
-    'mithril_mine': {'name': 'Мифриловые копи', 'description': 'Древние копи.', 'min_level': 20, 'resources': [{'res_id': 'mithril', 'prob': 0.5, 'min': 1, 'max': 2}, {'res_id': 'diamond', 'prob': 0.3, 'min': 1, 'max': 1}, {'res_id': 'gold', 'prob': 0.2, 'min': 1, 'max': 3}]}
+    'coal_mine': {
+        'name': 'Угольная шахта',
+        'description': 'Мелкая шахта, много угля.',
+        'min_level': 1,
+        'min_tool_level': 0,  # без требования
+        'resources': [...]
+    },
+    'iron_mine': {
+        'name': 'Железный рудник',
+        'description': 'Залежи железной руды.',
+        'min_level': 3,
+        'min_tool_level': 0,
+        'resources': [...]
+    },
+    'gold_mine': {
+        'name': 'Золотая жила',
+        'description': 'Богатое месторождение золота.',
+        'min_level': 5,
+        'min_tool_level': 2,  # требуется инструмент 2 уровня
+        'resources': [...]
+    },
+    'diamond_cave': {
+        'name': 'Алмазная пещера',
+        'description': 'Редкие алмазы, опасно.',
+        'min_level': 10,
+        'min_tool_level': 3,  # требуется инструмент 3 уровня
+        'resources': [...]
+    },
+    'mithril_mine': {
+        'name': 'Мифриловые копи',
+        'description': 'Древние копи.',
+        'min_level': 20,
+        'min_tool_level': 4,  # требуется инструмент 4 уровня
+        'resources': [...]
+    }
 }
 
 # Инструменты
@@ -1640,6 +1670,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
