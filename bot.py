@@ -137,6 +137,48 @@ LOCATIONS = {
     }
 }
 
+BOSS_LOCATIONS = {
+    'goblin_king': {
+        'name': 'Логово короля гоблинов',
+        'description': 'Старый король гоблинов, накопивший горы золота. Бой с ним требует смелости.',
+        'min_level': 21,
+        'min_tool_level': 4,  # требуется инструмент не ниже 4 уровня
+        'boss': {
+            'name': 'Король гоблинов',
+            'health': 1000,  # здоровье босса
+            'reward_gold': 5000,
+            'reward_resources': {'soul_shard': (1, 3), 'gold': (10, 20)},  # случайное количество
+            'exp_reward': 500
+        }
+    },
+    'dragon_lair': {
+        'name': 'Логово дракона',
+        'description': 'Древний дракон, стерегущий несметные сокровища. Будь осторожен!',
+        'min_level': 25,
+        'min_tool_level': 5,
+        'boss': {
+            'name': 'Огненный дракон',
+            'health': 5000,
+            'reward_gold': 20000,
+            'reward_resources': {'dragon_scale': (1, 2), 'magic_essence': (2, 5)},
+            'exp_reward': 2000
+        }
+    },
+    'lich_castle': {
+        'name': 'Цитадель лича',
+        'description': 'Могущественный лич, собирающий души для своего ритуала.',
+        'min_level': 30,
+        'min_tool_level': 6,
+        'boss': {
+            'name': 'Архилич',
+            'health': 10000,
+            'reward_gold': 50000,
+            'reward_resources': {'soul_shard': (5, 10), 'magic_essence': (3, 7)},
+            'exp_reward': 5000
+        }
+    }
+}
+
 # Инструменты
 TOOLS = {
     'wooden_pickaxe': {'name': 'Деревянная кирка', 'description': 'Самая простая.', 'price': 0, 'required_level': 1, 'base_power': 1, 'upgrade_cost': {'coal': 5, 'iron': 2}},
@@ -1730,6 +1772,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
