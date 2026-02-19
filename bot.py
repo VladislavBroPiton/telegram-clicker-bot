@@ -1378,27 +1378,52 @@ async def show_faq_locations(update_or_query, ctx):
     uid = update_or_query.from_user.id if not isinstance(update_or_query, Update) else update_or_query.effective_user.id
     stats = await get_player_stats(uid)
     lvl = stats['level']
+    
     text = "🗺 **Локации**\n\n"
+    text += "**Обычные локации:**\n\n"
+    
     for loc_id, loc in LOCATIONS.items():
         emoji = "🪨" if 'coal' in loc_id else "⚙️" if 'iron' in loc_id else "🟡" if 'gold' in loc_id else "💎" if 'diamond' in loc_id else "🔮"
         name = loc['name']
-        req = loc['min_level']
-        status = "✅" if lvl >= req else "🔒"
-        progress = min(lvl, req)
-        percent = int(progress / req * 100) if req > 0 else 0
-        bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
-        text += f"{emoji} **{name}** {status}\n"
-        text += f"   Требуется уровень: {req}\n"
-        if lvl < req:
-            text += f"   Прогресс: {bar} {lvl}/{req}\n"
-        else:
-            text += f"   Доступна! (ваш уровень {lvl})\n"
+        req_level = loc['min_level']
+        req_tool = loc.get('min_tool_level', 0)
+        tool_text = f", инструмент {req_tool} ур." if req_tool > 0 else ""
+        text += f"{emoji} **{name}**\n"
+        text += f"   Требуется: уровень {req_level}{tool_text}\n"
+        text += f"   {loc['description']}\n"
+        # Ресурсы
+        res_list = []
         for res in loc['resources']:
             res_name = RESOURCES[res['res_id']]['name']
-            prob_percent = int(res['prob'] * 100)
-            amount_range = f"{res['min']}-{res['max']}" if res['min'] != res['max'] else str(res['min'])
-            text += f"      • {res_name}: {prob_percent}% ({amount_range} шт.)\n"
-        text += "\n"
+            prob = int(res['prob'] * 100)
+            amount = f"{res['min']}-{res['max']}" if res['min'] != res['max'] else str(res['min'])
+            res_list.append(f"{res_name} {prob}% ({amount} шт.)")
+        text += "   Ресурсы: " + ", ".join(res_list) + "\n\n"
+    
+    # Босс-локации
+    if 'BOSS_LOCATIONS' in globals() and BOSS_LOCATIONS:
+        text += "\n⚔️ **Локации с боссами** ⚔️\n\n"
+        for bid, bloc in BOSS_LOCATIONS.items():
+            boss = bloc['boss']
+            emoji = "👑" if 'goblin' in bid else "🐉" if 'dragon' in bid else "💀"
+            text += f"{emoji} **{bloc['name']}**\n"
+            text += f"   Требуется: уровень {bloc['min_level']}, инструмент {bloc['min_tool_level']} ур.\n"
+            text += f"   {bloc['description']}\n"
+            text += f"   Босс: {boss['name']} | Здоровье: {boss['health']}\n"
+            # Награда
+            rewards = []
+            if boss['reward_gold']:
+                rewards.append(f"{boss['reward_gold']}💰")
+            if boss['exp_reward']:
+                rewards.append(f"{boss['exp_reward']}✨")
+            for res, (minr, maxr) in boss['reward_resources'].items():
+                res_name = RESOURCES.get(res, {}).get('name', res)
+                amount = f"{minr}-{maxr}" if minr != maxr else str(minr)
+                rewards.append(f"{res_name} {amount} шт.")
+            text += f"   Награда: {', '.join(rewards)}\n\n"
+    else:
+        text += "\n⚔️ Босс-локации пока не добавлены.\n"
+    
     kb = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_faq')]]
     await reply_or_edit(update_or_query, text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
 
@@ -1880,6 +1905,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
