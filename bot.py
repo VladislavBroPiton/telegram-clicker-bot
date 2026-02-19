@@ -1050,7 +1050,8 @@ async def show_inventory(update_or_query, ctx):
         txt = "🎒 **Инвентарь**\n\nТвой инвентарь пока пуст. Иди добывай!\n\n"
     txt += "\n─────────────────────────\nПродать ресурсы можно на рынке (/market)."
     kb = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
-    await reply_or_edit(update_or_query, txt, reply_markup=InlineKeyboardMarkup(kb))
+    # Добавлен parse_mode='Markdown'
+    await reply_or_edit(update_or_query, txt, reply_markup=InlineKeyboardMarkup(kb), parse_mode='Markdown')
 
 async def show_market(update_or_query, ctx):
     uid = update_or_query.from_user.id if not isinstance(update_or_query, Update) else update_or_query.effective_user.id
@@ -1631,6 +1632,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
