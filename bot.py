@@ -1808,6 +1808,8 @@ async def button_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await process_sell_execute(q, ctx)
     elif data.startswith('goto_'):
         await goto_location(q, ctx)
+    elif data.startswith('fight_boss_'):
+        await fight_boss(q, ctx)
     else:
         await q.answer()
         return
@@ -1879,6 +1881,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
