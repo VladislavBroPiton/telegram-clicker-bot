@@ -458,6 +458,16 @@ async def init_db():
                 PRIMARY KEY (user_id, tool_id)
             )
         ''')
+        await conn.execute('''
+    CREATE TABLE IF NOT EXISTS boss_progress (
+        user_id BIGINT,
+        boss_id TEXT,
+        current_health INTEGER,
+        defeated BOOLEAN DEFAULT FALSE,
+        last_attempt TIMESTAMP,
+        PRIMARY KEY (user_id, boss_id)
+    )
+''')
         logger.info("Database tables initialized (if not existed)")
 
 # ---------- Игроки ----------
@@ -1807,6 +1817,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
