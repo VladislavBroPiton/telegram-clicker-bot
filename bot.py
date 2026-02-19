@@ -1046,9 +1046,8 @@ async def show_locations(update_or_query, ctx):
         if avail and not is_cur:
             kb.append([InlineKeyboardButton(f"Перейти в {loc['name']}", callback_data=f'goto_{lid}')])
     
-    # ---- БОСС ЛОКАЦИИ ----
+    # === БОСС ЛОКАЦИИ ===
     if lvl >= 21:
-        # Отфильтруем доступные босс-локации
         available_bosses = []
         for bid, bloc in BOSS_LOCATIONS.items():
             if lvl >= bloc['min_level'] and tool_level >= bloc['min_tool_level']:
@@ -1066,7 +1065,7 @@ async def show_locations(update_or_query, ctx):
                     status = f"⚔️ Здоровье: {progress['current_health']}/{bloc['boss']['health']} {bar}"
                 txt += f"⚡ **{bloc['name']}**\n   {bloc['description']}\n   {status}\n\n"
                 kb.append([InlineKeyboardButton(f"Сразиться с {bloc['boss']['name']}", callback_data=f'fight_boss_{bid}')])
-    # ----------------------
+    # ====================
     
     txt += "─────────────────────────\nХочешь сменить локацию? Нажми на кнопку ниже (если она доступна)."
     kb.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
@@ -1881,6 +1880,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
