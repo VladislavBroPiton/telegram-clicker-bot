@@ -1013,6 +1013,21 @@ async def show_locations(update_or_query, ctx):
         status = "✅" if avail else "🔒"
         mark = "📍" if is_cur else ""
         loc_name = escape_markdown(loc['name'], version=1)
+
+         # Босс-локации, если уровень >= 21
+    if lvl >= 21:
+        txt += "\n\n⚔️ **Локации с боссами** ⚔️\n\n"
+        for bid, bloc in BOSS_LOCATIONS.items():
+            if lvl >= bloc['min_level'] and tool_level >= bloc['min_tool_level']:
+                progress = await get_boss_progress(uid, bid)
+                if progress['defeated']:
+                    status = "✅ ПОБЕЖДЁН"
+                else:
+                    percent = int((bloc['boss']['health'] - progress['current_health']) / bloc['boss']['health'] * 100)
+                    bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
+                    status = f"⚔️ Здоровье: {progress['current_health']}/{bloc['boss']['health']} {bar}"
+                txt += f"⚡ **{bloc['name']}**\n   {bloc['description']}\n   {status}\n\n"
+                kb.append([InlineKeyboardButton(f"Сразиться с {bloc['boss']['name']}", callback_data=f'fight_boss_{bid}')])
         
         # Формируем строку с требованиями
         line = f"{mark}{status} **{loc_name}**"
@@ -1792,6 +1807,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
