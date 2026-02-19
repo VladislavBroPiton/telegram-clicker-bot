@@ -683,6 +683,11 @@ async def get_active_tool(uid: int) -> str:
         tool = await conn.fetchval("SELECT active_tool FROM players WHERE user_id = $1", uid)
         return tool if tool else 'wooden_pickaxe'
 
+async def get_active_tool_level(uid: int) -> int:
+    """Возвращает уровень активного инструмента игрока."""
+    active = await get_active_tool(uid)
+    return await get_tool_level(uid, active)
+
 async def set_active_tool(uid: int, tid: str):
     async with db_pool.acquire() as conn:
         await conn.execute("UPDATE players SET active_tool = $1 WHERE user_id = $2", tid, uid)
@@ -1670,6 +1675,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
