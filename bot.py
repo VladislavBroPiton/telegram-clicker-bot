@@ -1686,6 +1686,64 @@ async def goto_location(update_or_query, ctx):
     await update_or_query.answer(f"Ты переместился в {loc['name']}")
     await show_main_menu_from_query(update_or_query)
 
+async def fight_boss(update_or_query, ctx):
+    q = update_or_query
+    uid = q.from_user.id
+    bid = q.data.replace('fight_boss_', '')
+    bloc = BOSS_LOCATIONS.get(bid)
+    if not bloc:
+        await q.answer("Босс не найден", show_alert=True)
+        return
+    
+    # Проверка уровня и инструмента
+    stats = await get_player_stats(uid)
+    if stats['level'] < bloc['min_level']:
+        await q.answer(f"❌ Требуется уровень {bloc['min_level']}", show_alert=True)
+        return
+    tool_level = await get_active_tool_level(uid)
+    if tool_level < bloc['min_tool_level']:
+        await q.answer(f"❌ Требуется инструмент {bloc['min_tool_level']} уровня", show_alert=True)
+        return
+    
+    progress = await get_boss_progress(uid, bid)
+    if progress['defeated']:
+        await q.answer("Босс уже побеждён!", show_alert=True)
+        return
+    
+    # Рассчитываем урон
+    gold, exp, is_crit = get_click_reward(stats)
+    damage = gold  # можно модифицировать
+    if is_crit:
+        damage *= 2
+        crit_text = " КРИТ!"
+    else:
+        crit_text = ""
+    
+    defeated = await update_boss_health(uid, bid, damage)
+    
+    if defeated:
+        boss = bloc['boss']
+        # Начисляем награду
+        await update_player(uid, gold=stats['gold'] + boss['reward_gold'], exp=stats['exp'] + boss['exp_reward'])
+        for res, (minr, maxr) in boss['reward_resources'].items():
+            amt = random.randint(minr, maxr)
+            await add_resource(uid, res, amt)
+        await q.message.reply_text(
+            f"⚔️ Ты нанёс {damage} урона{crit_text} и ПОБЕДИЛ {boss['name']}!\n"
+            f"Награда: {boss['reward_gold']}💰, {boss['exp_reward']}✨ и ресурсы!"
+        )
+        await check_achievements(uid, ctx)
+    else:
+        # Получаем обновлённое здоровье после урона
+        new_progress = await get_boss_progress(uid, bid)
+        await q.message.reply_text(
+            f"⚔️ Ты нанёс {damage} урона{crit_text} боссу {bloc['boss']['name']}. "
+            f"Осталось здоровья: {new_progress['current_health']}/{bloc['boss']['health']}"
+        )
+    
+    # Возвращаемся к списку локаций
+    await show_locations(q, ctx)
+
 async def profile_achievements_handler(query, ctx):
     uid = query.from_user.id
     await send_achievements(uid, ctx)
@@ -1821,6 +1879,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
