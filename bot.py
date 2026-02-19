@@ -73,7 +73,10 @@ RESOURCES = {
     'iron': {'name': 'Железо', 'base_price': 10},
     'gold': {'name': 'Золотая руда', 'base_price': 30},
     'diamond': {'name': 'Алмаз', 'base_price': 100},
-    'mithril': {'name': 'Мифрил', 'base_price': 300}
+    'mithril': {'name': 'Мифрил', 'base_price': 300},
+    'soul_shard': {'name': 'Осколок души', 'base_price': 500},
+    'dragon_scale': {'name': 'Чешуя дракона', 'base_price': 1000},
+    'magic_essence': {'name': 'Эссенция магии', 'base_price': 2000}
 }
 
 # Локации
@@ -1727,6 +1730,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
