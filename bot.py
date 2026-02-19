@@ -894,7 +894,15 @@ async def show_locations(update_or_query, ctx):
             line += f" (требуется ур.{loc['min_level']})"
         else:
             line += f" (доступна, ур.{loc['min_level']}+)"
-        txt += line + "\n   " + loc['description'] + "\n\n"
+        txt += line + "\n   " + loc['description'] + "\n"
+        # Добавляем прогресс-бар для недоступной локации
+        if not avail:
+            progress = lvl
+            req = loc['min_level']
+            percent = int(progress / req * 100) if req > 0 else 0
+            bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
+            txt += f"   Прогресс: {bar} {lvl}/{req}\n"
+        txt += "\n"
         if avail and not is_cur:
             kb.append([InlineKeyboardButton(f"Перейти в {loc['name']}", callback_data=f'goto_{lid}')])
     txt += "─────────────────────────\nХочешь сменить локацию? Нажми на кнопку ниже (если она доступна)."
@@ -1632,6 +1640,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
