@@ -999,7 +999,7 @@ async def show_locations(update_or_query, ctx):
     cur = await get_player_current_location(uid)
     stats = await get_player_stats(uid)
     lvl = stats['level']
-    tool_level = await get_active_tool_level(uid)  # новая строка
+    tool_level = await get_active_tool_level(uid)
     sl = sorted(LOCATIONS.items(), key=lambda x: x[1]['min_level'])
     cur_idx = None
     for i, (lid, _) in enumerate(sl):
@@ -1023,23 +1023,7 @@ async def show_locations(update_or_query, ctx):
         status = "✅" if avail else "🔒"
         mark = "📍" if is_cur else ""
         loc_name = escape_markdown(loc['name'], version=1)
-
-         # Босс-локации, если уровень >= 21
-    if lvl >= 21:
-        txt += "\n\n⚔️ **Локации с боссами** ⚔️\n\n"
-        for bid, bloc in BOSS_LOCATIONS.items():
-            if lvl >= bloc['min_level'] and tool_level >= bloc['min_tool_level']:
-                progress = await get_boss_progress(uid, bid)
-                if progress['defeated']:
-                    status = "✅ ПОБЕЖДЁН"
-                else:
-                    percent = int((bloc['boss']['health'] - progress['current_health']) / bloc['boss']['health'] * 100)
-                    bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
-                    status = f"⚔️ Здоровье: {progress['current_health']}/{bloc['boss']['health']} {bar}"
-                txt += f"⚡ **{bloc['name']}**\n   {bloc['description']}\n   {status}\n\n"
-                kb.append([InlineKeyboardButton(f"Сразиться с {bloc['boss']['name']}", callback_data=f'fight_boss_{bid}')])
         
-        # Формируем строку с требованиями
         line = f"{mark}{status} **{loc_name}**"
         if not level_ok:
             line += f" (треб. ур.{loc['min_level']})"
@@ -1049,20 +1033,40 @@ async def show_locations(update_or_query, ctx):
             line += f" (доступна)"
         txt += line + "\n   " + loc['description'] + "\n"
         
-        # Прогресс-бар по уровню, если не хватает уровня
         if not level_ok:
             progress = lvl
             req = loc['min_level']
             percent = int(progress / req * 100) if req > 0 else 0
             bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
             txt += f"   Прогресс уровня: {bar} {lvl}/{req}\n"
-        # Если уровень достаточен, но не хватает инструмента
         elif not tool_ok:
             txt += f"   Текущий инструмент: {tool_level} ур., требуется {loc['min_tool_level']} ур.\n"
         txt += "\n"
         
         if avail and not is_cur:
             kb.append([InlineKeyboardButton(f"Перейти в {loc['name']}", callback_data=f'goto_{lid}')])
+    
+    # ---- БОСС ЛОКАЦИИ ----
+    if lvl >= 21:
+        # Отфильтруем доступные босс-локации
+        available_bosses = []
+        for bid, bloc in BOSS_LOCATIONS.items():
+            if lvl >= bloc['min_level'] and tool_level >= bloc['min_tool_level']:
+                available_bosses.append((bid, bloc))
+        
+        if available_bosses:
+            txt += "\n\n⚔️ **Локации с боссами** ⚔️\n\n"
+            for bid, bloc in available_bosses:
+                progress = await get_boss_progress(uid, bid)
+                if progress['defeated']:
+                    status = "✅ ПОБЕЖДЁН"
+                else:
+                    percent = int((bloc['boss']['health'] - progress['current_health']) / bloc['boss']['health'] * 100)
+                    bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
+                    status = f"⚔️ Здоровье: {progress['current_health']}/{bloc['boss']['health']} {bar}"
+                txt += f"⚡ **{bloc['name']}**\n   {bloc['description']}\n   {status}\n\n"
+                kb.append([InlineKeyboardButton(f"Сразиться с {bloc['boss']['name']}", callback_data=f'fight_boss_{bid}')])
+    # ----------------------
     
     txt += "─────────────────────────\nХочешь сменить локацию? Нажми на кнопку ниже (если она доступна)."
     kb.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
@@ -1817,6 +1821,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
