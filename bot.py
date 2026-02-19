@@ -527,6 +527,26 @@ async def level_up_if_needed(uid: int):
             exp -= EXP_PER_LEVEL
         await conn.execute("UPDATE players SET level = $1, exp = $2 WHERE user_id = $3", lvl, exp, uid)
 
+async def get_boss_progress(uid: int, boss_id: str) -> dict:
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT current_health, defeated FROM boss_progress WHERE user_id=$1 AND boss_id=$2", uid, boss_id)
+        if not row:
+            # Инициализация
+            health = BOSS_LOCATIONS[boss_id]['boss']['health']
+            await conn.execute("INSERT INTO boss_progress (user_id, boss_id, current_health) VALUES ($1, $2, $3)", uid, boss_id, health)
+            return {'current_health': health, 'defeated': False}
+        return dict(row)
+
+async def update_boss_health(uid: int, boss_id: str, damage: int):
+    async with db_pool.acquire() as conn:
+        await conn.execute("UPDATE boss_progress SET current_health = current_health - $1 WHERE user_id=$2 AND boss_id=$3", damage, uid, boss_id)
+        # Проверить, не убит ли босс
+        row = await conn.fetchrow("SELECT current_health FROM boss_progress WHERE user_id=$1 AND boss_id=$2", uid, boss_id)
+        if row['current_health'] <= 0:
+            await conn.execute("UPDATE boss_progress SET defeated=TRUE, current_health=0 WHERE user_id=$1 AND boss_id=$2", uid, boss_id)
+            return True  # босс убит
+    return False
+
 # ---------- Улучшения ----------
 async def purchase_upgrade(uid: int, upgrade_id: str) -> Tuple[bool, str, int]:
     async with db_pool.acquire() as conn:
@@ -1772,6 +1792,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
