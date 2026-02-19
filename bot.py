@@ -1536,8 +1536,26 @@ async def process_sell_execute(update_or_query, ctx):
 async def goto_location(update_or_query, ctx):
     lid = update_or_query.data.replace('goto_', '')
     uid = update_or_query.from_user.id
+    loc = LOCATIONS.get(lid)
+    if not loc:
+        await update_or_query.answer("Локация не найдена", show_alert=True)
+        return
+    
+    stats = await get_player_stats(uid)
+    # Проверка уровня персонажа
+    if stats['level'] < loc['min_level']:
+        await update_or_query.answer(f"❌ Требуется уровень {loc['min_level']}", show_alert=True)
+        return
+    
+    # Проверка уровня инструмента (если требуется)
+    if loc.get('min_tool_level', 0) > 0:
+        tool_level = await get_active_tool_level(uid)
+        if tool_level < loc['min_tool_level']:
+            await update_or_query.answer(f"❌ Требуется инструмент {loc['min_tool_level']} уровня", show_alert=True)
+            return
+    
     await set_player_location(uid, lid)
-    await update_or_query.answer(f"Ты переместился в {LOCATIONS[lid]['name']}")
+    await update_or_query.answer(f"Ты переместился в {loc['name']}")
     await show_main_menu_from_query(update_or_query)
 
 async def profile_achievements_handler(query, ctx):
@@ -1675,6 +1693,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
