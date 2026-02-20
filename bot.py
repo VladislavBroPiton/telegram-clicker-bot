@@ -23,6 +23,7 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.requests import Request
+from starlette.middleware.cors import CORSMiddleware
 import uvicorn
 import asyncpg
 
@@ -2044,6 +2045,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
