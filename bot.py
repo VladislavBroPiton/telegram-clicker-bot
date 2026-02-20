@@ -1406,6 +1406,43 @@ async def show_faq_locations(update_or_query, ctx):
         [InlineKeyboardButton("🔙 Назад", callback_data='back_to_faq')]
     ]
     await reply_or_edit(update_or_query, text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+
+    async def show_faq_boss_locations(update_or_query, ctx):
+    text = "⚔️ **Босс-локации** ⚔️\n\n"
+    # Проверяем, определён ли словарь BOSS_LOCATIONS
+    if 'BOSS_LOCATIONS' not in globals() or not BOSS_LOCATIONS:
+        text += "Информация о босс-локациях пока не добавлена."
+    else:
+        for bid, bloc in BOSS_LOCATIONS.items():
+            boss = bloc['boss']
+            # Выбираем эмодзи в зависимости от названия (можно настроить под свои)
+            if 'goblin' in bid:
+                emoji = "👑"
+            elif 'dragon' in bid:
+                emoji = "🐉"
+            else:
+                emoji = "💀"
+            
+            text += f"{emoji} **{bloc['name']}**\n"
+            text += f"   Требуется: уровень {bloc['min_level']}, инструмент {bloc['min_tool_level']} ур.\n"
+            text += f"   {bloc['description']}\n"
+            text += f"   Босс: {boss['name']} | Здоровье: {boss['health']}\n"
+            # Награда
+            rewards = []
+            if boss['reward_gold']:
+                rewards.append(f"{boss['reward_gold']}💰")
+            if boss['exp_reward']:
+                rewards.append(f"{boss['exp_reward']}✨")
+            for res, (minr, maxr) in boss['reward_resources'].items():
+                # Получаем русское название ресурса из RESOURCES
+                res_name = RESOURCES.get(res, {}).get('name', res)
+                amount = f"{minr}-{maxr}" if minr != maxr else str(minr)
+                rewards.append(f"{res_name} {amount} шт.")
+            text += f"   Награда: {', '.join(rewards)}\n\n"
+    
+    # Кнопка возврата к обычным локациям
+    kb = [[InlineKeyboardButton("🔙 Назад к локациям", callback_data='faq_locations')]]
+    await reply_or_edit(update_or_query, text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
     
     # Босс-локации
     if 'BOSS_LOCATIONS' in globals() and BOSS_LOCATIONS:
@@ -1912,6 +1949,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
