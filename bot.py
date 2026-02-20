@@ -2152,6 +2152,7 @@ app = Starlette(
 # Добавляем маршруты API
 app.router.routes.extend([
     Route('/api/user', api_user, methods=['GET']),
+    Route('/api/click', api_click, methods=['POST']),   # <--- ЭТА НОВАЯ СТРОКА
     Route('/api/boss/attack', api_boss_attack, methods=['POST']),
     Route('/api/boss/{boss_id}', api_boss_info, methods=['GET']),
 ])
@@ -2170,6 +2171,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
