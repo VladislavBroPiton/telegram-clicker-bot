@@ -1,6 +1,6 @@
 """
 Telegram кликер бот "Шахтёрская глубина"
-Финальная версия с босс-локациями, новыми ресурсами и обновлённым FAQ.
+Финальная версия с босс-локациями, новыми ресурсами, обновлённым FAQ и Mini App API.
 """
 
 import logging
@@ -8,16 +8,21 @@ import random
 import datetime
 import asyncio
 import os
+import hashlib
+import hmac
+import json
 from typing import Dict, Tuple, Optional, Any, List
 from contextlib import asynccontextmanager
+from urllib.parse import parse_qsl
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from telegram.error import BadRequest
 from telegram.helpers import escape_markdown
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
+from starlette.requests import Request
 import uvicorn
 import asyncpg
 
@@ -803,7 +808,8 @@ async def unlock_achievement(uid: int, ach_id: str, gold: int, exp: int, progres
 def evaluate_achievement(ach: Achievement, uid: int, data: dict) -> tuple[bool, int, int]:
     return ach.condition_func(uid, data)
 
-async def check_achievements(uid: int, ctx: ContextTypes.DEFAULT_TYPE):
+# Изменено: добавлена возможность не передавать ctx (для вызовов из API)
+async def check_achievements(uid: int, ctx: ContextTypes.DEFAULT_TYPE = None):
     stats = await get_player_stats(uid)
     inv = await get_inventory(uid)
     inv_total = sum(inv.values())
@@ -828,11 +834,13 @@ async def check_achievements(uid: int, ctx: ContextTypes.DEFAULT_TYPE):
             await unlock_achievement(uid, ach.id, ach.reward_gold, ach.reward_exp, prog, maxp)
             new_ach.append(ach)
 
-    for ach in new_ach:
-        txt = f"🏆 Достижение получено: {ach.name}\n{ach.description}"
-        if ach.reward_gold > 0 or ach.reward_exp > 0:
-            txt += f"\nНаграда: {ach.reward_gold}💰, {ach.reward_exp}✨"
-        await ctx.bot.send_message(chat_id=uid, text=txt)
+    # Если есть ctx, отправляем сообщения (иначе пропускаем)
+    if ctx is not None:
+        for ach in new_ach:
+            txt = f"🏆 Достижение получено: {ach.name}\n{ach.description}"
+            if ach.reward_gold > 0 or ach.reward_exp > 0:
+                txt += f"\nНаграда: {ach.reward_gold}💰, {ach.reward_exp}✨"
+            await ctx.bot.send_message(chat_id=uid, text=txt)
     return len(new_ach)
 
 async def send_achievements(uid: int, ctx: ContextTypes.DEFAULT_TYPE):
@@ -965,9 +973,16 @@ async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 # ==================== ФУНКЦИИ ОТОБРАЖЕНИЯ ====================
 
 async def show_main_menu(update_or_query, ctx):
-    kb = [[InlineKeyboardButton("⛏ Добыть", callback_data='mine'),
-            InlineKeyboardButton("📋 Задания", callback_data='tasks'),
-            InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')]]
+    uid = update_or_query.from_user.id if not isinstance(update_or_query, Update) else update_or_query.effective_user.id
+    stats = await get_player_stats(uid)
+    kb = [
+        [InlineKeyboardButton("⛏ Добыть", callback_data='mine'),
+         InlineKeyboardButton("📋 Задания", callback_data='tasks'),
+         InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')]
+    ]
+    # Добавляем кнопку для Mini App, если игрок достиг 21 уровня
+    if stats['level'] >= 21:
+        kb.append([InlineKeyboardButton("⚔️ Босс-арена (3D)", web_app=WebAppInfo(url="https://your-mini-app.com"))])
     rm = InlineKeyboardMarkup(kb)
     txt = ("🪨 **Шахтёрская глубина**\n\nПривет, шахтёр! Твой путь к богатству начинается здесь.\n\n🏁 **Что делать?**\n• Нажимай «⛏ Добыть» – каждый клик приносит золото и ресурсы.\n• Выполняй «📋 Задания» – получай бонусы.\n• Соревнуйся в «🏆 Лидеры» – стань лучшим!\n\nОстальные команды доступны в меню (кнопка слева внизу).")
     await reply_or_edit(update_or_query, txt, reply_markup=rm, parse_mode='Markdown')
@@ -1026,6 +1041,24 @@ async def show_locations(update_or_query, ctx):
         
         if avail and not is_cur:
             kb.append([InlineKeyboardButton(f"Перейти в {loc['name']}", callback_data=f'goto_{lid}')])
+    
+    # Добавим босс-локации в конец (информационно)
+    txt += "\n⚔️ **Босс-локации (21+ уровень)**\n\n"
+    for bid, bloc in BOSS_LOCATIONS.items():
+        level_ok = lvl >= bloc['min_level']
+        tool_ok = tool_level >= bloc['min_tool_level']
+        if level_ok and tool_ok:
+            prog = await get_boss_progress(uid, bid)
+            status = "✅" if prog['defeated'] else "⚔️"
+            txt += f"{status} **{bloc['name']}**\n   {bloc['description']}\n"
+            if not prog['defeated']:
+                txt += f"   Здоровье: {prog['current_health']}/{bloc['boss']['health']}\n"
+                # Кнопка для открытия Mini App (можно добавить отдельно)
+            else:
+                txt += "   (побеждён)\n"
+        else:
+            txt += f"🔒 **{bloc['name']}** (треб. ур.{bloc['min_level']}, инстр.{bloc['min_tool_level']})\n"
+        txt += "\n"
     
     kb.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
     await reply_or_edit(update_or_query, txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
@@ -1792,37 +1825,191 @@ async def button_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     await q.answer()
 
+# ==================== API ДЛЯ MINI APP ====================
+
+def verify_telegram_data(bot_token: str, init_data: str) -> dict | None:
+    """
+    Проверяет подпись данных от Telegram и возвращает объект пользователя.
+    """
+    try:
+        data = dict(parse_qsl(init_data))
+        if 'hash' not in data:
+            return None
+        hash_received = data.pop('hash')
+        # Сортируем ключи и создаём строку для проверки
+        items = sorted(data.items())
+        data_check_string = '\n'.join(f"{k}={v}" for k, v in items)
+        # Вычисляем HMAC-SHA256
+        secret_key = hmac.new(bot_token.encode(), b"WebAppData", hashlib.sha256).digest()
+        h = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256)
+        if h.hexdigest() != hash_received:
+            return None
+        # Парсим поле user (это JSON строка)
+        if 'user' in data:
+            user = json.loads(data['user'])
+            return user
+        return None
+    except Exception as e:
+        logger.error(f"Error verifying initData: {e}")
+        return None
+
+async def api_user(request: Request):
+    init_data = request.headers.get('x-telegram-init-data')
+    if not init_data:
+        return JSONResponse({'error': 'Missing init data'}, status_code=401)
+    user = verify_telegram_data(TOKEN, init_data)
+    if not user:
+        return JSONResponse({'error': 'Invalid signature'}, status_code=403)
+    uid = user['id']
+    
+    # Получаем данные игрока
+    stats = await get_player_stats(uid)
+    inv = await get_inventory(uid)
+    current_location = await get_player_current_location(uid)
+    
+    # Прогресс боссов
+    boss_progress = {}
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("SELECT boss_id, current_health, defeated FROM boss_progress WHERE user_id = $1", uid)
+        for row in rows:
+            boss_progress[row['boss_id']] = {
+                'current_health': row['current_health'],
+                'defeated': row['defeated']
+            }
+    
+    return JSONResponse({
+        'id': uid,
+        'level': stats['level'],
+        'exp': stats['exp'],
+        'gold': stats['gold'],
+        'location': current_location,
+        'inventory': inv,
+        'upgrades': stats['upgrades'],
+        'boss_progress': boss_progress
+    })
+
+async def api_boss_attack(request: Request):
+    init_data = request.headers.get('x-telegram-init-data')
+    if not init_data:
+        return JSONResponse({'error': 'Missing init data'}, status_code=401)
+    user = verify_telegram_data(TOKEN, init_data)
+    if not user:
+        return JSONResponse({'error': 'Invalid signature'}, status_code=403)
+    uid = user['id']
+    
+    body = await request.json()
+    boss_id = body.get('boss_id')
+    if not boss_id or boss_id not in BOSS_LOCATIONS:
+        return JSONResponse({'error': 'Invalid boss_id'}, status_code=400)
+    
+    # Проверяем, доступна ли локация игроку
+    stats = await get_player_stats(uid)
+    bloc = BOSS_LOCATIONS[boss_id]
+    if stats['level'] < bloc['min_level']:
+        return JSONResponse({'error': 'Level too low'}, status_code=403)
+    tool_level = await get_active_tool_level(uid)
+    if tool_level < bloc['min_tool_level']:
+        return JSONResponse({'error': 'Tool level too low'}, status_code=403)
+    
+    # Проверяем, не побеждён ли босс
+    prog = await get_boss_progress(uid, boss_id)
+    if prog['defeated']:
+        return JSONResponse({'error': 'Boss already defeated'}, status_code=400)
+    
+    # Вычисляем урон (используем ту же логику, что и в mine_action)
+    gold, exp, is_crit = get_click_reward(stats)
+    damage = gold  # урон равен добытому золоту (можно настроить)
+    if is_crit:
+        damage *= 2
+    
+    defeated = await update_boss_health(uid, boss_id, damage)
+    
+    # Если босс побеждён, выдаём награду
+    if defeated:
+        boss = bloc['boss']
+        async with db_pool.acquire() as conn:
+            await conn.execute(
+                "UPDATE players SET gold = gold + $1, exp = exp + $2 WHERE user_id = $3",
+                boss['reward_gold'], boss['exp_reward'], uid
+            )
+            for res, (min_amt, max_amt) in boss['reward_resources'].items():
+                amt = random.randint(min_amt, max_amt)
+                await add_resource(uid, res, amt)
+        await check_achievements(uid)  # ctx=None, не отправляем сообщения в чат
+    
+    # Получаем обновлённое состояние босса
+    new_prog = await get_boss_progress(uid, boss_id)
+    # Обновлённые данные игрока
+    new_stats = await get_player_stats(uid)
+    new_inv = await get_inventory(uid)
+    
+    return JSONResponse({
+        'damage': damage,
+        'is_crit': is_crit,
+        'defeated': defeated,
+        'current_health': new_prog['current_health'],
+        'max_health': bloc['boss']['health'],
+        'new_gold': new_stats['gold'],
+        'new_exp': new_stats['exp'],
+        'inventory': new_inv
+    })
+
+async def api_boss_info(request: Request):
+    init_data = request.headers.get('x-telegram-init-data')
+    if not init_data:
+        return JSONResponse({'error': 'Missing init data'}, status_code=401)
+    user = verify_telegram_data(TOKEN, init_data)
+    if not user:
+        return JSONResponse({'error': 'Invalid signature'}, status_code=403)
+    uid = user['id']
+    boss_id = request.path_params.get('boss_id')
+    if not boss_id or boss_id not in BOSS_LOCATIONS:
+        return JSONResponse({'error': 'Invalid boss_id'}, status_code=400)
+    prog = await get_boss_progress(uid, boss_id)
+    return JSONResponse({
+        'current_health': prog['current_health'],
+        'defeated': prog['defeated'],
+        'max_health': BOSS_LOCATIONS[boss_id]['boss']['health']
+    })
+
+# Добавляем маршруты API
+app.router.routes.extend([
+    Route('/api/user', api_user, methods=['GET']),
+    Route('/api/boss/attack', api_boss_attack, methods=['POST']),
+    Route('/api/boss/{boss_id}', api_boss_info, methods=['GET']),
+])
+
 # ==================== ЗАПУСК ====================
 
 async def run_bot():
     logger.info("Starting bot polling...")
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("mine", cmd_mine))
-    app.add_handler(CommandHandler("locations", cmd_locations))
-    app.add_handler(CommandHandler("shop", cmd_shop))
-    app.add_handler(CommandHandler("tasks", cmd_tasks))
-    app.add_handler(CommandHandler("profile", cmd_profile))
-    app.add_handler(CommandHandler("inventory", cmd_inventory))
-    app.add_handler(CommandHandler("market", cmd_market))
-    app.add_handler(CommandHandler("leaderboard", cmd_leaderboard))
-    app.add_handler(CommandHandler("faq", cmd_faq))
-    app.add_handler(CommandHandler("achievements", cmd_achievements))
-    app.add_handler(CommandHandler("help", cmd_help))
-    app.add_handler(CallbackQueryHandler(button_handler))
+    app_bot = Application.builder().token(TOKEN).build()
+    app_bot.add_handler(CommandHandler("start", start))
+    app_bot.add_handler(CommandHandler("mine", cmd_mine))
+    app_bot.add_handler(CommandHandler("locations", cmd_locations))
+    app_bot.add_handler(CommandHandler("shop", cmd_shop))
+    app_bot.add_handler(CommandHandler("tasks", cmd_tasks))
+    app_bot.add_handler(CommandHandler("profile", cmd_profile))
+    app_bot.add_handler(CommandHandler("inventory", cmd_inventory))
+    app_bot.add_handler(CommandHandler("market", cmd_market))
+    app_bot.add_handler(CommandHandler("leaderboard", cmd_leaderboard))
+    app_bot.add_handler(CommandHandler("faq", cmd_faq))
+    app_bot.add_handler(CommandHandler("achievements", cmd_achievements))
+    app_bot.add_handler(CommandHandler("help", cmd_help))
+    app_bot.add_handler(CallbackQueryHandler(button_handler))
 
     try:
-        await app.bot.delete_webhook(drop_pending_updates=True)
-        await app.initialize()
-        await app.start()
-        await app.updater.start_polling()
+        await app_bot.bot.delete_webhook(drop_pending_updates=True)
+        await app_bot.initialize()
+        await app_bot.start()
+        await app_bot.updater.start_polling()
         logger.info("Bot polling started successfully")
         while True:
             await asyncio.sleep(3600)
     except Exception as e:
         logger.error(f"Error in bot polling: {e}", exc_info=True)
     finally:
-        await app.stop()
+        await app_bot.stop()
 
 async def healthcheck(request):
     try:
