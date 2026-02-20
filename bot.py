@@ -1872,7 +1872,7 @@ async def api_user(request: Request):
         uid = user['id']
     elif "github.io" in origin or "localhost" in origin:
         # ВРЕМЕННО: для теста из браузера на GitHub Pages (или локально)
-        uid = YOUR_TELEGRAM_ID  # ⚠️ СЮДА ВСТАВЬТЕ СВОЙ ID, например 123456789
+        uid = 5683729883  # ⚠️ СЮДА ВСТАВЬТЕ СВОЙ ID, например 123456789
     else:
         # Если нет ни init_data, ни разрешённого источника — ошибка
         return JSONResponse({'error': 'Missing init data'}, status_code=401)
@@ -1913,7 +1913,7 @@ async def api_boss_attack(request: Request):
             return JSONResponse({'error': 'Invalid signature'}, status_code=403)
         uid = user['id']
     elif "github.io" in origin or "localhost" in origin:
-        uid = YOUR_TELEGRAM_ID  # ⚠️ СЮДА ВСТАВЬТЕ СВОЙ ID
+        uid = 5683729883  # ⚠️ СЮДА ВСТАВЬТЕ СВОЙ ID
     else:
         return JSONResponse({'error': 'Missing init data'}, status_code=401)
     
@@ -1979,7 +1979,7 @@ async def api_boss_info(request: Request):
             return JSONResponse({'error': 'Invalid signature'}, status_code=403)
         uid = user['id']
     elif "github.io" in origin or "localhost" in origin:
-        uid = YOUR_TELEGRAM_ID  # ⚠️ СЮДА ВСТАВЬТЕ СВОЙ ID
+        uid = 5683729883  # ⚠️ СЮДА ВСТАВЬТЕ СВОЙ ID
     else:
         return JSONResponse({'error': 'Missing init data'}, status_code=401)
     
@@ -2073,6 +2073,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
