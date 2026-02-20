@@ -1400,6 +1400,13 @@ async def show_faq_locations(update_or_query, ctx):
             res_list.append(f"{res_name} {prob}% ({amount} шт.)")
         text += "   Ресурсы: " + ", ".join(res_list) + "\n\n"
     
+    # Клавиатура с кнопкой на босс-локации и назад
+    kb = [
+        [InlineKeyboardButton("⚔️ Босс-локации", callback_data='faq_boss_locations')],
+        [InlineKeyboardButton("🔙 Назад", callback_data='back_to_faq')]
+    ]
+    await reply_or_edit(update_or_query, text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+    
     # Босс-локации
     if 'BOSS_LOCATIONS' in globals() and BOSS_LOCATIONS:
         text += "\n⚔️ **Локации с боссами** ⚔️\n\n"
@@ -1905,6 +1912,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
