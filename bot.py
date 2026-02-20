@@ -1992,6 +1992,103 @@ async def api_boss_info(request: Request):
         'defeated': prog['defeated'],
         'max_health': BOSS_LOCATIONS[boss_id]['boss']['health']
     })
+
+async def api_click(request: Request):
+    init_data = request.headers.get('x-telegram-init-data')
+    origin = request.headers.get('origin', '')
+    
+    # --- Определяем пользователя (как и в других API-функциях) ---
+    uid = None
+    if init_data:
+        user = verify_telegram_data(TOKEN, init_data)
+        if not user:
+            return JSONResponse({'error': 'Invalid signature'}, status_code=403)
+        uid = user['id']
+    elif "github.io" in origin or "localhost" in origin:
+        # ВРЕМЕННО: для теста из браузера
+        uid = 5683729883  # ⚠️ НЕ ЗАБУДЬТЕ ЗАМЕНИТЬ!
+    else:
+        return JSONResponse({'error': 'Missing init data'}, status_code=401)
+    # ------------------------------------------------------------
+
+    # Получаем текущую локацию игрока
+    loc_id = await get_player_current_location(uid)
+    loc = LOCATIONS.get(loc_id, LOCATIONS['coal_mine'])
+    
+    # --- Логика добычи (скопирована из mine_action) ---
+    rnd = random.random()
+    cum = 0
+    found = None
+    amt = 0
+    for r in loc['resources']:
+        cum += r['prob']
+        if rnd < cum:
+            found = r['res_id']
+            amt = random.randint(r['min'], r['max'])
+            break
+
+    stats = await get_player_stats(uid)
+    gold, exp, is_crit = get_click_reward(stats)
+
+    if found:
+        active_tool = await get_active_tool(uid)
+        tool_level = await get_tool_level(uid, active_tool)
+        tool_power = get_tool_power(uid, active_tool, tool_level)
+        if tool_power > 0:
+            multiplier = 1 + (tool_power - 1) * 0.2
+            amt = int(amt * multiplier)
+            amt = max(1, amt)
+    # ----------------------------------------------------
+
+    # --- Обновление данных в базе ---
+    async with db_pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE players SET gold = gold + $1, exp = exp + $2, total_clicks = total_clicks + 1, total_gold_earned = total_gold_earned + $3 WHERE user_id = $4",
+            gold, exp, gold, uid
+        )
+        if is_crit:
+            await conn.execute(
+                "UPDATE players SET total_crits = total_crits + 1, current_crit_streak = current_crit_streak + 1, max_crit_streak = GREATEST(max_crit_streak, current_crit_streak) WHERE user_id = $1",
+                uid
+            )
+        else:
+            await conn.execute("UPDATE players SET current_crit_streak = 0 WHERE user_id = $1", uid)
+
+    await level_up_if_needed(uid)
+
+    if found:
+        await add_resource(uid, found, amt)
+
+    # --- Обновление заданий и достижений ---
+    await update_daily_task_progress(uid, 'Труженик', 1)
+    await update_daily_task_progress(uid, 'Золотоискатель', gold)
+    if is_crit:
+        await update_daily_task_progress(uid, 'Везунчик', 1)
+    if found:
+        await update_daily_task_progress(uid, 'Рудокоп', amt)
+    await update_weekly_task_progress(uid, 'Шахтёр', 1)
+    await update_weekly_task_progress(uid, 'Золотая лихорадка', gold)
+    if is_crit:
+        await update_weekly_task_progress(uid, 'Критический удар', 1)
+    if found:
+        await update_weekly_task_progress(uid, 'Коллекционер', amt)
+
+    await check_achievements(uid)  # Проверяем, но не отправляем сообщения в чат
+
+    # --- Получаем свежие данные для ответа ---
+    new_stats = await get_player_stats(uid)
+    new_inv = await get_inventory(uid)
+
+    return JSONResponse({
+        'gold': gold,
+        'exp': exp,
+        'is_crit': is_crit,
+        'found_resource': found,
+        'amount': amt,
+        'new_gold': new_stats['gold'],
+        'new_exp': new_stats['exp'],
+        'inventory': new_inv
+    })
 # ==================== ЗАПУСК ====================
 
 async def run_bot():
@@ -2073,6 +2170,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
