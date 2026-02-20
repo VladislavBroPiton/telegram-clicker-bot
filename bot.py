@@ -1972,13 +1972,6 @@ async def api_boss_info(request: Request):
         'max_health': BOSS_LOCATIONS[boss_id]['boss']['health']
     })
 
-# Добавляем маршруты API
-app.router.routes.extend([
-    Route('/api/user', api_user, methods=['GET']),
-    Route('/api/boss/attack', api_boss_attack, methods=['POST']),
-    Route('/api/boss/{boss_id}', api_boss_info, methods=['GET']),
-])
-
 # ==================== ЗАПУСК ====================
 
 async def run_bot():
@@ -2038,12 +2031,20 @@ app = Starlette(
     on_shutdown=[shutdown_event]
 )
 
+# Добавляем маршруты API
+app.router.routes.extend([
+    Route('/api/user', api_user, methods=['GET']),
+    Route('/api/boss/attack', api_boss_attack, methods=['POST']),
+    Route('/api/boss/{boss_id}', api_boss_info, methods=['GET']),
+])
+
 def main():
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
     main()
+
 
 
 
