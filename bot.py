@@ -139,8 +139,8 @@ BOSS_LOCATIONS = {
     'goblin_king': {
         'name': 'Логово короля гоблинов',
         'description': 'Старый король гоблинов, накопивший горы золота. Бой с ним требует смелости.',
-        'min_level': 21,
-        'min_tool_level': 4,
+        'min_level': 5,
+        'min_tool_level': 1,
         'boss': {
             'name': 'Король гоблинов',
             'health': 1000,
@@ -152,8 +152,8 @@ BOSS_LOCATIONS = {
     'dragon_lair': {
         'name': 'Логово дракона',
         'description': 'Древний дракон, стерегущий несметные сокровища. Будь осторожен!',
-        'min_level': 25,
-        'min_tool_level': 5,
+        'min_level': 5,
+        'min_tool_level': 1,
         'boss': {
             'name': 'Огненный дракон',
             'health': 5000,
@@ -165,8 +165,8 @@ BOSS_LOCATIONS = {
     'lich_castle': {
         'name': 'Цитадель лича',
         'description': 'Могущественный лич, собирающий души для своего ритуала.',
-        'min_level': 30,
-        'min_tool_level': 6,
+        'min_level': 1,
+        'min_tool_level': 1,
         'boss': {
             'name': 'Архилич',
             'health': 10000,
@@ -2044,6 +2044,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
