@@ -1849,6 +1849,7 @@ SIMPLE_CALLBACK_HANDLERS = {
     'inventory': show_inventory,
     'market': show_market,
     'back_to_menu': show_main_menu_from_query,
+    'faq_boss_locations': show_faq_boss_locations,
 }
 
 async def button_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -1949,6 +1950,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
