@@ -1,15 +1,6 @@
 """
 Telegram кликер бот "Шахтёрская глубина"
-Полностью переработанная версия с улучшениями:
-- Диспетчер callback'ов
-- Вынос логики достижений
-- Инкапсуляция SQL-запросов
-- Конфигурация констант
-- Валидация callback_data
-- Единый интерфейс ответа
-- Логирование
-- Ограничение ресурсов
-- Оптимизация обновления заданий
+Финальная версия с босс-локациями, новыми ресурсами и обновлённым FAQ.
 """
 
 import logging
@@ -56,7 +47,7 @@ class Achievement:
         self.id = id
         self.name = name
         self.description = desc
-        self.condition_func = cond_func  # функция, принимающая (uid, data) -> (bool, current, required)
+        self.condition_func = cond_func
         self.reward_gold = reward_gold
         self.reward_exp = reward_exp
 
@@ -74,12 +65,13 @@ RESOURCES = {
     'gold': {'name': 'Золотая руда', 'base_price': 30},
     'diamond': {'name': 'Алмаз', 'base_price': 100},
     'mithril': {'name': 'Мифрил', 'base_price': 300},
+    # Новые ресурсы с боссов
     'soul_shard': {'name': 'Осколок души', 'base_price': 500},
     'dragon_scale': {'name': 'Чешуя дракона', 'base_price': 1000},
     'magic_essence': {'name': 'Эссенция магии', 'base_price': 2000}
 }
 
-# Локации
+# Локации (обычные)
 LOCATIONS = {
     'coal_mine': {
         'name': 'Угольная шахта',
@@ -137,17 +129,18 @@ LOCATIONS = {
     }
 }
 
+# Босс-локации
 BOSS_LOCATIONS = {
     'goblin_king': {
         'name': 'Логово короля гоблинов',
         'description': 'Старый король гоблинов, накопивший горы золота. Бой с ним требует смелости.',
         'min_level': 21,
-        'min_tool_level': 4,  # требуется инструмент не ниже 4 уровня
+        'min_tool_level': 4,
         'boss': {
             'name': 'Король гоблинов',
-            'health': 1000,  # здоровье босса
+            'health': 1000,
             'reward_gold': 5000,
-            'reward_resources': {'soul_shard': (1, 3), 'gold': (10, 20)},  # случайное количество
+            'reward_resources': {'soul_shard': (1, 3), 'gold': (10, 20)},
             'exp_reward': 500
         }
     },
@@ -233,7 +226,6 @@ FAQ = [
 ]
 
 # ==================== УСЛОВИЯ ДОСТИЖЕНИЙ ====================
-# Все функции условий (они принимают uid и данные, возвращают (bool, current, required))
 
 def cond_first_click(uid, data): stats = data['stats']; return stats['clicks'] >= 1, stats['clicks'], 1
 def cond_clicks_100(uid, data): stats = data['stats']; return stats['clicks'] >= 100, stats['clicks'], 100
@@ -330,20 +322,17 @@ def get_week_number(d=None):
     return f"{y}-{w:02d}"
 
 def get_upgrade_cost(tid: str, level: int) -> dict:
-    """Возвращает стоимость улучшения инструмента для данного уровня."""
     if level == 0:
         return {}
     base_cost = TOOLS[tid]['upgrade_cost']
     return {res: amount * level for res, amount in base_cost.items()}
 
 def get_tool_power(uid: int, tid: str, level: int) -> int:
-    """Вычисляет силу инструмента."""
     if level == 0:
         return 0
     return TOOLS[tid]['base_power'] + level - 1
 
 def get_click_reward(stats: dict) -> Tuple[int, int, bool]:
-    """Синхронный расчёт награды за клик на основе статистики."""
     cpl = stats['upgrades']['click_power']
     ccl = stats['upgrades']['crit_chance']
     bg = random.randint(*BASE_CLICK_REWARD)
@@ -357,10 +346,6 @@ def get_click_reward(stats: dict) -> Tuple[int, int, bool]:
     return gold, be, is_crit
 
 async def reply_or_edit(update_or_query, text: str, reply_markup=None, parse_mode=None):
-    """
-    Универсальный ответ: если это Update (сообщение) — reply,
-    если CallbackQuery — edit_message_text.
-    """
     if isinstance(update_or_query, Update):
         await update_or_query.message.reply_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
     else:
@@ -373,7 +358,6 @@ async def reply_or_edit(update_or_query, text: str, reply_markup=None, parse_mod
 # ==================== ФУНКЦИИ БАЗЫ ДАННЫХ ====================
 
 async def init_db():
-    """Создаёт таблицы, если их нет."""
     async with db_pool.acquire() as conn:
         await conn.execute('''
             CREATE TABLE IF NOT EXISTS players (
@@ -458,16 +442,17 @@ async def init_db():
                 PRIMARY KEY (user_id, tool_id)
             )
         ''')
+        # Таблица для прогресса боссов
         await conn.execute('''
-    CREATE TABLE IF NOT EXISTS boss_progress (
-        user_id BIGINT,
-        boss_id TEXT,
-        current_health INTEGER,
-        defeated BOOLEAN DEFAULT FALSE,
-        last_attempt TIMESTAMP,
-        PRIMARY KEY (user_id, boss_id)
-    )
-''')
+            CREATE TABLE IF NOT EXISTS boss_progress (
+                user_id BIGINT,
+                boss_id TEXT,
+                current_health INTEGER,
+                defeated BOOLEAN DEFAULT FALSE,
+                last_attempt TIMESTAMP,
+                PRIMARY KEY (user_id, boss_id)
+            )
+        ''')
         logger.info("Database tables initialized (if not existed)")
 
 # ---------- Игроки ----------
@@ -575,7 +560,6 @@ async def generate_daily_tasks(uid: int, conn: asyncpg.Connection = None):
             await _gen(conn)
 
 async def check_daily_reset(uid: int) -> bool:
-    """Проверяет, нужно ли обновить ежедневные задания. Возвращает True, если обновлены."""
     async with db_pool.acquire() as conn:
         last = await conn.fetchval("SELECT last_daily_reset FROM players WHERE user_id = $1", uid)
         today = datetime.date.today()
@@ -759,7 +743,6 @@ async def get_active_tool(uid: int) -> str:
         return tool if tool else 'wooden_pickaxe'
 
 async def get_active_tool_level(uid: int) -> int:
-    """Возвращает уровень активного инструмента игрока."""
     active = await get_active_tool(uid)
     return await get_tool_level(uid, active)
 
@@ -777,24 +760,23 @@ async def set_player_location(uid: int, loc: str):
     async with db_pool.acquire() as conn:
         await conn.execute("UPDATE players SET current_location = $1 WHERE user_id = $2", loc, uid)
 
+# ---------- Боссы ----------
 async def get_boss_progress(uid: int, boss_id: str) -> dict:
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow("SELECT current_health, defeated FROM boss_progress WHERE user_id=$1 AND boss_id=$2", uid, boss_id)
         if not row:
-            # Инициализация
             health = BOSS_LOCATIONS[boss_id]['boss']['health']
             await conn.execute("INSERT INTO boss_progress (user_id, boss_id, current_health) VALUES ($1, $2, $3)", uid, boss_id, health)
             return {'current_health': health, 'defeated': False}
         return dict(row)
 
-async def update_boss_health(uid: int, boss_id: str, damage: int):
+async def update_boss_health(uid: int, boss_id: str, damage: int) -> bool:
     async with db_pool.acquire() as conn:
         await conn.execute("UPDATE boss_progress SET current_health = current_health - $1 WHERE user_id=$2 AND boss_id=$3", damage, uid, boss_id)
-        # Проверить, не убит ли босс
         row = await conn.fetchrow("SELECT current_health FROM boss_progress WHERE user_id=$1 AND boss_id=$2", uid, boss_id)
         if row['current_health'] <= 0:
             await conn.execute("UPDATE boss_progress SET defeated=TRUE, current_health=0 WHERE user_id=$1 AND boss_id=$2", uid, boss_id)
-            return True  # босс убит
+            return True
     return False
 
 # ---------- Достижения ----------
@@ -818,7 +800,6 @@ async def unlock_achievement(uid: int, ach_id: str, gold: int, exp: int, progres
             gold, exp, uid
         )
 
-# Функция оценки достижения (использует данные из data)
 def evaluate_achievement(ach: Achievement, uid: int, data: dict) -> tuple[bool, int, int]:
     return ach.condition_func(uid, data)
 
@@ -898,12 +879,12 @@ async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 async def cmd_mine(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     u = update.effective_user
     await get_player(u.id, u.username)
-    await mine_action(update, ctx)  # передаём update, он обработается внутри
+    await mine_action(update, ctx)
 
 async def cmd_locations(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     u = update.effective_user
     await get_player(u.id, u.username)
-    await show_locations(update, ctx)  # используем reply_or_edit
+    await show_locations(update, ctx)
 
 async def cmd_shop(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     u = update.effective_user
@@ -981,7 +962,7 @@ async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     txt = ("🪨 **Шахтёрский бот**\n\nТы начинающий шахтёр. Кликай, добывай ресурсы, продавай их, улучшай инструменты и открывай новые локации.\n\n**Команды:**\n/start - главное меню\n/mine - копнуть в текущей локации\n/locations - выбрать локацию\n/shop - магазин улучшений\n/tasks - задания\n/profile - твой профиль\n/inventory - ресурсы\n/market - продать ресурсы\n/leaderboard - топ игроков\n/achievements - мои достижения\n/faq - часто задаваемые вопросы\n/help - это сообщение")
     await update.message.reply_text(txt, parse_mode='Markdown')
 
-# ==================== ФУНКЦИИ ОТОБРАЖЕНИЯ (для команд и callback'ов) ====================
+# ==================== ФУНКЦИИ ОТОБРАЖЕНИЯ ====================
 
 async def show_main_menu(update_or_query, ctx):
     kb = [[InlineKeyboardButton("⛏ Добыть", callback_data='mine'),
@@ -1046,28 +1027,6 @@ async def show_locations(update_or_query, ctx):
         if avail and not is_cur:
             kb.append([InlineKeyboardButton(f"Перейти в {loc['name']}", callback_data=f'goto_{lid}')])
     
-    # === БОСС ЛОКАЦИИ ===
-    if lvl >= 21:
-        available_bosses = []
-        for bid, bloc in BOSS_LOCATIONS.items():
-            if lvl >= bloc['min_level'] and tool_level >= bloc['min_tool_level']:
-                available_bosses.append((bid, bloc))
-        
-        if available_bosses:
-            txt += "\n\n⚔️ **Локации с боссами** ⚔️\n\n"
-            for bid, bloc in available_bosses:
-                progress = await get_boss_progress(uid, bid)
-                if progress['defeated']:
-                    status = "✅ ПОБЕЖДЁН"
-                else:
-                    percent = int((bloc['boss']['health'] - progress['current_health']) / bloc['boss']['health'] * 100)
-                    bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
-                    status = f"⚔️ Здоровье: {progress['current_health']}/{bloc['boss']['health']} {bar}"
-                txt += f"⚡ **{bloc['name']}**\n   {bloc['description']}\n   {status}\n\n"
-                kb.append([InlineKeyboardButton(f"Сразиться с {bloc['boss']['name']}", callback_data=f'fight_boss_{bid}')])
-    # ====================
-    
-    txt += "─────────────────────────\nХочешь сменить локацию? Нажми на кнопку ниже (если она доступна)."
     kb.append([InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')])
     await reply_or_edit(update_or_query, txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
 
@@ -1128,7 +1087,7 @@ async def show_shop_tools(update_or_query, ctx):
 
 async def show_daily_tasks(update_or_query, ctx):
     uid = update_or_query.from_user.id if not isinstance(update_or_query, Update) else update_or_query.effective_user.id
-    await check_daily_reset(uid)  # проверяем сброс только здесь
+    await check_daily_reset(uid)
     daily = await get_daily_tasks(uid)
     txt = "📋 **Ежедневные задания**\n\n"
     if daily:
@@ -1153,7 +1112,7 @@ async def show_daily_tasks(update_or_query, ctx):
 
 async def show_weekly_tasks(update_or_query, ctx):
     uid = update_or_query.from_user.id if not isinstance(update_or_query, Update) else update_or_query.effective_user.id
-    await check_weekly_reset(uid)  # проверяем сброс только здесь
+    await check_weekly_reset(uid)
     weekly = await get_weekly_tasks(uid)
     txt = "📅 **Еженедельные задания**\n\n"
     if weekly:
@@ -1204,6 +1163,10 @@ async def show_profile(update_or_query, ctx):
             InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
     await reply_or_edit(update_or_query, txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
 
+async def profile_achievements_handler(query, ctx):
+    uid = query.from_user.id
+    await send_achievements(uid, ctx)
+
 async def show_inventory(update_or_query, ctx):
     uid = update_or_query.from_user.id if not isinstance(update_or_query, Update) else update_or_query.effective_user.id
     inv = await get_inventory(uid)
@@ -1220,7 +1183,6 @@ async def show_inventory(update_or_query, ctx):
         txt = "🎒 **Инвентарь**\n\nТвой инвентарь пока пуст. Иди добывай!\n\n"
     txt += "\n─────────────────────────\nПродать ресурсы можно на рынке (/market)."
     kb = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]]
-    # Добавлен parse_mode='Markdown'
     await reply_or_edit(update_or_query, txt, reply_markup=InlineKeyboardMarkup(kb), parse_mode='Markdown')
 
 async def show_market(update_or_query, ctx):
@@ -1400,7 +1362,6 @@ async def show_faq_locations(update_or_query, ctx):
             res_list.append(f"{res_name} {prob}% ({amount} шт.)")
         text += "   Ресурсы: " + ", ".join(res_list) + "\n\n"
     
-    # Клавиатура с кнопкой на босс-локации и назад
     kb = [
         [InlineKeyboardButton("⚔️ Босс-локации", callback_data='faq_boss_locations')],
         [InlineKeyboardButton("🔙 Назад", callback_data='back_to_faq')]
@@ -1409,13 +1370,11 @@ async def show_faq_locations(update_or_query, ctx):
 
 async def show_faq_boss_locations(update_or_query, ctx):
     text = "⚔️ **Босс-локации** ⚔️\n\n"
-    # Проверяем, определён ли словарь BOSS_LOCATIONS
     if 'BOSS_LOCATIONS' not in globals() or not BOSS_LOCATIONS:
         text += "Информация о босс-локациях пока не добавлена."
     else:
         for bid, bloc in BOSS_LOCATIONS.items():
             boss = bloc['boss']
-            # Выбираем эмодзи в зависимости от названия (можно настроить под свои)
             if 'goblin' in bid:
                 emoji = "👑"
             elif 'dragon' in bid:
@@ -1434,41 +1393,12 @@ async def show_faq_boss_locations(update_or_query, ctx):
             if boss['exp_reward']:
                 rewards.append(f"{boss['exp_reward']}✨")
             for res, (minr, maxr) in boss['reward_resources'].items():
-                # Получаем русское название ресурса из RESOURCES
                 res_name = RESOURCES.get(res, {}).get('name', res)
                 amount = f"{minr}-{maxr}" if minr != maxr else str(minr)
                 rewards.append(f"{res_name} {amount} шт.")
             text += f"   Награда: {', '.join(rewards)}\n\n"
     
-    # Кнопка возврата к обычным локациям
     kb = [[InlineKeyboardButton("🔙 Назад к локациям", callback_data='faq_locations')]]
-    await reply_or_edit(update_or_query, text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
-    
-    # Босс-локации
-    if 'BOSS_LOCATIONS' in globals() and BOSS_LOCATIONS:
-        text += "\n⚔️ **Локации с боссами** ⚔️\n\n"
-        for bid, bloc in BOSS_LOCATIONS.items():
-            boss = bloc['boss']
-            emoji = "👑" if 'goblin' in bid else "🐉" if 'dragon' in bid else "💀"
-            text += f"{emoji} **{bloc['name']}**\n"
-            text += f"   Требуется: уровень {bloc['min_level']}, инструмент {bloc['min_tool_level']} ур.\n"
-            text += f"   {bloc['description']}\n"
-            text += f"   Босс: {boss['name']} | Здоровье: {boss['health']}\n"
-            # Награда
-            rewards = []
-            if boss['reward_gold']:
-                rewards.append(f"{boss['reward_gold']}💰")
-            if boss['exp_reward']:
-                rewards.append(f"{boss['exp_reward']}✨")
-            for res, (minr, maxr) in boss['reward_resources'].items():
-                res_name = RESOURCES.get(res, {}).get('name', res)
-                amount = f"{minr}-{maxr}" if minr != maxr else str(minr)
-                rewards.append(f"{res_name} {amount} шт.")
-            text += f"   Награда: {', '.join(rewards)}\n\n"
-    else:
-        text += "\n⚔️ Босс-локации пока не добавлены.\n"
-    
-    kb = [[InlineKeyboardButton("🔙 Назад", callback_data='back_to_faq')]]
     await reply_or_edit(update_or_query, text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
 
 async def back_to_faq(update_or_query, ctx):
@@ -1509,13 +1439,11 @@ async def back_to_faq(update_or_query, ctx):
     kb = [[InlineKeyboardButton("🗺 Локации", callback_data='faq_locations')]]
     await reply_or_edit(update_or_query, text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
 
-# ==================== ДЕЙСТВИЯ (CALLBACK-ОБРАБОТЧИКИ) ====================
+# ==================== ДЕЙСТВИЯ ====================
 
 async def mine_action(update_or_query, ctx):
-    """Обрабатывает клик (может быть вызвана из команды или callback)."""
     if isinstance(update_or_query, Update):
         uid = update_or_query.effective_user.id
-        # Для команды нужно просто выполнить действие и ответить, не редактируя меню
     else:
         uid = update_or_query.from_user.id
 
@@ -1542,7 +1470,6 @@ async def mine_action(update_or_query, ctx):
             amt = int(amt * multiplier)
             amt = max(1, amt)
 
-    # Обновление через прямые запросы (можно вынести, но пока оставим)
     async with db_pool.acquire() as conn:
         await conn.execute(
             "UPDATE players SET gold = gold + $1, exp = exp + $2, total_clicks = total_clicks + 1, total_gold_earned = total_gold_earned + $3 WHERE user_id = $4",
@@ -1563,7 +1490,6 @@ async def mine_action(update_or_query, ctx):
     else:
         res_txt = ""
 
-    # Обновление заданий
     await update_daily_task_progress(uid, 'Труженик', 1)
     await update_daily_task_progress(uid, 'Золотоискатель', gold)
     if is_crit:
@@ -1582,17 +1508,14 @@ async def mine_action(update_or_query, ctx):
     ct = "💥 КРИТ!" if is_crit else ""
     txt = f"Ты добыл: {gold} золота {ct}{res_txt}\nПолучено опыта: {exp}"
 
-    # Отправляем результат
     if isinstance(update_or_query, Update):
         await update_or_query.message.reply_text(txt)
-        # После команды /mine показываем главное меню
         await show_main_menu(update_or_query, ctx)
     else:
         await update_or_query.message.reply_text(txt)
         await show_main_menu_from_query(update_or_query)
 
 async def process_buy(update_or_query, ctx):
-    """Обработка покупки улучшения или инструмента."""
     data = update_or_query.data
     if data.startswith('buy_tool_'):
         tid = data.replace('buy_tool_', '')
@@ -1620,7 +1543,6 @@ async def process_buy(update_or_query, ctx):
     success, message, new_level = await purchase_upgrade(uid, up_id)
     if success:
         await ctx.bot.send_message(chat_id=uid, text=message)
-        # Обновляем задания
         price = int(UPGRADES[up_id]['base_price'] * (UPGRADES[up_id]['price_mult'] ** (new_level-1)))
         await update_daily_task_progress(uid, 'Покупатель', price)
         await update_weekly_task_progress(uid, 'Магнат', price)
@@ -1675,7 +1597,7 @@ async def show_sell_confirmation(update_or_query, ctx):
         await update_or_query.answer("Неверные данные", show_alert=True)
         return
     rid = parts[2]
-    sell_type = parts[3]  # '1' или 'all'
+    sell_type = parts[3]
     uid = update_or_query.from_user.id
     inv = await get_inventory(uid)
     avail = inv.get(rid, 0)
@@ -1736,20 +1658,15 @@ async def goto_location(update_or_query, ctx):
     if not loc:
         await update_or_query.answer("Локация не найдена", show_alert=True)
         return
-    
     stats = await get_player_stats(uid)
-    # Проверка уровня персонажа
     if stats['level'] < loc['min_level']:
         await update_or_query.answer(f"❌ Требуется уровень {loc['min_level']}", show_alert=True)
         return
-    
-    # Проверка уровня инструмента (если требуется)
     if loc.get('min_tool_level', 0) > 0:
         tool_level = await get_active_tool_level(uid)
         if tool_level < loc['min_tool_level']:
             await update_or_query.answer(f"❌ Требуется инструмент {loc['min_tool_level']} уровня", show_alert=True)
             return
-    
     await set_player_location(uid, lid)
     await update_or_query.answer(f"Ты переместился в {loc['name']}")
     await show_main_menu_from_query(update_or_query)
@@ -1763,7 +1680,6 @@ async def fight_boss(update_or_query, ctx):
         await q.answer("Босс не найден", show_alert=True)
         return
     
-    # Проверка уровня и инструмента
     stats = await get_player_stats(uid)
     if stats['level'] < bloc['min_level']:
         await q.answer(f"❌ Требуется уровень {bloc['min_level']}", show_alert=True)
@@ -1778,9 +1694,8 @@ async def fight_boss(update_or_query, ctx):
         await q.answer("Босс уже побеждён!", show_alert=True)
         return
     
-    # Рассчитываем урон
     gold, exp, is_crit = get_click_reward(stats)
-    damage = gold  # можно модифицировать
+    damage = gold
     if is_crit:
         damage *= 2
         crit_text = " КРИТ!"
@@ -1791,7 +1706,6 @@ async def fight_boss(update_or_query, ctx):
     
     if defeated:
         boss = bloc['boss']
-        # Начисляем награду
         await update_player(uid, gold=stats['gold'] + boss['reward_gold'], exp=stats['exp'] + boss['exp_reward'])
         for res, (minr, maxr) in boss['reward_resources'].items():
             amt = random.randint(minr, maxr)
@@ -1802,19 +1716,13 @@ async def fight_boss(update_or_query, ctx):
         )
         await check_achievements(uid, ctx)
     else:
-        # Получаем обновлённое здоровье после урона
         new_progress = await get_boss_progress(uid, bid)
         await q.message.reply_text(
             f"⚔️ Ты нанёс {damage} урона{crit_text} боссу {bloc['boss']['name']}. "
             f"Осталось здоровья: {new_progress['current_health']}/{bloc['boss']['health']}"
         )
     
-    # Возвращаемся к списку локаций
     await show_locations(q, ctx)
-
-async def profile_achievements_handler(query, ctx):
-    uid = query.from_user.id
-    await send_achievements(uid, ctx)
 
 # ==================== ДИСПЕТЧЕР CALLBACK'ОВ ====================
 
@@ -1845,11 +1753,11 @@ SIMPLE_CALLBACK_HANDLERS = {
     'leaderboard_mithril': show_leaderboard_mithril,
     'leaderboard_total_resources': show_leaderboard_total_resources,
     'faq_locations': show_faq_locations,
+    'faq_boss_locations': show_faq_boss_locations,
     'back_to_faq': back_to_faq,
     'inventory': show_inventory,
     'market': show_market,
     'back_to_menu': show_main_menu_from_query,
-    'faq_boss_locations': show_faq_boss_locations,
 }
 
 async def button_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -1862,7 +1770,6 @@ async def button_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await q.answer()
         return
 
-    # Префиксные callback'и
     if data.startswith('activate_tool_'):
         await activate_tool(q, ctx)
     elif data.startswith('upgrade_tool_'):
@@ -1950,29 +1857,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
