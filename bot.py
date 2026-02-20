@@ -971,6 +971,10 @@ async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     txt = ("🪨 **Шахтёрский бот**\n\nТы начинающий шахтёр. Кликай, добывай ресурсы, продавай их, улучшай инструменты и открывай новые локации.\n\n**Команды:**\n/start - главное меню\n/mine - копнуть в текущей локации\n/locations - выбрать локацию\n/shop - магазин улучшений\n/tasks - задания\n/profile - твой профиль\n/inventory - ресурсы\n/market - продать ресурсы\n/leaderboard - топ игроков\n/achievements - мои достижения\n/faq - часто задаваемые вопросы\n/help - это сообщение")
     await update.message.reply_text(txt, parse_mode='Markdown')
 
+async def cmd_myid(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    uid = update.effective_user.id
+    await update.message.reply_text(f"🔑 Ваш Telegram ID: `{uid}`", parse_mode='Markdown')
+
 # ==================== ФУНКЦИИ ОТОБРАЖЕНИЯ ====================
 
 async def show_main_menu(update_or_query, ctx):
@@ -2053,3 +2057,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
