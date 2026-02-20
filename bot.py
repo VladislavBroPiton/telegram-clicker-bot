@@ -982,7 +982,7 @@ async def show_main_menu(update_or_query, ctx):
     ]
     # Добавляем кнопку для Mini App, если игрок достиг 21 уровня
     if stats['level'] >= 21:
-        kb.append([InlineKeyboardButton("⚔️ Босс-арена (3D)", web_app=WebAppInfo(url="https://your-mini-app.com"))])
+        kb.append([InlineKeyboardButton("⚔️ Босс-арена (3D)", web_app=WebAppInfo(url="https://github.com/VladislavBroPiton/telegram-clicker-bot/tree/main"))])
     rm = InlineKeyboardMarkup(kb)
     txt = ("🪨 **Шахтёрская глубина**\n\nПривет, шахтёр! Твой путь к богатству начинается здесь.\n\n🏁 **Что делать?**\n• Нажимай «⛏ Добыть» – каждый клик приносит золото и ресурсы.\n• Выполняй «📋 Задания» – получай бонусы.\n• Соревнуйся в «🏆 Лидеры» – стань лучшим!\n\nОстальные команды доступны в меню (кнопка слева внизу).")
     await reply_or_edit(update_or_query, txt, reply_markup=rm, parse_mode='Markdown')
@@ -2044,3 +2044,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
