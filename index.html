@@ -114,6 +114,8 @@
         }
 
         const initData = tg.initData;
+        const debugDiv = document.getElementById('debug');
+        debugDiv.innerHTML = 'initData: ' + (initData ? initData.substring(0, 100) + '...' : 'отсутствует');
 
         // Функция для API-запросов с улучшенной обработкой ошибок
         async function apiCall(endpoint, method = 'GET', body = null) {
@@ -137,6 +139,7 @@
                 const data = await response.json();
                 return data;
             } catch (error) {
+                debugDiv.innerHTML += '<br>Ошибка: ' + error.message;
                 showError(`API error (${endpoint}): ${error.message}`);
                 return null;
             }
@@ -333,4 +336,5 @@
     </script>
 </body>
 </html>
+
 
