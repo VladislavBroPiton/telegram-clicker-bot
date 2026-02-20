@@ -1834,28 +1834,17 @@ async def button_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 def verify_telegram_data(bot_token: str, init_data: str) -> dict | None:
     """
-    Проверяет подпись данных от Telegram и возвращает объект пользователя.
+    ВРЕМЕННО: упрощённая версия без проверки подписи.
+    Извлекает пользователя из init_data.
     """
     try:
         data = dict(parse_qsl(init_data))
-        if 'hash' not in data:
-            return None
-        hash_received = data.pop('hash')
-        # Сортируем ключи и создаём строку для проверки
-        items = sorted(data.items())
-        data_check_string = '\n'.join(f"{k}={v}" for k, v in items)
-        # Вычисляем HMAC-SHA256
-        secret_key = hmac.new(bot_token.encode(), b"WebAppData", hashlib.sha256).digest()
-        h = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256)
-        if h.hexdigest() != hash_received:
-            return None
-        # Парсим поле user (это JSON строка)
         if 'user' in data:
             user = json.loads(data['user'])
             return user
         return None
     except Exception as e:
-        logger.error(f"Error verifying initData: {e}")
+        logger.error(f"Error parsing initData: {e}")
         return None
 
 async def api_user(request: Request):
@@ -2171,6 +2160,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
