@@ -1995,6 +1995,7 @@ async def run_bot():
     app_bot.add_handler(CommandHandler("achievements", cmd_achievements))
     app_bot.add_handler(CommandHandler("help", cmd_help))
     app_bot.add_handler(CallbackQueryHandler(button_handler))
+    app_bot.add_handler(CommandHandler("myid", cmd_myid))
 
     try:
         await app_bot.bot.delete_webhook(drop_pending_updates=True)
@@ -2057,4 +2058,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
