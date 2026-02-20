@@ -1407,7 +1407,7 @@ async def show_faq_locations(update_or_query, ctx):
     ]
     await reply_or_edit(update_or_query, text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
 
-    async def show_faq_boss_locations(update_or_query, ctx):
+async def show_faq_boss_locations(update_or_query, ctx):
     text = "⚔️ **Босс-локации** ⚔️\n\n"
     # Проверяем, определён ли словарь BOSS_LOCATIONS
     if 'BOSS_LOCATIONS' not in globals() or not BOSS_LOCATIONS:
@@ -1950,6 +1950,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
