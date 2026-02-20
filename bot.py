@@ -1860,19 +1860,28 @@ def verify_telegram_data(bot_token: str, init_data: str) -> dict | None:
 
 async def api_user(request: Request):
     init_data = request.headers.get('x-telegram-init-data')
-    if not init_data:
-        return JSONResponse({'error': 'Missing init data'}, status_code=401)
-    user = verify_telegram_data(TOKEN, init_data)
-    if not user:
-        return JSONResponse({'error': 'Invalid signature'}, status_code=403)
-    uid = user['id']
+    origin = request.headers.get('origin', '')
     
-    # Получаем данные игрока
+    # Определяем, от какого пользователя пришёл запрос
+    uid = None
+    if init_data:
+        # Если есть данные от Telegram, проверяем подпись
+        user = verify_telegram_data(TOKEN, init_data)
+        if not user:
+            return JSONResponse({'error': 'Invalid signature'}, status_code=403)
+        uid = user['id']
+    elif "github.io" in origin or "localhost" in origin:
+        # ВРЕМЕННО: для теста из браузера на GitHub Pages (или локально)
+        uid = YOUR_TELEGRAM_ID  # ⚠️ СЮДА ВСТАВЬТЕ СВОЙ ID, например 123456789
+    else:
+        # Если нет ни init_data, ни разрешённого источника — ошибка
+        return JSONResponse({'error': 'Missing init data'}, status_code=401)
+    
+    # Дальше код без изменений — получаем данные игрока
     stats = await get_player_stats(uid)
     inv = await get_inventory(uid)
     current_location = await get_player_current_location(uid)
     
-    # Прогресс боссов
     boss_progress = {}
     async with db_pool.acquire() as conn:
         rows = await conn.fetch("SELECT boss_id, current_health, defeated FROM boss_progress WHERE user_id = $1", uid)
@@ -1895,19 +1904,24 @@ async def api_user(request: Request):
 
 async def api_boss_attack(request: Request):
     init_data = request.headers.get('x-telegram-init-data')
-    if not init_data:
+    origin = request.headers.get('origin', '')
+    
+    uid = None
+    if init_data:
+        user = verify_telegram_data(TOKEN, init_data)
+        if not user:
+            return JSONResponse({'error': 'Invalid signature'}, status_code=403)
+        uid = user['id']
+    elif "github.io" in origin or "localhost" in origin:
+        uid = YOUR_TELEGRAM_ID  # ⚠️ СЮДА ВСТАВЬТЕ СВОЙ ID
+    else:
         return JSONResponse({'error': 'Missing init data'}, status_code=401)
-    user = verify_telegram_data(TOKEN, init_data)
-    if not user:
-        return JSONResponse({'error': 'Invalid signature'}, status_code=403)
-    uid = user['id']
     
     body = await request.json()
     boss_id = body.get('boss_id')
     if not boss_id or boss_id not in BOSS_LOCATIONS:
         return JSONResponse({'error': 'Invalid boss_id'}, status_code=400)
     
-    # Проверяем, доступна ли локация игроку
     stats = await get_player_stats(uid)
     bloc = BOSS_LOCATIONS[boss_id]
     if stats['level'] < bloc['min_level']:
@@ -1916,20 +1930,17 @@ async def api_boss_attack(request: Request):
     if tool_level < bloc['min_tool_level']:
         return JSONResponse({'error': 'Tool level too low'}, status_code=403)
     
-    # Проверяем, не побеждён ли босс
     prog = await get_boss_progress(uid, boss_id)
     if prog['defeated']:
         return JSONResponse({'error': 'Boss already defeated'}, status_code=400)
     
-    # Вычисляем урон (используем ту же логику, что и в mine_action)
     gold, exp, is_crit = get_click_reward(stats)
-    damage = gold  # урон равен добытому золоту (можно настроить)
+    damage = gold
     if is_crit:
         damage *= 2
     
     defeated = await update_boss_health(uid, boss_id, damage)
     
-    # Если босс побеждён, выдаём награду
     if defeated:
         boss = bloc['boss']
         async with db_pool.acquire() as conn:
@@ -1940,11 +1951,9 @@ async def api_boss_attack(request: Request):
             for res, (min_amt, max_amt) in boss['reward_resources'].items():
                 amt = random.randint(min_amt, max_amt)
                 await add_resource(uid, res, amt)
-        await check_achievements(uid)  # ctx=None, не отправляем сообщения в чат
+        await check_achievements(uid)
     
-    # Получаем обновлённое состояние босса
     new_prog = await get_boss_progress(uid, boss_id)
-    # Обновлённые данные игрока
     new_stats = await get_player_stats(uid)
     new_inv = await get_inventory(uid)
     
@@ -1961,12 +1970,19 @@ async def api_boss_attack(request: Request):
 
 async def api_boss_info(request: Request):
     init_data = request.headers.get('x-telegram-init-data')
-    if not init_data:
+    origin = request.headers.get('origin', '')
+    
+    uid = None
+    if init_data:
+        user = verify_telegram_data(TOKEN, init_data)
+        if not user:
+            return JSONResponse({'error': 'Invalid signature'}, status_code=403)
+        uid = user['id']
+    elif "github.io" in origin or "localhost" in origin:
+        uid = YOUR_TELEGRAM_ID  # ⚠️ СЮДА ВСТАВЬТЕ СВОЙ ID
+    else:
         return JSONResponse({'error': 'Missing init data'}, status_code=401)
-    user = verify_telegram_data(TOKEN, init_data)
-    if not user:
-        return JSONResponse({'error': 'Invalid signature'}, status_code=403)
-    uid = user['id']
+    
     boss_id = request.path_params.get('boss_id')
     if not boss_id or boss_id not in BOSS_LOCATIONS:
         return JSONResponse({'error': 'Invalid boss_id'}, status_code=400)
@@ -1976,7 +1992,6 @@ async def api_boss_info(request: Request):
         'defeated': prog['defeated'],
         'max_health': BOSS_LOCATIONS[boss_id]['boss']['health']
     })
-
 # ==================== ЗАПУСК ====================
 
 async def run_bot():
@@ -2058,5 +2073,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
