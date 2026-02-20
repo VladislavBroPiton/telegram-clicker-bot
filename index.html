@@ -42,6 +42,18 @@
             width: 100%;
             transition: width 0.2s;
         }
+        #error-message {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: red;
+            background: rgba(0,0,0,0.8);
+            padding: 5px;
+            border-radius: 5px;
+            z-index: 200;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
     </style>
 </head>
 <body>
@@ -55,6 +67,7 @@
         <div class="health-bar"><div class="health-fill" id="boss-health-fill" style="width:100%"></div></div>
         <div><span id="boss-current-health">0</span>/<span id="boss-max-health">0</span></div>
     </div>
+    <div id="error-message"></div>
     
     <script type="importmap">
         {
@@ -67,35 +80,63 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js';
 
-        // --- НАСТРОЙКА: Здесь нужно указать адрес вашего бота на Render! ---
+        // --- НАСТРОЙКА: Адрес вашего бота на Render ---
         const API_BASE_URL = 'https://telegram-clicker-bot-zi6c.onrender.com'; // <--- ИЗМЕНИТЕ ЭТО!
-        // -------------------------------------------------------------
+        // ---------------------------------------------
 
-        // Инициализация Telegram
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
+        // Функция для отображения ошибок прямо на странице
+        function showError(message) {
+            const el = document.getElementById('error-message');
+            el.textContent += message + '\n';
+            console.error(message);
+        }
+
+        // Инициализация Telegram с проверкой
+        let tg;
+        try {
+            if (window.Telegram && window.Telegram.WebApp) {
+                tg = window.Telegram.WebApp;
+                tg.ready();
+                tg.expand();
+                console.log("Telegram WebApp initialized");
+            } else {
+                throw new Error("Not in Telegram");
+            }
+        } catch (e) {
+            console.warn("Running outside Telegram, using mock");
+            tg = {
+                ready: () => {},
+                expand: () => {},
+                HapticFeedback: { impactOccurred: () => {} },
+                initData: ""
+            };
+        }
 
         const initData = tg.initData;
 
-        // Функция для API-запросов
+        // Функция для API-запросов с улучшенной обработкой ошибок
         async function apiCall(endpoint, method = 'GET', body = null) {
             const headers = {
-                'X-Telegram-Init-Data': initData,
                 'Content-Type': 'application/json'
             };
+            if (initData) {
+                headers['X-Telegram-Init-Data'] = initData;
+            }
             const options = { method, headers };
             if (body) options.body = JSON.stringify(body);
             
             try {
-                const response = await fetch(`${API_BASE_URL}/api/${endpoint}`, options);
+                const url = `${API_BASE_URL}/api/${endpoint}`;
+                console.log(`Fetching ${url}...`);
+                const response = await fetch(url, options);
                 if (!response.ok) {
-                    console.error('API error:', response.status, await response.text());
-                    return null;
+                    const text = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${text}`);
                 }
-                return response.json();
+                const data = await response.json();
+                return data;
             } catch (error) {
-                console.error('Network error:', error);
+                showError(`API error (${endpoint}): ${error.message}`);
                 return null;
             }
         }
@@ -105,15 +146,16 @@
         async function loadUser() {
             userData = await apiCall('user');
             if (!userData) {
-                document.getElementById('hud').innerHTML += '<div style="color:red">Ошибка загрузки. Проверьте консоль.</div>';
+                showError("Не удалось загрузить данные пользователя. Проверьте API_BASE_URL и CORS.");
                 return;
             }
             document.getElementById('gold').textContent = userData.gold;
             document.getElementById('exp').textContent = userData.exp;
             updateInventoryDisplay(userData.inventory);
             
-            // Проверяем, есть ли доступные боссы
-            checkBosses(userData.boss_progress);
+            if (userData.boss_progress) {
+                checkBosses(userData.boss_progress);
+            }
         }
 
         function updateInventoryDisplay(inv) {
@@ -124,14 +166,13 @@
             invDiv.textContent = items.join(', ') || 'пусто';
         }
 
-        // Проверяем боссов (упрощенно: показываем первого не побежденного)
         let currentBossId = null;
         function checkBosses(bossProgress) {
             for (const [bossId, progress] of Object.entries(bossProgress)) {
                 if (!progress.defeated) {
                     currentBossId = bossId;
                     document.getElementById('boss-health').style.display = 'block';
-                    document.getElementById('boss-name').textContent = bossId; // Замените на красивое имя при необходимости
+                    document.getElementById('boss-name').textContent = bossId;
                     loadBossInfo(bossId);
                     break;
                 }
@@ -145,145 +186,149 @@
             }
         }
 
-        // Настройка сцены
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x111122);
+        // Настройка сцены Three.js
+        try {
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x111122);
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(5, 5, 10);
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(5, 5, 10);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
 
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.maxPolarAngle = Math.PI / 2;
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.maxPolarAngle = Math.PI / 2;
 
-        // Освещение
-        const ambientLight = new THREE.AmbientLight(0x404060);
-        scene.add(ambientLight);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-        dirLight.position.set(1, 2, 1);
-        scene.add(dirLight);
+            // Освещение
+            const ambientLight = new THREE.AmbientLight(0x404060);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+            dirLight.position.set(1, 2, 1);
+            scene.add(dirLight);
 
-        // Пол
-        const floorGeometry = new THREE.PlaneGeometry(20, 20);
-        const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8, metalness: 0.2 });
-        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-        floor.rotation.x = -Math.PI / 2;
-        floor.position.y = 0;
-        scene.add(floor);
+            // Пол
+            const floorGeometry = new THREE.PlaneGeometry(20, 20);
+            const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8, metalness: 0.2 });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = 0;
+            scene.add(floor);
 
-        // Ресурсы (кубы)
-        const resources = [];
-        const positions = [
-            [-3, 0.5, -3], [3, 0.5, -3], [0, 0.5, 3], [-2, 0.5, 2], [2, 0.5, 2],
-            [-4, 0.5, 1], [4, 0.5, 1], [-1, 0.5, -4], [1, 0.5, -4]
-        ];
-        const colors = [0xffaa00, 0xcc8800, 0xaaaaaa, 0x44aa88, 0x8844aa, 0xaa44aa, 0x88aa44, 0xaa8844, 0x44aa44];
-        positions.forEach((pos, i) => {
-            const geometry = new THREE.BoxGeometry(1, 1, 1);
-            const material = new THREE.MeshStandardMaterial({ color: colors[i], emissive: 0x222222 });
-            const cube = new THREE.Mesh(geometry, material);
-            cube.position.set(pos[0], pos[1], pos[2]);
-            cube.userData = { type: 'resource', id: i % 5 };
-            scene.add(cube);
-            resources.push(cube);
-        });
+            // Ресурсы (кубы)
+            const resources = [];
+            const positions = [
+                [-3, 0.5, -3], [3, 0.5, -3], [0, 0.5, 3], [-2, 0.5, 2], [2, 0.5, 2],
+                [-4, 0.5, 1], [4, 0.5, 1], [-1, 0.5, -4], [1, 0.5, -4]
+            ];
+            const colors = [0xffaa00, 0xcc8800, 0xaaaaaa, 0x44aa88, 0x8844aa, 0xaa44aa, 0x88aa44, 0xaa8844, 0x44aa44];
+            positions.forEach((pos, i) => {
+                const geometry = new THREE.BoxGeometry(1, 1, 1);
+                const material = new THREE.MeshStandardMaterial({ color: colors[i], emissive: 0x222222 });
+                const cube = new THREE.Mesh(geometry, material);
+                cube.position.set(pos[0], pos[1], pos[2]);
+                cube.userData = { type: 'resource', id: i % 5 };
+                scene.add(cube);
+                resources.push(cube);
+            });
 
-        // Модель босса (конус)
-        const bossGeometry = new THREE.ConeGeometry(1, 2, 8);
-        const bossMaterial = new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0x440000 });
-        const boss = new THREE.Mesh(bossGeometry, bossMaterial);
-        boss.position.set(0, 1, 0);
-        boss.userData = { type: 'boss' };
-        scene.add(boss);
-        boss.visible = false; // Показываем только если есть активный босс
+            // Модель босса (конус)
+            const bossGeometry = new THREE.ConeGeometry(1, 2, 8);
+            const bossMaterial = new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0x440000 });
+            const boss = new THREE.Mesh(bossGeometry, bossMaterial);
+            boss.position.set(0, 1, 0);
+            boss.userData = { type: 'boss' };
+            scene.add(boss);
+            boss.visible = false;
 
-        // Рэйкастер для кликов
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
+            // Рэйкастер для кликов
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
 
-        function onClick(event) {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects([...resources, boss]);
-            if (intersects.length > 0) {
-                const hit = intersects[0].object;
-                if (hit.userData.type === 'resource') {
-                    hit.material.emissive.setHex(0x444444);
-                    setTimeout(() => hit.material.emissive.setHex(0x222222), 100);
-                    
-                    apiCall('click', 'POST', { resourceId: hit.userData.id })
-                        .then(data => {
-                            if (data) {
-                                document.getElementById('gold').textContent = data.new_gold;
-                                document.getElementById('exp').textContent = data.new_exp;
-                                updateInventoryDisplay(data.inventory);
-                                tg.HapticFeedback.impactOccurred('light');
-                            }
-                        });
-                } else if (hit.userData.type === 'boss' && currentBossId) {
-                    hit.material.emissive.setHex(0xaa0000);
-                    setTimeout(() => hit.material.emissive.setHex(0x440000), 200);
-                    
-                    apiCall('boss/attack', 'POST', { boss_id: currentBossId })
-                        .then(data => {
-                            if (data) {
-                                if (data.defeated) {
-                                    boss.visible = false;
-                                    document.getElementById('boss-health').style.display = 'none';
-                                } else {
-                                    updateBossHealth(data.current_health, data.max_health);
+            function onClick(event) {
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects([...resources, boss]);
+                if (intersects.length > 0) {
+                    const hit = intersects[0].object;
+                    if (hit.userData.type === 'resource') {
+                        hit.material.emissive.setHex(0x444444);
+                        setTimeout(() => hit.material.emissive.setHex(0x222222), 100);
+                        
+                        apiCall('click', 'POST', { resourceId: hit.userData.id })
+                            .then(data => {
+                                if (data) {
+                                    document.getElementById('gold').textContent = data.new_gold;
+                                    document.getElementById('exp').textContent = data.new_exp;
+                                    updateInventoryDisplay(data.inventory);
+                                    if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
                                 }
-                                document.getElementById('gold').textContent = data.new_gold;
-                                document.getElementById('exp').textContent = data.new_exp;
-                                updateInventoryDisplay(data.inventory);
-                                tg.HapticFeedback.impactOccurred('heavy');
-                            }
-                        });
+                            });
+                    } else if (hit.userData.type === 'boss' && currentBossId) {
+                        hit.material.emissive.setHex(0xaa0000);
+                        setTimeout(() => hit.material.emissive.setHex(0x440000), 200);
+                        
+                        apiCall('boss/attack', 'POST', { boss_id: currentBossId })
+                            .then(data => {
+                                if (data) {
+                                    if (data.defeated) {
+                                        boss.visible = false;
+                                        document.getElementById('boss-health').style.display = 'none';
+                                    } else {
+                                        updateBossHealth(data.current_health, data.max_health);
+                                    }
+                                    document.getElementById('gold').textContent = data.new_gold;
+                                    document.getElementById('exp').textContent = data.new_exp;
+                                    updateInventoryDisplay(data.inventory);
+                                    if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy');
+                                }
+                            });
+                    }
                 }
             }
-        }
 
-        window.addEventListener('click', onClick);
+            window.addEventListener('click', onClick);
 
-        function updateBossHealth(current, max) {
-            document.getElementById('boss-current-health').textContent = current;
-            document.getElementById('boss-max-health').textContent = max;
-            const percent = (current / max) * 100;
-            document.getElementById('boss-health-fill').style.width = percent + '%';
-            
-            // Показываем босса, если он не побежден
-            if (current > 0) {
-                boss.visible = true;
-            } else {
-                boss.visible = false;
+            function updateBossHealth(current, max) {
+                document.getElementById('boss-current-health').textContent = current;
+                document.getElementById('boss-max-health').textContent = max;
+                const percent = (current / max) * 100;
+                document.getElementById('boss-health-fill').style.width = percent + '%';
+                
+                if (current > 0) {
+                    boss.visible = true;
+                } else {
+                    boss.visible = false;
+                }
             }
-        }
 
-        // Анимация
-        function animate() {
-            requestAnimationFrame(animate);
-            resources.forEach(cube => {
-                cube.rotation.y += 0.005;
+            // Анимация
+            function animate() {
+                requestAnimationFrame(animate);
+                resources.forEach(cube => {
+                    cube.rotation.y += 0.005;
+                });
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // Загрузка данных
+            loadUser();
+
+            // Обработка ресайза
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
             });
-            controls.update();
-            renderer.render(scene, camera);
+
+        } catch (e) {
+            showError("Three.js error: " + e.message);
         }
-        animate();
-
-        // Загрузка данных
-        loadUser();
-
-        // Обработка ресайза
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
     </script>
 </body>
 </html>
