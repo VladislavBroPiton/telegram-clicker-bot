@@ -4,7 +4,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Шахтёрская глубина 3D</title>
-    <!-- Принудительно подключаем Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
@@ -46,7 +45,7 @@
         }
         #error-message {
             position: absolute;
-            bottom: 10px;
+            bottom: 60px;
             left: 10px;
             right: 10px;
             color: red;
@@ -61,7 +60,7 @@
         }
         #debug {
             position: absolute;
-            bottom: 100px;
+            bottom: 10px;
             left: 10px;
             color: lime;
             background: black;
@@ -71,8 +70,19 @@
             max-width: 90%;
             word-break: break-all;
         }
+        #testButton {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: red;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+        }
     </style>
-    <!-- Карта импортов для Three.js -->
     <script type="importmap">
         {
             "imports": {
@@ -94,296 +104,193 @@
     </div>
     <div id="error-message" style="display: none;"></div>
     <div id="debug"></div>
+    <button id="testButton">Тест клика</button>
 
     <script type="module">
-        (function() {
-            // Глобальный перехват ошибок
-            window.onerror = function(msg, url, line, col, error) {
-                document.getElementById('error-message').style.display = 'block';
-                document.getElementById('error-message').innerHTML += 
-                    '<b>Ошибка:</b> ' + msg + '<br>' +
-                    '<b>Файл:</b> ' + url + ':' + line + ':' + col + '<br>' +
-                    '<b>Стек:</b> ' + (error ? error.stack : 'нет');
-                return true;
-            };
+        // --- НАСТРОЙКА: Адрес вашего бота на Render ---
+        const API_BASE_URL = 'https://telegram-clicker-bot-zi6c.onrender.com'; // <--- ИЗМЕНИТЕ ЭТО!
+        // ---------------------------------------------
 
+        // Функция для показа ошибок
+        function showError(msg) {
+            const el = document.getElementById('error-message');
+            el.style.display = 'block';
+            el.innerHTML = msg;
+        }
+
+        // Telegram
+        let tg;
+        try {
+            tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+        } catch (e) {
+            tg = { ready: () => {}, expand: () => {}, HapticFeedback: { impactOccurred: () => {} }, initData: "" };
+        }
+        const initData = tg.initData;
+        document.getElementById('debug').innerHTML = 'initData: ' + (initData ? initData.substring(0,50) + '...' : 'нет');
+
+        // API вызов
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            const headers = { 'Content-Type': 'application/json' };
+            if (initData) headers['X-Telegram-Init-Data'] = initData;
+            const options = { method, headers };
+            if (body) options.body = JSON.stringify(body);
             try {
-                // --- НАСТРОЙКА: Адрес вашего бота на Render ---
-                const API_BASE_URL = 'https://telegram-clicker-bot-zi6c.onrender.com'; // <--- ИЗМЕНИТЕ ЭТО!
-                // ---------------------------------------------
+                const response = await fetch(`${API_BASE_URL}/api/${endpoint}`, options);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (e) {
+                showError(`Ошибка API ${endpoint}: ${e.message}`);
+                return null;
+            }
+        }
 
-                // Функция для отображения ошибок
-                function showError(message) {
-                    const el = document.getElementById('error-message');
-                    el.style.display = 'block';
-                    el.innerHTML += message + '<br>';
-                    console.error(message);
-                }
+        // Тестовая кнопка
+        document.getElementById('testButton').onclick = async () => {
+            showError('Отправка тестового клика...');
+            const data = await apiCall('click', 'POST', { resourceId: 0 });
+            if (data) {
+                showError(`Успех! Золото: ${data.new_gold}`);
+                document.getElementById('gold').textContent = data.new_gold;
+                document.getElementById('exp').textContent = data.new_exp;
+            }
+        };
 
-                // Функция для обновления отладки
-                function updateDebug() {
-                    const debugDiv = document.getElementById('debug');
-                    let html = '';
-                    if (window.Telegram) {
-                        html += 'Telegram: есть<br>';
-                        if (window.Telegram.WebApp) {
-                            html += 'WebApp: есть<br>';
-                            html += 'initData: ' + (window.Telegram.WebApp.initData ? window.Telegram.WebApp.initData.substring(0,100) + '...' : 'пусто');
-                        } else {
-                            html += 'WebApp: отсутствует';
-                        }
-                    } else {
-                        html += 'Telegram: отсутствует';
-                    }
-                    debugDiv.innerHTML = html;
-                }
-                updateDebug();
-
-                // Инициализация Telegram WebApp
-                let tg;
-                if (window.Telegram && window.Telegram.WebApp) {
-                    tg = window.Telegram.WebApp;
-                    tg.ready();
-                    tg.expand();
-                    console.log("Telegram WebApp initialized");
-                } else {
-                    console.warn("Telegram WebApp not available, using mock");
-                    tg = {
-                        ready: () => {},
-                        expand: () => {},
-                        HapticFeedback: { impactOccurred: () => {} },
-                        initData: ""
-                    };
-                }
-
-                const initData = tg.initData;
-                updateDebug(); // обновим после инициализации
-
-                // API функция
-                async function apiCall(endpoint, method = 'GET', body = null) {
-                    const headers = {
-                        'Content-Type': 'application/json'
-                    };
-                    if (initData) {
-                        headers['X-Telegram-Init-Data'] = initData;
-                    }
-                    const options = { method, headers };
-                    if (body) options.body = JSON.stringify(body);
-                    
-                    try {
-                        const url = `${API_BASE_URL}/api/${endpoint}`;
-                        console.log(`Fetching ${url}...`);
-                        const response = await fetch(url, options);
-                        if (!response.ok) {
-                            const text = await response.text();
-                            throw new Error(`HTTP ${response.status}: ${text}`);
-                        }
-                        return await response.json();
-                    } catch (error) {
-                        showError(`API error (${endpoint}): ${error.message}`);
-                        return null;
+        // Загрузка пользователя
+        async function loadUser() {
+            const data = await apiCall('user');
+            if (!data) return;
+            document.getElementById('gold').textContent = data.gold;
+            document.getElementById('exp').textContent = data.exp;
+            // Инвентарь
+            const inv = Object.entries(data.inventory).filter(([,v]) => v>0).map(([k,v]) => `${k}:${v}`).join(', ');
+            document.getElementById('inventory').textContent = inv || 'пусто';
+            if (data.boss_progress) {
+                for (let [bid, prog] of Object.entries(data.boss_progress)) {
+                    if (!prog.defeated) {
+                        document.getElementById('boss-health').style.display = 'block';
+                        document.getElementById('boss-name').textContent = bid;
+                        loadBossInfo(bid);
+                        break;
                     }
                 }
+            }
+        }
 
-                // Загрузка данных пользователя
-                let userData = null;
-                async function loadUser() {
-                    userData = await apiCall('user');
-                    if (!userData) {
-                        showError("Не удалось загрузить данные пользователя. Проверьте API_BASE_URL и CORS.");
-                        return;
-                    }
-                    document.getElementById('gold').textContent = userData.gold;
-                    document.getElementById('exp').textContent = userData.exp;
-                    updateInventoryDisplay(userData.inventory);
-                    
-                    if (userData.boss_progress) {
-                        checkBosses(userData.boss_progress);
-                    }
-                }
+        async function loadBossInfo(bid) {
+            const data = await apiCall(`boss/${bid}`);
+            if (data) {
+                document.getElementById('boss-current-health').textContent = data.current_health;
+                document.getElementById('boss-max-health').textContent = data.max_health;
+                const percent = (data.current_health / data.max_health) * 100;
+                document.getElementById('boss-health-fill').style.width = percent + '%';
+            }
+        }
 
-                function updateInventoryDisplay(inv) {
-                    const invDiv = document.getElementById('inventory');
-                    const items = Object.entries(inv)
-                        .filter(([_, amt]) => amt > 0)
-                        .map(([res, amt]) => `${res}: ${amt}`);
-                    invDiv.textContent = items.join(', ') || 'пусто';
-                }
+        // 3D сцена
+        import('three').then((THREE) => {
+            import('https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js').then(({ OrbitControls }) => {
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x111122);
+                const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
+                camera.position.set(5,5,10);
+                const renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(innerWidth, innerHeight);
+                document.body.appendChild(renderer.domElement);
+                const controls = new OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.maxPolarAngle = Math.PI/2;
 
-                let currentBossId = null;
-                function checkBosses(bossProgress) {
-                    for (const [bossId, progress] of Object.entries(bossProgress)) {
-                        if (!progress.defeated) {
-                            currentBossId = bossId;
-                            document.getElementById('boss-health').style.display = 'block';
-                            document.getElementById('boss-name').textContent = bossId;
-                            loadBossInfo(bossId);
-                            break;
-                        }
-                    }
-                }
+                // Освещение
+                scene.add(new THREE.AmbientLight(0x404060));
+                const light = new THREE.DirectionalLight(0xffffff, 1);
+                light.position.set(1,2,1);
+                scene.add(light);
 
-                async function loadBossInfo(bossId) {
-                    const data = await apiCall(`boss/${bossId}`);
-                    if (data) {
-                        updateBossHealth(data.current_health, data.max_health);
-                    }
-                }
+                // Пол
+                const floor = new THREE.Mesh(
+                    new THREE.PlaneGeometry(20,20),
+                    new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 })
+                );
+                floor.rotation.x = -Math.PI/2;
+                floor.position.y = 0;
+                scene.add(floor);
 
-                // Дождаться загрузки модулей Three.js
-                Promise.all([
-                    import('three'),
-                    import('https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js')
-                ]).then(([THREE, { OrbitControls }]) => {
-                    try {
-                        const scene = new THREE.Scene();
-                        scene.background = new THREE.Color(0x111122);
-
-                        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-                        camera.position.set(5, 5, 10);
-
-                        const renderer = new THREE.WebGLRenderer({ antialias: true });
-                        renderer.setSize(window.innerWidth, window.innerHeight);
-                        document.body.appendChild(renderer.domElement);
-
-                        const controls = new OrbitControls(camera, renderer.domElement);
-                        controls.enableDamping = true;
-                        controls.maxPolarAngle = Math.PI / 2;
-
-                        // Освещение
-                        const ambientLight = new THREE.AmbientLight(0x404060);
-                        scene.add(ambientLight);
-                        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-                        dirLight.position.set(1, 2, 1);
-                        scene.add(dirLight);
-
-                        // Пол
-                        const floorGeometry = new THREE.PlaneGeometry(20, 20);
-                        const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8, metalness: 0.2 });
-                        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-                        floor.rotation.x = -Math.PI / 2;
-                        floor.position.y = 0;
-                        scene.add(floor);
-
-                        // Ресурсы (кубы)
-                        const resources = [];
-                        const positions = [
-                            [-3, 0.5, -3], [3, 0.5, -3], [0, 0.5, 3], [-2, 0.5, 2], [2, 0.5, 2],
-                            [-4, 0.5, 1], [4, 0.5, 1], [-1, 0.5, -4], [1, 0.5, -4]
-                        ];
-                        const colors = [0xffaa00, 0xcc8800, 0xaaaaaa, 0x44aa88, 0x8844aa, 0xaa44aa, 0x88aa44, 0xaa8844, 0x44aa44];
-                        positions.forEach((pos, i) => {
-                            const geometry = new THREE.BoxGeometry(1, 1, 1);
-                            const material = new THREE.MeshStandardMaterial({ color: colors[i], emissive: 0x222222 });
-                            const cube = new THREE.Mesh(geometry, material);
-                            cube.position.set(pos[0], pos[1], pos[2]);
-                            cube.userData = { type: 'resource', id: i % 5 };
-                            scene.add(cube);
-                            resources.push(cube);
-                        });
-
-                        // Модель босса (конус)
-                        const bossGeometry = new THREE.ConeGeometry(1, 2, 8);
-                        const bossMaterial = new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0x440000 });
-                        const boss = new THREE.Mesh(bossGeometry, bossMaterial);
-                        boss.position.set(0, 1, 0);
-                        boss.userData = { type: 'boss' };
-                        scene.add(boss);
-                        boss.visible = false;
-
-                        // Рэйкастер для кликов
-                        const raycaster = new THREE.Raycaster();
-                        const mouse = new THREE.Vector2();
-
-                        function onClick(event) {
-                            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-                            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-                            raycaster.setFromCamera(mouse, camera);
-                            const intersects = raycaster.intersectObjects([...resources, boss]);
-                            if (intersects.length > 0) {
-                                const hit = intersects[0].object;
-                                if (hit.userData.type === 'resource') {
-                                    hit.material.emissive.setHex(0x444444);
-                                    setTimeout(() => hit.material.emissive.setHex(0x222222), 100);
-                                    
-                                    apiCall('click', 'POST', { resourceId: hit.userData.id })
-                                        .then(data => {
-                                            if (data) {
-                                                document.getElementById('gold').textContent = data.new_gold;
-                                                document.getElementById('exp').textContent = data.new_exp;
-                                                updateInventoryDisplay(data.inventory);
-                                                if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
-                                            }
-                                        });
-                                } else if (hit.userData.type === 'boss' && currentBossId) {
-                                    hit.material.emissive.setHex(0xaa0000);
-                                    setTimeout(() => hit.material.emissive.setHex(0x440000), 200);
-                                    
-                                    apiCall('boss/attack', 'POST', { boss_id: currentBossId })
-                                        .then(data => {
-                                            if (data) {
-                                                if (data.defeated) {
-                                                    boss.visible = false;
-                                                    document.getElementById('boss-health').style.display = 'none';
-                                                } else {
-                                                    updateBossHealth(data.current_health, data.max_health);
-                                                }
-                                                document.getElementById('gold').textContent = data.new_gold;
-                                                document.getElementById('exp').textContent = data.new_exp;
-                                                updateInventoryDisplay(data.inventory);
-                                                if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy');
-                                            }
-                                        });
-                                }
-                            }
-                        }
-
-                        window.addEventListener('click', onClick);
-
-                        function updateBossHealth(current, max) {
-                            document.getElementById('boss-current-health').textContent = current;
-                            document.getElementById('boss-max-health').textContent = max;
-                            const percent = (current / max) * 100;
-                            document.getElementById('boss-health-fill').style.width = percent + '%';
-                            
-                            if (current > 0) {
-                                boss.visible = true;
-                            } else {
-                                boss.visible = false;
-                            }
-                        }
-
-                        function animate() {
-                            requestAnimationFrame(animate);
-                            resources.forEach(cube => {
-                                cube.rotation.y += 0.005;
-                            });
-                            controls.update();
-                            renderer.render(scene, camera);
-                        }
-                        animate();
-
-                        // Загрузка данных пользователя
-                        loadUser();
-
-                        window.addEventListener('resize', () => {
-                            camera.aspect = window.innerWidth / window.innerHeight;
-                            camera.updateProjectionMatrix();
-                            renderer.setSize(window.innerWidth, window.innerHeight);
-                        });
-
-                    } catch (e) {
-                        showError("Three.js error: " + e.message + '\n' + e.stack);
-                    }
-                }).catch(error => {
-                    showError("Failed to load Three.js modules: " + error.message);
+                // Кубы-ресурсы
+                const cubes = [];
+                const positions = [[-3,0.5,-3], [3,0.5,-3], [0,0.5,3], [-2,0.5,2], [2,0.5,2]];
+                positions.forEach((pos, i) => {
+                    const cube = new THREE.Mesh(
+                        new THREE.BoxGeometry(1,1,1),
+                        new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x222222 })
+                    );
+                    cube.position.set(pos[0], pos[1], pos[2]);
+                    cube.userData = { type: 'resource', id: i };
+                    scene.add(cube);
+                    cubes.push(cube);
                 });
 
-            } catch (e) {
-                document.getElementById('error-message').style.display = 'block';
-                document.getElementById('error-message').innerHTML = 'Критическая ошибка: ' + e.message + '<br>' + e.stack;
-            }
-        })();
+                // Босс-конус
+                const boss = new THREE.Mesh(
+                    new THREE.ConeGeometry(1,2,8),
+                    new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0x440000 })
+                );
+                boss.position.set(0,1,0);
+                boss.userData = { type: 'boss' };
+                boss.visible = false;
+                scene.add(boss);
+
+                // Рэйкастер
+                const raycaster = new THREE.Raycaster();
+                const mouse = new THREE.Vector2();
+
+                window.addEventListener('click', (e) => {
+                    mouse.x = (e.clientX / innerWidth) * 2 - 1;
+                    mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+                    raycaster.setFromCamera(mouse, camera);
+                    const intersects = raycaster.intersectObjects([...cubes, boss]);
+                    if (intersects.length === 0) {
+                        showError('Клик мимо');
+                        return;
+                    }
+                    const hit = intersects[0].object;
+                    if (hit.userData.type === 'resource') {
+                        showError(`Клик по ресурсу ${hit.userData.id}`);
+                        apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
+                            if (data) {
+                                document.getElementById('gold').textContent = data.new_gold;
+                                document.getElementById('exp').textContent = data.new_exp;
+                                // обновить инвентарь
+                                const inv = Object.entries(data.inventory).filter(([,v]) => v>0).map(([k,v]) => `${k}:${v}`).join(', ');
+                                document.getElementById('inventory').textContent = inv || 'пусто';
+                            }
+                        });
+                    } else if (hit.userData.type === 'boss') {
+                        showError('Клик по боссу');
+                        // здесь позже
+                    }
+                });
+
+                // Анимация
+                function animate() {
+                    cubes.forEach(c => c.rotation.y += 0.005);
+                    controls.update();
+                    renderer.render(scene, camera);
+                    requestAnimationFrame(animate);
+                }
+                animate();
+
+                // Загрузка данных
+                loadUser();
+
+                window.addEventListener('resize', () => {
+                    camera.aspect = innerWidth/innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(innerWidth, innerHeight);
+                });
+            });
+        });
     </script>
 </body>
 </html>
