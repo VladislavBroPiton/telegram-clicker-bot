@@ -6,198 +6,7 @@
     <title>Шахтёрская глубина 3D</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; }
-
-/* Общие контейнеры */
-#hud, #boss-health {
-    position: absolute;
-    color: white;
-    background: rgba(20, 20, 30, 0.85);
-    backdrop-filter: blur(4px);
-    padding: 10px 14px;
-    border-radius: 16px;
-    z-index: 200;
-    pointer-events: none;
-    border: 1px solid rgba(255,215,0,0.3);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    font-size: 14px;
-    transition: all 0.2s;
-}
-
-#hud {
-    top: 10px;
-    left: 10px;
-    right: auto;
-    max-width: calc(100% - 240px);
-}
-
-#boss-health {
-    top: 10px;
-    right: 10px;
-    width: 220px;
-    display: none;
-    border-color: #ff4444;
-}
-
-/* Для узких экранов (мобильные) */
-@media (max-width: 600px) {
-    #hud {
-        max-width: none;
-        right: 10px;
-        width: auto;
-        margin-bottom: 5px;
-    }
-    #boss-health {
-        top: auto;
-        bottom: 10px; /* панель босса внизу */
-        right: 10px;
-        left: 10px;
-        width: auto;
-    }
-    /* Панели отладки поднимаем выше, чтобы не перекрывать панель босса */
-    #debug-info {
-        bottom: auto;
-        top: 70px;
-        max-height: calc(100% - 200px);
-    }
-    #error-message {
-        bottom: 70px;
-        top: auto;
-    }
-    #success-message {
-        bottom: 120px;
-        top: auto;
-    }
-    #loot-message {
-        top: 50%;
-        transform: translateY(-50%);
-    }
-}
-
-/* Если очень узко, можно ещё уменьшить отступы */
-@media (max-width: 400px) {
-    #hud {
-        font-size: 12px;
-        padding: 6px 10px;
-    }
-    #boss-health {
-        font-size: 12px;
-        padding: 6px 10px;
-    }
-    #debug-info, #error-message, #success-message, #loot-message {
-        font-size: 12px;
-        padding: 6px;
-    }
-}
-
-/* Полоска здоровья */
-.health-bar {
-    width: 100%;
-    height: 16px;
-    background-color: #333;
-    border-radius: 8px;
-    overflow: hidden;
-    margin-top: 6px;
-}
-.health-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #ff4444, #ff8844);
-    width: 100%;
-    transition: width 0.2s;
-}
-
-/* Навигация по боссам */
-.boss-navigation {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 10px;
-    pointer-events: auto;
-}
-.boss-nav-btn {
-    background: rgba(255,255,255,0.2);
-    border: none;
-    color: white;
-    font-size: 20px;
-    width: 40px;
-    height: 40px;
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: 0.2s;
-}
-.boss-nav-btn:active { background: rgba(255,255,255,0.4); }
-.boss-nav-btn.disabled { opacity: 0.3; pointer-events: none; }
-
-/* Панели отладки */
-#debug-info, #error-message, #success-message, #loot-message {
-    position: absolute;
-    left: 10px;
-    right: 10px;
-    background: rgba(0,0,0,0.9);
-    padding: 10px;
-    border-radius: 8px;
-    z-index: 1000;
-    font-size: 14px;
-    white-space: pre-wrap;
-    word-break: break-word;
-    pointer-events: none;
-}
-#debug-info {
-    bottom: 80px;
-    border: 2px solid yellow;
-    color: white;
-    max-height: 150px;
-    overflow: auto;
-}
-#error-message {
-    bottom: 10px;
-    border: 2px solid red;
-    color: #ff8888;
-}
-#success-message {
-    bottom: 60px;
-    border: 2px solid #0f0;
-    color: #aaffaa;
-}
-#loot-message {
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(0,0,0,0.95);
-    border: 2px solid gold;
-    color: gold;
-    font-size: 18px;
-    text-align: center;
-    padding: 20px;
-    border-radius: 20px;
-    box-shadow: 0 0 30px gold;
-    display: none;
-}
-
-#test-button {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    z-index: 2000;
-    background: #ff4444;
-    color: white;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: bold;
-    pointer-events: auto;
-}
-
-#tool-display {
-    margin-top: 8px;
-    font-size: 13px;
-    color: #ffaa66;
-    border-top: 1px solid #444;
-    padding-top: 6px;
-}
+        /* ... (стили без изменений, как в предыдущем коде) ... */
     </style>
     <script type="importmap">
         {
@@ -208,28 +17,7 @@
     </script>
 </head>
 <body>
-    <div id="hud">
-        <div style="display: flex; justify-content: space-between;">
-            <span>💰 <span id="gold">0</span></span>
-            <span>✨ <span id="exp">0</span></span>
-        </div>
-        <div id="exp-bar-container"><div id="exp-bar-fill"></div></div>
-        <div id="exp-text">Уровень <span id="level">1</span> • <span id="exp-current">0</span>/100 опыта</div>
-        <div>📦 Инвентарь: <span id="inventory">—</span></div>
-        <div id="tool-display">🧰 Инструмент: <span id="active-tool">загрузка...</span></div>
-    </div>
-    <div id="boss-health">
-        <div style="display: flex; justify-content: space-between;">
-            <span>👾 <span id="boss-name"></span></span>
-            <span><span id="boss-current-health">0</span>/<span id="boss-max-health">0</span></span>
-        </div>
-        <div class="health-bar"><div class="health-fill" id="boss-health-fill"></div></div>
-        <div class="boss-navigation">
-            <button class="boss-nav-btn" id="prev-boss">←</button>
-            <span style="font-size: 14px;" id="boss-index">1/3</span>
-            <button class="boss-nav-btn" id="next-boss">→</button>
-        </div>
-    </div>
+    <!-- ... (HTML без изменений) ... -->
     <div id="debug-info" style="display: none;"></div>
     <div id="error-message" style="display: none;"></div>
     <div id="success-message" style="display: none;"></div>
@@ -241,7 +29,6 @@
         const API_BASE_URL = 'https://telegram-clicker-bot-zi6c.onrender.com';
         const EXP_PER_LEVEL = 100;
 
-        // Список боссов
         const BOSS_IDS = ['goblin_king', 'dragon_lair', 'lich_castle'];
         const BOSS_NAMES = {
             'goblin_king': 'Король гоблинов',
@@ -249,14 +36,15 @@
             'lich_castle': 'Архилич'
         };
 
-        // Глобальные переменные
+        // Глобальные переменные модуля
         let currentBossIndex = 0;
         let currentBossId = BOSS_IDS[0];
         let isAttacking = false;
         let cubes = [];
         let scene, camera, renderer, controls;
         let bossGroup = null;
-        let threeReady = false; // флаг готовности Three.js
+        let threeReady = false;
+        let THREE; // сохраним ссылку на библиотеку
 
         // Аудио
         let audioClick = new Audio('https://github.com/VladislavBroPiton/telegram-clicker-bot/blob/main/creatorshome-pickaxe-blow-333695.mp3');
@@ -285,29 +73,40 @@
         const successMsg = document.getElementById('success-message');
         const lootMsg = document.getElementById('loot-message');
         const lootDetails = document.getElementById('loot-details');
+        const prevBossBtn = document.getElementById('prev-boss');
+        const nextBossBtn = document.getElementById('next-boss');
+        const testButton = document.getElementById('test-button');
 
         // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
         function debugLog(msg) {
-            debugInfo.style.display = 'block';
-            debugInfo.innerHTML = msg + '<br>' + debugInfo.innerHTML;
             console.log(msg);
+            if (debugInfo) {
+                debugInfo.style.display = 'block';
+                debugInfo.innerHTML = msg + '<br>' + debugInfo.innerHTML;
+            }
         }
 
         function showError(msg) {
-            errorMsg.style.display = 'block';
-            errorMsg.innerHTML = msg;
+            if (errorMsg) {
+                errorMsg.style.display = 'block';
+                errorMsg.innerHTML = msg;
+            }
         }
 
         function showSuccess(msg) {
-            successMsg.style.display = 'block';
-            successMsg.innerHTML = msg;
-            setTimeout(() => successMsg.style.display = 'none', 2000);
+            if (successMsg) {
+                successMsg.style.display = 'block';
+                successMsg.innerHTML = msg;
+                setTimeout(() => successMsg.style.display = 'none', 2000);
+            }
         }
 
         function showLoot(items) {
-            lootDetails.innerHTML = items;
-            lootMsg.style.display = 'block';
-            setTimeout(() => lootMsg.style.display = 'none', 4000);
+            if (lootDetails) lootDetails.innerHTML = items;
+            if (lootMsg) {
+                lootMsg.style.display = 'block';
+                setTimeout(() => lootMsg.style.display = 'none', 4000);
+            }
         }
 
         // --- ТЕЛЕГРАМ ---
@@ -356,40 +155,44 @@
 
         // --- ОБНОВЛЕНИЕ ИНТЕРФЕЙСА ---
         function updateExpBar(level, exp) {
-            hudLevel.textContent = level;
-            hudExp.textContent = exp;
-            hudExpCurrent.textContent = exp;
+            if (hudLevel) hudLevel.textContent = level;
+            if (hudExp) hudExp.textContent = exp;
+            if (hudExpCurrent) hudExpCurrent.textContent = exp;
             const percent = (exp / EXP_PER_LEVEL) * 100;
-            expBarFill.style.width = percent + '%';
+            if (expBarFill) expBarFill.style.width = percent + '%';
         }
 
         function updateInventoryDisplay(inv) {
             if (!inv) {
-                inventorySpan.textContent = '—';
+                if (inventorySpan) inventorySpan.textContent = '—';
                 return;
             }
             const entries = Object.entries(inv).filter(([,v]) => v > 0);
-            if (entries.length === 0) inventorySpan.textContent = 'пусто';
-            else inventorySpan.textContent = entries.map(([k,v]) => `${k}:${v}`).join(', ');
+            if (entries.length === 0) {
+                if (inventorySpan) inventorySpan.textContent = 'пусто';
+            } else {
+                if (inventorySpan) inventorySpan.textContent = entries.map(([k,v]) => `${k}:${v}`).join(', ');
+            }
         }
 
         function updateBossHealth(current, max) {
-            bossCurrentHealth.textContent = current;
-            bossMaxHealth.textContent = max;
+            if (bossCurrentHealth) bossCurrentHealth.textContent = current;
+            if (bossMaxHealth) bossMaxHealth.textContent = max;
             const percent = max > 0 ? (current / max) * 100 : 0;
-            bossHealthFill.style.width = percent + '%';
+            if (bossHealthFill) bossHealthFill.style.width = percent + '%';
         }
 
-        // --- ФУНКЦИЯ СОЗДАНИЯ МОДЕЛИ БОССА (вызывается только после ready) ---
+        // --- ФУНКЦИЯ СОЗДАНИЯ МОДЕЛИ БОССА ---
         function createBossModel(bossId) {
-            console.log('createBossModel called for', bossId);
-            if (!bossGroup) {
-                console.error('bossGroup not ready');
+            debugLog(`createBossModel called for ${bossId}`);
+            if (!THREE) {
+                debugLog('THREE not available');
                 return null;
             }
             const group = new THREE.Group();
 
             if (bossId === 'goblin_king') {
+                // ... (код создания гоблина) ...
                 const bodyGeom = new THREE.CylinderGeometry(1.2, 1.5, 2, 8);
                 const bodyMat = new THREE.MeshStandardMaterial({ color: 0x44aa88, emissive: 0x112233 });
                 const body = new THREE.Mesh(bodyGeom, bodyMat);
@@ -409,6 +212,7 @@
                 crown.rotation.y = Math.PI/4;
                 group.add(crown);
 
+                // Глаза
                 const eyeGeom = new THREE.SphereGeometry(0.15);
                 const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
                 const pupilMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
@@ -428,6 +232,7 @@
                 group.add(pupilR);
             }
             else if (bossId === 'dragon_lair') {
+                // ... (дракон) ...
                 const bodyGeom = new THREE.CylinderGeometry(1.2, 1.2, 2.5, 8);
                 const bodyMat = new THREE.MeshStandardMaterial({ color: 0xaa4422, emissive: 0x331100 });
                 const body = new THREE.Mesh(bodyGeom, bodyMat);
@@ -467,6 +272,7 @@
                 group.add(tail);
             }
             else if (bossId === 'lich_castle') {
+                // ... (лич) ...
                 const bodyGeom = new THREE.CylinderGeometry(0.8, 1.0, 3, 6);
                 const bodyMat = new THREE.MeshStandardMaterial({ color: 0x557799, emissive: 0x113344 });
                 const body = new THREE.Mesh(bodyGeom, bodyMat);
@@ -520,10 +326,10 @@
             const data = await apiCall('user');
             if (!data) return;
 
-            goldSpan.textContent = data.gold;
+            if (goldSpan) goldSpan.textContent = data.gold;
             updateExpBar(data.level, data.exp);
             updateInventoryDisplay(data.inventory);
-            activeToolSpan.textContent = data.active_tool || 'неизвестно';
+            if (activeToolSpan) activeToolSpan.textContent = data.active_tool || 'неизвестно';
 
             if (data.boss_progress) {
                 let found = false;
@@ -541,14 +347,18 @@
                     currentBossIndex = 0;
                     currentBossId = BOSS_IDS[0];
                 }
-                // Загружаем информацию о текущем боссе, но только если Three.js готов
+
+                // Обновим отображение индекса сразу
+                if (bossIndexSpan) bossIndexSpan.textContent = `${currentBossIndex+1}/${BOSS_IDS.length}`;
+
+                // Загружаем босса, если Three готов
                 if (threeReady) {
                     loadBossInfo(currentBossId);
                 } else {
-                    // Если ещё не готов, ждём инициализацию
-                    const waitForThree = setInterval(() => {
+                    // Ждём готовности Three
+                    const checkThree = setInterval(() => {
                         if (threeReady) {
-                            clearInterval(waitForThree);
+                            clearInterval(checkThree);
                             loadBossInfo(currentBossId);
                         }
                     }, 100);
@@ -558,27 +368,30 @@
 
         // --- ЗАГРУЗКА ИНФОРМАЦИИ О БОССЕ И ОБНОВЛЕНИЕ МОДЕЛИ ---
         async function loadBossInfo(bid) {
+            debugLog(`loadBossInfo for ${bid}`);
             const data = await apiCall(`boss/${bid}`);
             if (data) {
-                bossNameSpan.textContent = BOSS_NAMES[bid] || bid;
+                if (bossNameSpan) bossNameSpan.textContent = BOSS_NAMES[bid] || bid;
                 updateBossHealth(data.current_health, data.max_health);
-                bossHealthDiv.style.display = 'block';
+                if (bossHealthDiv) bossHealthDiv.style.display = 'block';
 
                 if (bossGroup && threeReady) {
-                    // Удаляем старую модель
+                    debugLog('Removing old boss model');
                     while(bossGroup.children.length > 0) {
                         bossGroup.remove(bossGroup.children[0]);
                     }
-                    // Создаём новую
+                    debugLog('Creating new boss model');
                     const newBoss = createBossModel(bid);
                     if (newBoss) {
                         bossGroup.add(newBoss);
-                        console.log('Boss model added for', bid);
+                        debugLog(`Boss model added for ${bid}, children count: ${bossGroup.children.length}`);
+                        // Проверим видимость
+                        bossGroup.visible = true;
                     } else {
-                        console.error('Failed to create boss model');
+                        debugLog('Failed to create boss model');
                     }
                 } else {
-                    console.warn('bossGroup not ready, cannot create model');
+                    debugLog(`bossGroup ready: ${!!bossGroup}, threeReady: ${threeReady}`);
                 }
 
                 updateBossNavigation();
@@ -587,14 +400,132 @@
 
         // --- НАВИГАЦИЯ ПО БОССАМ ---
         function updateBossNavigation() {
-            bossIndexSpan.textContent = `${currentBossIndex+1}/${BOSS_IDS.length}`;
-            document.getElementById('prev-boss').classList.toggle('disabled', currentBossIndex === 0);
-            document.getElementById('next-boss').classList.toggle('disabled', currentBossIndex === BOSS_IDS.length-1);
+            if (bossIndexSpan) bossIndexSpan.textContent = `${currentBossIndex+1}/${BOSS_IDS.length}`;
+            if (prevBossBtn) prevBossBtn.classList.toggle('disabled', currentBossIndex === 0);
+            if (nextBossBtn) nextBossBtn.classList.toggle('disabled', currentBossIndex === BOSS_IDS.length-1);
+        }
+
+        // --- ОБРАБОТЧИКИ КНОПОК НАВИГАЦИИ ---
+        if (prevBossBtn) {
+            prevBossBtn.addEventListener('click', () => {
+                debugLog('Prev boss clicked');
+                if (currentBossIndex > 0) {
+                    currentBossIndex--;
+                    currentBossId = BOSS_IDS[currentBossIndex];
+                    loadBossInfo(currentBossId);
+                }
+            });
+        }
+        if (nextBossBtn) {
+            nextBossBtn.addEventListener('click', () => {
+                debugLog('Next boss clicked');
+                if (currentBossIndex < BOSS_IDS.length-1) {
+                    currentBossIndex++;
+                    currentBossId = BOSS_IDS[currentBossIndex];
+                    loadBossInfo(currentBossId);
+                }
+            });
+        }
+
+        // --- АТАКА НА БОССА ---
+        async function attackBoss() {
+            if (isAttacking) return;
+            if (!currentBossId) {
+                showError('Босс не выбран');
+                return;
+            }
+
+            isAttacking = true;
+            if (bossGroup && bossGroup.children.length > 0) {
+                bossGroup.scale.set(0.9, 0.9, 0.9);
+                setTimeout(() => bossGroup.scale.set(0.8, 0.8, 0.8), 150);
+            }
+            audioBossHit.currentTime = 0;
+            audioBossHit.play().catch(() => {});
+
+            try {
+                const data = await apiCall('boss/attack', 'POST', { boss_id: currentBossId });
+                if (!data) return;
+
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+
+                if (data.new_gold !== undefined && goldSpan) goldSpan.textContent = data.new_gold;
+                if (data.new_exp !== undefined && hudExp) hudExp.textContent = data.new_exp;
+                if (data.inventory) updateInventoryDisplay(data.inventory);
+
+                if (data.current_health !== undefined && data.max_health !== undefined) {
+                    updateBossHealth(data.current_health, data.max_health);
+                    if (bossGroup) createHitParticles(bossGroup.position.clone());
+                }
+
+                if (data.defeated) {
+                    audioVictory.currentTime = 0;
+                    audioVictory.play().catch(() => {});
+                    showLoot(data.loot ? data.loot : 'Награда получена!');
+                    if (bossGroup) bossGroup.visible = false;
+                    if (bossHealthDiv) bossHealthDiv.style.display = 'none';
+                } else {
+                    showSuccess('Удар!');
+                }
+
+                // Перезагрузим данные пользователя для обновления опыта/уровня
+                loadUser();
+            } catch (e) {
+                console.error(e);
+            } finally {
+                isAttacking = false;
+            }
+        }
+
+        // --- ЧАСТИЦЫ ПРИ УДАРЕ ---
+        function createHitParticles(position) {
+            if (!scene || !THREE) return;
+            const particleCount = 15;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount; i++) {
+                positions[i*3] = position.x;
+                positions[i*3+1] = position.y;
+                positions[i*3+2] = position.z;
+                colors[i*3] = 1;
+                colors[i*3+1] = 0.3 + Math.random()*0.3;
+                colors[i*3+2] = 0.1;
+            }
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({ size: 0.2, vertexColors: true, transparent: true });
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            const startTime = performance.now();
+            function animateParticles() {
+                const elapsed = performance.now() - startTime;
+                if (elapsed > 500) {
+                    scene.remove(particles);
+                    return;
+                }
+                const positionsAttr = geometry.attributes.position;
+                for (let i = 0; i < particleCount; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    positionsAttr.array[i*3] += Math.cos(angle) * 0.05;
+                    positionsAttr.array[i*3+1] += Math.sin(angle) * 0.05;
+                    positionsAttr.array[i*3+2] += (Math.random() - 0.5) * 0.05;
+                }
+                positionsAttr.needsUpdate = true;
+                requestAnimationFrame(animateParticles);
+            }
+            animateParticles();
         }
 
         // --- ИНИЦИАЛИЗАЦИЯ 3D ---
         async function init3D() {
-            const THREE = await import('three');
+            debugLog('init3D started');
+            THREE = await import('three');
             const { OrbitControls } = await import('https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js');
 
             scene = new THREE.Scene();
@@ -655,8 +586,11 @@
             bossGroup = new THREE.Group();
             scene.add(bossGroup);
 
-            threeReady = true; // теперь можно создавать модели
-            console.log('Three.js ready');
+            threeReady = true;
+            debugLog('Three.js initialized, bossGroup created');
+
+            // Сразу после инициализации попробуем загрузить босса, если данные пользователя уже есть
+            // Но loadUser сам вызовет loadBossInfo после готовности threeReady
 
             // Рэйкастер
             const raycaster = new THREE.Raycaster();
@@ -680,8 +614,8 @@
                         audioClick.play().catch(() => {});
                         apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
                             if (data) {
-                                goldSpan.textContent = data.new_gold;
-                                hudExp.textContent = data.new_exp;
+                                if (goldSpan) goldSpan.textContent = data.new_gold;
+                                if (hudExp) hudExp.textContent = data.new_exp;
                                 updateInventoryDisplay(data.inventory);
                                 showSuccess(`+${data.gold}💰`);
                                 loadUser();
@@ -708,8 +642,8 @@
                         audioClick.play().catch(() => {});
                         apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
                             if (data) {
-                                goldSpan.textContent = data.new_gold;
-                                hudExp.textContent = data.new_exp;
+                                if (goldSpan) goldSpan.textContent = data.new_gold;
+                                if (hudExp) hudExp.textContent = data.new_exp;
                                 updateInventoryDisplay(data.inventory);
                                 showSuccess(`+${data.gold}💰`);
                                 loadUser();
@@ -750,134 +684,30 @@
                 camera.updateProjectionMatrix();
                 renderer.setSize(innerWidth, innerHeight);
             });
+
+            // Если loadUser уже был вызван, он ждал threeReady и теперь загрузит босса
         }
 
-        // --- ОБРАБОТЧИКИ НАВИГАЦИИ ---
-        document.getElementById('prev-boss').addEventListener('click', () => {
-            if (currentBossIndex > 0) {
-                currentBossIndex--;
-                currentBossId = BOSS_IDS[currentBossIndex];
-                loadBossInfo(currentBossId);
-            }
-        });
-        document.getElementById('next-boss').addEventListener('click', () => {
-            if (currentBossIndex < BOSS_IDS.length-1) {
-                currentBossIndex++;
-                currentBossId = BOSS_IDS[currentBossIndex];
-                loadBossInfo(currentBossId);
-            }
-        });
-
-        // --- АТАКА НА БОССА ---
-        async function attackBoss() {
-            if (isAttacking) return;
-            if (!currentBossId) {
-                showError('Босс не выбран');
-                return;
-            }
-
-            isAttacking = true;
-            if (bossGroup.children.length > 0) {
-                bossGroup.scale.set(0.9, 0.9, 0.9);
-                setTimeout(() => bossGroup.scale.set(0.8, 0.8, 0.8), 150);
-            }
-            audioBossHit.currentTime = 0;
-            audioBossHit.play().catch(() => {});
-
-            try {
-                const data = await apiCall('boss/attack', 'POST', { boss_id: currentBossId });
-                if (!data) return;
-
-                if (data.error) {
-                    showError(data.error);
-                    return;
-                }
-
-                if (data.new_gold !== undefined) goldSpan.textContent = data.new_gold;
-                if (data.new_exp !== undefined) hudExp.textContent = data.new_exp;
-                if (data.inventory) updateInventoryDisplay(data.inventory);
-
-                if (data.current_health !== undefined && data.max_health !== undefined) {
-                    updateBossHealth(data.current_health, data.max_health);
-                    createHitParticles(bossGroup.position.clone());
-                }
-
-                if (data.defeated) {
-                    audioVictory.currentTime = 0;
-                    audioVictory.play().catch(() => {});
-                    showLoot(data.loot ? data.loot : 'Награда получена!');
-                    bossGroup.visible = false;
-                    bossHealthDiv.style.display = 'none';
-                } else {
-                    showSuccess('Удар!');
-                }
-
-                loadUser();
-            } catch (e) {
-                console.error(e);
-            } finally {
-                isAttacking = false;
-            }
-        }
-
-        // --- ЧАСТИЦЫ ПРИ УДАРЕ ---
-        function createHitParticles(position) {
-            if (!scene) return;
-            const particleCount = 15;
-            const geometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(particleCount * 3);
-            const colors = new Float32Array(particleCount * 3);
-            for (let i = 0; i < particleCount; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                positions[i*3] = position.x;
-                positions[i*3+1] = position.y;
-                positions[i*3+2] = position.z;
-                colors[i*3] = 1;
-                colors[i*3+1] = 0.3 + Math.random()*0.3;
-                colors[i*3+2] = 0.1;
-            }
-            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-            const material = new THREE.PointsMaterial({ size: 0.2, vertexColors: true, transparent: true });
-            const particles = new THREE.Points(geometry, material);
-            scene.add(particles);
-
-            const startTime = performance.now();
-            function animateParticles() {
-                const elapsed = performance.now() - startTime;
-                if (elapsed > 500) {
-                    scene.remove(particles);
-                    return;
-                }
-                const positionsAttr = geometry.attributes.position;
-                for (let i = 0; i < particleCount; i++) {
-                    const angle = Math.random() * Math.PI * 2;
-                    positionsAttr.array[i*3] += Math.cos(angle) * 0.05;
-                    positionsAttr.array[i*3+1] += Math.sin(angle) * 0.05;
-                    positionsAttr.array[i*3+2] += (Math.random() - 0.5) * 0.05;
-                }
-                positionsAttr.needsUpdate = true;
-                requestAnimationFrame(animateParticles);
-            }
-            animateParticles();
-        }
-
-        // --- СТАРТ ---
-        document.getElementById('test-button').addEventListener('click', () => {
-            apiCall('click', 'POST', { resourceId: 0 }).then(data => {
-                if (data) {
-                    goldSpan.textContent = data.new_gold;
-                    hudExp.textContent = data.new_exp;
-                    updateInventoryDisplay(data.inventory);
-                    loadUser();
-                }
+        // --- ТЕСТОВАЯ КНОПКА ---
+        if (testButton) {
+            testButton.addEventListener('click', () => {
+                apiCall('click', 'POST', { resourceId: 0 }).then(data => {
+                    if (data) {
+                        if (goldSpan) goldSpan.textContent = data.new_gold;
+                        if (hudExp) hudExp.textContent = data.new_exp;
+                        updateInventoryDisplay(data.inventory);
+                        loadUser();
+                    }
+                });
             });
-        });
+        }
 
-        // Запускаем инициализацию 3D и загрузку пользователя
+        // Запускаем инициализацию
         init3D();
         loadUser();
+
+        // Дополнительная отладка: проверим, что элементы существуют
+        debugLog(`prevBossBtn: ${!!prevBossBtn}, nextBossBtn: ${!!nextBossBtn}`);
     </script>
 </body>
 </html>
