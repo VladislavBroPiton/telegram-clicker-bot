@@ -7,160 +7,181 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; }
-        #hud {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 250px;
-            color: white;
-            background: rgba(20, 20, 30, 0.85);
-            backdrop-filter: blur(4px);
-            padding: 12px 16px;
-            border-radius: 16px;
-            z-index: 200;
-            pointer-events: none;
-            border: 1px solid rgba(255,215,0,0.3);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            font-size: 14px;
-        }
-        #exp-bar-container {
-            width: 100%;
-            height: 8px;
-            background-color: #333;
-            border-radius: 4px;
-            margin: 8px 0 4px 0;
-            overflow: hidden;
-        }
-        #exp-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4facfe, #00f2fe);
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-        #exp-text {
-            font-size: 12px;
-            color: #aaccff;
-            text-align: right;
-        }
-        #boss-health {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 230px;
-            color: white;
-            background: rgba(20, 20, 30, 0.85);
-            backdrop-filter: blur(4px);
-            padding: 12px 16px;
-            border-radius: 16px;
-            z-index: 150;
-            display: none;
-            border: 1px solid #ff4444;
-            box-shadow: 0 4px 15px rgba(255,0,0,0.2);
-            pointer-events: none;
-        }
-        .health-bar {
-            width: 100%;
-            height: 20px;
-            background-color: #333;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-top: 8px;
-        }
-        .health-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #ff4444, #ff8844);
-            width: 100%;
-            transition: width 0.2s;
-        }
-        .boss-navigation {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 10px;
-            pointer-events: auto;
-        }
-        .boss-nav-btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            font-size: 20px;
-            width: 40px;
-            height: 40px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .boss-nav-btn:active { background: rgba(255,255,255,0.4); }
-        .boss-nav-btn.disabled { opacity: 0.3; pointer-events: none; }
 
-        #debug-info, #error-message, #success-message, #loot-message {
-            position: absolute;
-            left: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.9);
-            padding: 10px;
-            border-radius: 8px;
-            z-index: 1000;
-            font-size: 14px;
-            white-space: pre-wrap;
-            word-break: break-word;
-            pointer-events: none;
-        }
-        #debug-info {
-            bottom: 80px;
-            border: 2px solid yellow;
-            color: white;
-            max-height: 150px;
-            overflow: auto;
-        }
-        #error-message {
-            bottom: 10px;
-            border: 2px solid red;
-            color: #ff8888;
-        }
-        #success-message {
-            bottom: 60px;
-            border: 2px solid #0f0;
-            color: #aaffaa;
-        }
-        #loot-message {
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(0,0,0,0.95);
-            border: 2px solid gold;
-            color: gold;
-            font-size: 18px;
-            text-align: center;
-            padding: 20px;
-            border-radius: 20px;
-            box-shadow: 0 0 30px gold;
-            display: none;
-            pointer-events: none;
-        }
-        #test-button {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            z-index: 2000;
-            background: #ff4444;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-            pointer-events: auto;
-        }
-        #tool-display {
-            margin-top: 8px;
-            font-size: 13px;
-            color: #ffaa66;
-            border-top: 1px solid #444;
-            padding-top: 6px;
-        }
+/* Общие контейнеры */
+#hud, #boss-health {
+    position: absolute;
+    color: white;
+    background: rgba(20, 20, 30, 0.85);
+    backdrop-filter: blur(4px);
+    padding: 10px 14px;
+    border-radius: 16px;
+    z-index: 200;
+    pointer-events: none;
+    border: 1px solid rgba(255,215,0,0.3);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+#hud {
+    top: 10px;
+    left: 10px;
+    right: auto; /* убираем фиксированный right */
+    max-width: calc(100% - 240px); /* чтобы не залезать на панель босса */
+}
+
+#boss-health {
+    top: 10px;
+    right: 10px;
+    width: 220px;
+    display: none;
+    border-color: #ff4444;
+}
+
+/* Для узких экранов (мобильные) */
+@media (max-width: 600px) {
+    #hud {
+        max-width: none;
+        right: 10px;
+        width: auto;
+        margin-bottom: 5px;
+    }
+    #boss-health {
+        top: auto;
+        bottom: 10px; /* перемещаем панель босса вниз */
+        right: 10px;
+        left: 10px;
+        width: auto;
+    }
+    /* Панели отладки тоже подвигаем, чтобы не мешали */
+    #debug-info, #error-message, #success-message, #loot-message {
+        bottom: auto;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+}
+
+/* Если очень узко, можно ещё уменьшить отступы */
+@media (max-width: 400px) {
+    #hud {
+        font-size: 12px;
+        padding: 6px 10px;
+    }
+    #boss-health {
+        font-size: 12px;
+        padding: 6px 10px;
+    }
+}
+
+/* Полоска здоровья */
+.health-bar {
+    width: 100%;
+    height: 16px;
+    background-color: #333;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 6px;
+}
+.health-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff4444, #ff8844);
+    width: 100%;
+    transition: width 0.2s;
+}
+
+/* Навигация по боссам */
+.boss-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    pointer-events: auto;
+}
+.boss-nav-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    font-size: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.boss-nav-btn:active { background: rgba(255,255,255,0.4); }
+.boss-nav-btn.disabled { opacity: 0.3; pointer-events: none; }
+
+/* Панели отладки */
+#debug-info, #error-message, #success-message, #loot-message {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.9);
+    padding: 10px;
+    border-radius: 8px;
+    z-index: 1000;
+    font-size: 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    pointer-events: none;
+}
+#debug-info {
+    bottom: 80px;
+    border: 2px solid yellow;
+    color: white;
+    max-height: 150px;
+    overflow: auto;
+}
+#error-message {
+    bottom: 10px;
+    border: 2px solid red;
+    color: #ff8888;
+}
+#success-message {
+    bottom: 60px;
+    border: 2px solid #0f0;
+    color: #aaffaa;
+}
+#loot-message {
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.95);
+    border: 2px solid gold;
+    color: gold;
+    font-size: 18px;
+    text-align: center;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 0 30px gold;
+    display: none;
+}
+
+#test-button {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    z-index: 2000;
+    background: #ff4444;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: bold;
+    pointer-events: auto;
+}
+
+#tool-display {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #ffaa66;
+    border-top: 1px solid #444;
+    padding-top: 6px;
+}
     </style>
     <script type="importmap">
         {
@@ -701,4 +722,5 @@
     </script>
 </body>
 </html>
+
 
