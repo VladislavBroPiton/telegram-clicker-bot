@@ -1848,35 +1848,21 @@ def verify_telegram_data(bot_token: str, init_data: str) -> dict | None:
         print(f"verify_telegram_data error: {e}")
         return None
 
-async def api_user(request: Request):
-    # Получаем заголовок с данными от Telegram
+async def api_user(request):
     init_data = request.headers.get('x-telegram-init-data')
-    if not init_data:
-        # После того, как мы получили uid, добавим:
-        print(f"DEBUG api_user: uid={uid}, gold={stats['gold']}, level={stats['level']}")
-        return JSONResponse({'error': 'Missing init data'}, status_code=401)
-    
-    # Извлекаем пользователя
-    user = verify_telegram_data(TOKEN, init_data)
-    if not user:
-        return JSONResponse({'error': 'Invalid init data'}, status_code=403)
-    
+    # ... проверка init_data ...
     uid = user['id']
-    
-    # Получаем данные игрока (как и раньше)
     stats = await get_player_stats(uid)
     inv = await get_inventory(uid)
     current_location = await get_player_current_location(uid)
     
-    # Прогресс боссов
+    # Получаем активный инструмент (ID, например 'wooden_pickaxe')
+    active_tool_id = await get_active_tool(uid)
+    # Можно также получить его название из словаря TOOLS
+    active_tool_name = TOOLS.get(active_tool_id, {}).get('name', active_tool_id)
+    
     boss_progress = {}
-    async with db_pool.acquire() as conn:
-        rows = await conn.fetch("SELECT boss_id, current_health, defeated FROM boss_progress WHERE user_id = $1", uid)
-        for row in rows:
-            boss_progress[row['boss_id']] = {
-                'current_health': row['current_health'],
-                'defeated': row['defeated']
-            }
+    # ... получение прогресса боссов ...
     
     return JSONResponse({
         'id': uid,
@@ -1886,6 +1872,7 @@ async def api_user(request: Request):
         'location': current_location,
         'inventory': inv,
         'upgrades': stats['upgrades'],
+        'active_tool': active_tool_name,   # ← добавляем название для отображения
         'boss_progress': boss_progress
     })
 
@@ -2150,6 +2137,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
