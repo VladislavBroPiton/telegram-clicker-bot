@@ -134,7 +134,7 @@
 
     <script type="module">
         // --- НАСТРОЙКА: Адрес вашего бота на Render ---
-        const API_BASE_URL = 'https://telegram-clicker-bot-zi6c.onrender.com'; // <--- ИЗМЕНИТЕ ЭТО!
+        const API_BASE_URL = 'https://telegram-clicker-bot-zi6c.onrender.com'; // <--- проверьте, что это правильный URL
         // ---------------------------------------------
 
         // Глобальные переменные модуля
@@ -176,7 +176,7 @@
         const initData = tg.initData;
         debugLog('initData: ' + (initData ? initData.substring(0,50) + '...' : 'нет'));
 
-        // API
+        // API (с отладкой ответов)
         async function apiCall(endpoint, method = 'GET', body = null) {
             const headers = { 'Content-Type': 'application/json' };
             if (initData) headers['X-Telegram-Init-Data'] = initData;
@@ -185,18 +185,31 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/${endpoint}`, options);
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                return await response.json();
+                const json = await response.json();
+                // ОТЛАДКА: выводим ответ в консоль и на экран
+                console.log(`API ответ от ${endpoint}:`, json);
+                debugLog(`Ответ от ${endpoint}: ${JSON.stringify(json, null, 2)}`);
+                return json;
             } catch (e) {
                 showError(`Ошибка API ${endpoint}: ${e.message}`);
                 return null;
             }
         }
 
+        // Универсальное чтение здоровья из объекта
+        function extractBossHealth(data) {
+            // Пробуем разные варианты полей, которые могут прийти от сервера
+            let current = data.current_health ?? data.health ?? data.hp ?? data.boss?.health ?? data.boss_health ?? 0;
+            let max = data.max_health ?? data.maxHealth ?? data.max_hp ?? data.max ?? data.boss?.max_health ?? data.boss_max_health ?? 1000;
+            return { current, max };
+        }
+
         // Обновление здоровья босса в интерфейсе
         function updateBossHealth(current, max) {
             document.getElementById('boss-current-health').textContent = current;
             document.getElementById('boss-max-health').textContent = max;
-            const percent = (current / max) * 100;
+            // Защита от деления на ноль
+            const percent = max > 0 ? (current / max) * 100 : 0;
             document.getElementById('boss-health-fill').style.width = percent + '%';
         }
 
@@ -220,26 +233,21 @@
                 if (!data) return;
 
                 if (data.success) {
-                    // Обновляем золото и опыт (поддерживаем оба возможных формата)
+                    // Обновляем золото и опыт (поддерживаем разные форматы)
                     if (data.new_gold !== undefined) {
                         document.getElementById('gold').textContent = data.new_gold;
-                    } else if (data.user && data.user.gold !== undefined) {
+                    } else if (data.user?.gold !== undefined) {
                         document.getElementById('gold').textContent = data.user.gold;
                     }
 
                     if (data.new_exp !== undefined) {
                         document.getElementById('exp').textContent = data.new_exp;
-                    } else if (data.user && data.user.experience !== undefined) {
+                    } else if (data.user?.experience !== undefined) {
                         document.getElementById('exp').textContent = data.user.experience;
                     }
 
                     // Обновляем инвентарь
-                    let inventoryObj = null;
-                    if (data.inventory) {
-                        inventoryObj = data.inventory;
-                    } else if (data.user && data.user.inventory) {
-                        inventoryObj = data.user.inventory;
-                    }
+                    let inventoryObj = data.inventory || data.user?.inventory;
                     if (inventoryObj) {
                         const inv = Object.entries(inventoryObj)
                             .filter(([,v]) => v > 0)
@@ -248,18 +256,11 @@
                         document.getElementById('inventory').textContent = inv || 'пусто';
                     }
 
-                    // Обновляем здоровье босса
-                    if (data.boss) {
-                        updateBossHealth(data.boss.health, data.boss.max_health);
-                        if (data.boss.health <= 0) {
-                            hideBoss();
-                            showSuccess('Босс повержен! 🎉');
-                        } else {
-                            showSuccess('Удар!');
-                        }
-                    } else if (data.boss_health !== undefined && data.boss_max_health !== undefined) {
-                        updateBossHealth(data.boss_health, data.boss_max_health);
-                        if (data.boss_health <= 0) {
+                    // Обновляем здоровье босса (универсально)
+                    const { current, max } = extractBossHealth(data);
+                    if (current !== undefined && max !== undefined) {
+                        updateBossHealth(current, max);
+                        if (current <= 0) {
                             hideBoss();
                             showSuccess('Босс повержен! 🎉');
                         } else {
@@ -285,6 +286,7 @@
             document.getElementById('exp').textContent = data.exp;
             const inv = Object.entries(data.inventory).filter(([,v]) => v>0).map(([k,v]) => `${k}:${v}`).join(', ');
             document.getElementById('inventory').textContent = inv || 'пусто';
+            // Проверяем, есть ли непобеждённый босс
             if (data.boss_progress) {
                 for (let [bid, prog] of Object.entries(data.boss_progress)) {
                     if (!prog.defeated) {
@@ -300,11 +302,10 @@
         async function loadBossInfo(bid) {
             const data = await apiCall(`boss/${bid}`);
             if (data) {
-                currentBossId = bid;          // запоминаем текущего босса
-                document.getElementById('boss-current-health').textContent = data.current_health;
-                document.getElementById('boss-max-health').textcontent = data.max_health;
-                const percent = (data.current_health / data.max_health) * 100;
-                document.getElementById('boss-health-fill').style.width = percent + '%';
+                currentBossId = bid;
+                // Универсально читаем здоровье
+                const { current, max } = extractBossHealth(data);
+                updateBossHealth(current, max);
                 if (bossMesh) bossMesh.visible = true;  // показываем модель босса
             }
         }
@@ -382,7 +383,7 @@
                 boss.userData = { type: 'boss' };
                 boss.visible = false;
                 scene.add(boss);
-                bossMesh = boss;  // сохраняем в глобальную переменную
+                bossMesh = boss;
 
                 // Рэйкастер
                 const raycaster = new THREE.Raycaster();
@@ -418,7 +419,6 @@
                                 }
                             });
                         } else if (hit.userData.type === 'boss') {
-                            // Вызов атаки на босса
                             attackBoss();
                         }
                     } else {
