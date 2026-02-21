@@ -1120,6 +1120,10 @@ async def process_click(uid: int, conn: asyncpg.Connection = None) -> dict:
             await update_daily_task_progress(uid, 'Везунчик', 1, conn)
         if found:
             await update_daily_task_progress(uid, 'Рудокоп', amt, conn)
+        if found:
+    # ежедневные задания на добычу
+        await update_daily_task_progress(uid, 'Рудокоп', amt, conn)
+        await update_daily_task_progress(uid, 'Горняк', amt, conn)
 
         await update_weekly_task_progress(uid, 'Шахтёр', 1, conn)
         await update_weekly_task_progress(uid, 'Золотая лихорадка', gold, conn)
@@ -2354,4 +2358,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
