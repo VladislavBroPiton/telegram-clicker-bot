@@ -1922,7 +1922,6 @@ async def api_boss_attack(request):
     if is_crit:
         damage *= 2
 
-    # Список для лута (пока пустой)
     loot_items = []
 
     # Наносим урон
@@ -1933,7 +1932,6 @@ async def api_boss_attack(request):
         gold_reward = boss['reward_gold']
         exp_reward = boss['exp_reward']
 
-        # Добавляем в лут золото и опыт
         loot_items.append(f"{gold_reward}💰")
         loot_items.append(f"{exp_reward}✨")
 
@@ -1948,12 +1946,12 @@ async def api_boss_attack(request):
                 res_name = RESOURCES.get(res, {}).get('name', res)
                 loot_items.append(f"{res_name} x{amt}")
 
-        await check_achievements(uid)  # без отправки сообщений
+        await check_achievements(uid)
 
     # Получаем свежие данные
     new_prog = await get_boss_progress(uid, boss_id)
     new_stats = await get_player_stats(uid)
-    new_inv = await get_inventory(uid)
+    new_inv = await get_inventory(uid)   # <--- полный инвентарь
 
     return JSONResponse({
         'damage': damage,
@@ -1963,8 +1961,8 @@ async def api_boss_attack(request):
         'max_health': bloc['boss']['health'],
         'new_gold': new_stats['gold'],
         'new_exp': new_stats['exp'],
-        'inventory': new_inv,
-        'loot': loot_items   # <-- добавили это поле
+        'inventory': new_inv,             # <--- возвращаем полный инвентарь
+        'loot': loot_items
     })
 
 async def api_boss_info(request: Request):
@@ -1989,7 +1987,7 @@ async def api_boss_info(request: Request):
         'max_health': BOSS_LOCATIONS[boss_id]['boss']['health']
     })
 
-async def api_click(request: Request):
+async def api_click(request):
     init_data = request.headers.get('x-telegram-init-data')
     if not init_data:
         return JSONResponse({'error': 'Missing init data'}, status_code=401)
@@ -2061,11 +2059,11 @@ async def api_click(request: Request):
     if found:
         await update_weekly_task_progress(uid, 'Коллекционер', amt)
     
-    await check_achievements(uid)  # Проверяем достижения без отправки сообщений
+    await check_achievements(uid)
     
-    # Возвращаем обновлённые данные
+    # Получаем свежие данные
     new_stats = await get_player_stats(uid)
-    new_inv = await get_inventory(uid)
+    new_inv = await get_inventory(uid)   # <--- теперь полный инвентарь
     
     return JSONResponse({
         'gold': gold,
@@ -2075,7 +2073,7 @@ async def api_click(request: Request):
         'amount': amt,
         'new_gold': new_stats['gold'],
         'new_exp': new_stats['exp'],
-        'inventory': new_inv
+        'inventory': new_inv              # <--- возвращаем полный инвентарь
     })
 # ==================== ЗАПУСК ====================
 
@@ -2159,6 +2157,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
