@@ -1850,20 +1850,32 @@ def verify_telegram_data(bot_token: str, init_data: str) -> dict | None:
 
 async def api_user(request):
     init_data = request.headers.get('x-telegram-init-data')
-    # ... проверка init_data ...
+    if not init_data:
+        return JSONResponse({'error': 'Missing init data'}, status_code=401)
+
+    user = verify_telegram_data(TOKEN, init_data)
+    if not user:
+        return JSONResponse({'error': 'Invalid init data'}, status_code=403)
+
     uid = user['id']
+
     stats = await get_player_stats(uid)
     inv = await get_inventory(uid)
     current_location = await get_player_current_location(uid)
-    
-    # Получаем активный инструмент (ID, например 'wooden_pickaxe')
+
+    # Получаем активный инструмент
     active_tool_id = await get_active_tool(uid)
-    # Можно также получить его название из словаря TOOLS
     active_tool_name = TOOLS.get(active_tool_id, {}).get('name', active_tool_id)
-    
+
     boss_progress = {}
-    # ... получение прогресса боссов ...
-    
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("SELECT boss_id, current_health, defeated FROM boss_progress WHERE user_id = $1", uid)
+        for row in rows:
+            boss_progress[row['boss_id']] = {
+                'current_health': row['current_health'],
+                'defeated': row['defeated']
+            }
+
     return JSONResponse({
         'id': uid,
         'level': stats['level'],
@@ -1872,7 +1884,7 @@ async def api_user(request):
         'location': current_location,
         'inventory': inv,
         'upgrades': stats['upgrades'],
-        'active_tool': active_tool_name,   # ← добавляем название для отображения
+        'active_tool': active_tool_name,   # <-- добавили это поле
         'boss_progress': boss_progress
     })
 
@@ -2149,6 +2161,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
