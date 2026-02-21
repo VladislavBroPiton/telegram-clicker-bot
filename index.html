@@ -95,27 +95,17 @@
         border: 2px solid #0f0;
         display: none;
     }
-    .test-buttons {
+    #debug-status {
         position: absolute;
-        bottom: 10px;
-        right: 10px;
-        z-index: 2000;
-        display: flex;
-        gap: 10px;
-        pointer-events: auto;
-    }
-    .test-buttons button {
-        background: red;
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        font-size: 16px;
-        font-weight: bold;
-        cursor: pointer;
-    }
-    .test-buttons button.secondary {
-        background: orange;
+        top: 70px;
+        left: 10px;
+        color: yellow;
+        background: rgba(0,0,0,0.5);
+        padding: 5px;
+        border-radius: 3px;
+        font-size: 12px;
+        z-index: 300;
+        pointer-events: none;
     }
 </style>
     <script type="importmap">
@@ -140,14 +130,11 @@
     <div id="debug-info" style="display: none;"></div>
     <div id="error-message" style="display: none;"></div>
     <div id="success-message" style="display: none;"></div>
-    <div class="test-buttons">
-        <button id="testClickButton">ТЕСТ КЛИК</button>
-        <button id="testBossAttackButton" class="secondary">ТЕСТ АТАКА БОССА</button>
-    </div>
+    <div id="debug-status">⚙️ Загрузка...</div>
 
     <script type="module">
         // --- НАСТРОЙКА: Адрес вашего бота на Render ---
-        const API_BASE_URL = 'https://telegram-clicker-bot-zi6c.onrender.com'; // <--- проверьте, что это правильный URL
+        const API_BASE_URL = 'https://telegram-clicker-bot-zi6c.onrender.com';
         // ---------------------------------------------
 
         // Глобальные переменные модуля
@@ -156,11 +143,18 @@
         let bossMesh = null;
         let cubes = [];
 
+        // Элементы отладки
+        const debugStatus = document.getElementById('debug-status');
+
+        function setDebugStatus(text) {
+            debugStatus.textContent = '⚙️ ' + text;
+        }
+
         // Отладка
         function debugLog(msg) {
             const el = document.getElementById('debug-info');
             el.style.display = 'block';
-            el.innerHTML = msg + '<br>' + el.innerHTML; // новые сообщения сверху
+            el.innerHTML = msg + '<br>' + el.innerHTML;
             console.log(msg);
         }
 
@@ -200,7 +194,6 @@
             debugLog(logMsg);
             
             try {
-                // Добавляем таймаут 10 секунд
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 10000);
                 options.signal = controller.signal;
@@ -225,7 +218,6 @@
 
         // Универсальное чтение здоровья из объекта
         function extractBossHealth(data) {
-            // Пробуем разные варианты полей
             let current = data.current_health ?? data.health ?? data.hp ?? data.boss?.health ?? data.boss_health ?? 0;
             let max = data.max_health ?? data.maxHealth ?? data.max_hp ?? data.max ?? data.boss?.max_health ?? data.boss_max_health ?? 1000;
             return { current, max };
@@ -256,26 +248,34 @@
 
         // Атака на босса
         async function attackBoss() {
+            setDebugStatus(`Атака? isAttacking=${isAttacking}, currentBossId=${currentBossId}`);
+            
             if (isAttacking) {
                 debugLog('⏳ Атака уже выполняется, пропускаем');
                 return;
             }
             if (!currentBossId) {
-                showError('Босс не выбран');
-                debugLog('⚠️ currentBossId не задан');
+                const errMsg = '⚠️ Босс не выбран (currentBossId = null)';
+                showError(errMsg);
+                debugLog(errMsg);
                 return;
             }
 
             isAttacking = true;
-            flashBoss(); // визуальный отклик
+            flashBoss();
+            setDebugStatus(`Атакую босса ${currentBossId}...`);
 
             try {
                 debugLog(`⚔️ Атакуем босса ${currentBossId}`);
                 const data = await apiCall('boss/attack', 'POST', { boss_id: currentBossId });
-                if (!data) return;
+                if (!data) {
+                    isAttacking = false;
+                    setDebugStatus('Атака: нет ответа');
+                    return;
+                }
 
                 if (data.success) {
-                    // Обновляем золото и опыт (поддерживаем разные форматы)
+                    // Обновляем золото и опыт
                     if (data.new_gold !== undefined) {
                         document.getElementById('gold').textContent = data.new_gold;
                     } else if (data.user?.gold !== undefined) {
@@ -308,14 +308,18 @@
                         } else {
                             showSuccess('💥 Удар!');
                         }
+                        setDebugStatus(`Атака успешна: здоровье ${current}/${max}`);
                     } else {
                         debugLog('⚠️ В ответе нет данных о здоровье босса');
+                        setDebugStatus('Атака: нет здоровья в ответе');
                     }
                 } else {
                     showError(data.error || 'Ошибка атаки');
+                    setDebugStatus('Атака: ошибка - ' + (data.error || 'неизвестно'));
                 }
             } catch (e) {
-                // Ошибка уже обработана в apiCall
+                // уже обработано в apiCall
+                setDebugStatus('Атака: исключение');
             } finally {
                 isAttacking = false;
             }
@@ -323,13 +327,17 @@
 
         // Загрузка пользователя
         async function loadUser() {
+            setDebugStatus('Загрузка пользователя...');
             const data = await apiCall('user');
-            if (!data) return;
+            if (!data) {
+                setDebugStatus('Ошибка загрузки пользователя');
+                return;
+            }
             document.getElementById('gold').textContent = data.gold;
             document.getElementById('exp').textContent = data.exp;
             const inv = Object.entries(data.inventory).filter(([,v]) => v>0).map(([k,v]) => `${k}:${v}`).join(', ');
             document.getElementById('inventory').textContent = inv || 'пусто';
-            // Проверяем, есть ли непобеждённый босс
+            
             if (data.boss_progress) {
                 for (let [bid, prog] of Object.entries(data.boss_progress)) {
                     if (!prog.defeated) {
@@ -339,10 +347,13 @@
                         break;
                     }
                 }
+            } else {
+                setDebugStatus('Нет данных о боссах');
             }
         }
 
         async function loadBossInfo(bid) {
+            setDebugStatus(`Загрузка информации о боссе ${bid}...`);
             const data = await apiCall(`boss/${bid}`);
             if (data) {
                 currentBossId = bid;
@@ -350,26 +361,11 @@
                 updateBossHealth(current, max);
                 if (bossMesh) bossMesh.visible = true;
                 debugLog(`🐲 Босс ${bid} загружен: здоровье ${current}/${max}`);
+                setDebugStatus(`Босс ${bid}: ${current}/${max}`);
+            } else {
+                setDebugStatus(`Ошибка загрузки босса ${bid}`);
             }
         }
-
-        // Тестовые кнопки
-        document.getElementById('testClickButton').onclick = async () => {
-            debugLog('🖱️ Тестовый клик по ресурсу 0');
-            const data = await apiCall('click', 'POST', { resourceId: 0 });
-            if (data) {
-                document.getElementById('gold').textContent = data.new_gold;
-                document.getElementById('exp').textContent = data.new_exp;
-                const inv = Object.entries(data.inventory).filter(([,v]) => v>0).map(([k,v]) => `${k}:${v}`).join(', ');
-                document.getElementById('inventory').textContent = inv || 'пусто';
-                showSuccess(`+${data.gold}💰`);
-            }
-        };
-
-        document.getElementById('testBossAttackButton').onclick = () => {
-            debugLog('🖱️ Тестовая атака босса по кнопке');
-            attackBoss();
-        };
 
         // 3D сцена
         import('three').then((THREE) => {
@@ -468,6 +464,7 @@
                                 }
                             });
                         } else if (hit.userData.type === 'boss') {
+                            debugLog('👾 Вызван обработчик атаки босса');
                             attackBoss();
                         }
                     } else {
@@ -501,6 +498,7 @@
                                 }
                             });
                         } else if (hit.userData.type === 'boss') {
+                            debugLog('👾 Вызван обработчик атаки босса');
                             attackBoss();
                         }
                     } else {
