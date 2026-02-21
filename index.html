@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Шахтёрская глубина 3D</title>
+    <!-- Принудительно подключаем Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
         #hud {
@@ -70,7 +72,7 @@
             word-break: break-all;
         }
     </style>
-    <!-- Подключаем Three.js и OrbitControls напрямую через CDN (более надёжно, чем import map) -->
+    <!-- Карта импортов для Three.js -->
     <script type="importmap">
         {
             "imports": {
@@ -118,19 +120,34 @@
                     console.error(message);
                 }
 
-                // Инициализация Telegram
-                let tg;
-                try {
-                    if (window.Telegram && window.Telegram.WebApp) {
-                        tg = window.Telegram.WebApp;
-                        tg.ready();
-                        tg.expand();
-                        console.log("Telegram WebApp initialized");
+                // Функция для обновления отладки
+                function updateDebug() {
+                    const debugDiv = document.getElementById('debug');
+                    let html = '';
+                    if (window.Telegram) {
+                        html += 'Telegram: есть<br>';
+                        if (window.Telegram.WebApp) {
+                            html += 'WebApp: есть<br>';
+                            html += 'initData: ' + (window.Telegram.WebApp.initData ? window.Telegram.WebApp.initData.substring(0,100) + '...' : 'пусто');
+                        } else {
+                            html += 'WebApp: отсутствует';
+                        }
                     } else {
-                        throw new Error("Not in Telegram");
+                        html += 'Telegram: отсутствует';
                     }
-                } catch (e) {
-                    console.warn("Running outside Telegram, using mock");
+                    debugDiv.innerHTML = html;
+                }
+                updateDebug();
+
+                // Инициализация Telegram WebApp
+                let tg;
+                if (window.Telegram && window.Telegram.WebApp) {
+                    tg = window.Telegram.WebApp;
+                    tg.ready();
+                    tg.expand();
+                    console.log("Telegram WebApp initialized");
+                } else {
+                    console.warn("Telegram WebApp not available, using mock");
                     tg = {
                         ready: () => {},
                         expand: () => {},
@@ -140,8 +157,7 @@
                 }
 
                 const initData = tg.initData;
-                document.getElementById('debug').innerHTML = 'initData: ' + 
-                    (initData ? initData.substring(0, 100) + '...' : 'отсутствует');
+                updateDebug(); // обновим после инициализации
 
                 // API функция
                 async function apiCall(endpoint, method = 'GET', body = null) {
@@ -219,7 +235,6 @@
                     import('three'),
                     import('https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js')
                 ]).then(([THREE, { OrbitControls }]) => {
-                    // Теперь THREE и OrbitControls доступны
                     try {
                         const scene = new THREE.Scene();
                         scene.background = new THREE.Color(0x111122);
@@ -348,7 +363,7 @@
                         }
                         animate();
 
-                        // Загрузка данных
+                        // Загрузка данных пользователя
                         loadUser();
 
                         window.addEventListener('resize', () => {
@@ -372,4 +387,3 @@
     </script>
 </body>
 </html>
-
