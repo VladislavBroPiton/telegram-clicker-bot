@@ -239,11 +239,10 @@
     <script type="module">
         // --- КОНФИГУРАЦИЯ ---
         const API_BASE_URL = 'https://telegram-clicker-bot-zi6c.onrender.com';
-        const EXP_PER_LEVEL = 100; // должно совпадать с сервером
+        const EXP_PER_LEVEL = 100;
 
-        // Список боссов в порядке навигации (ID должны совпадать с серверными)
+        // Список боссов
         const BOSS_IDS = ['goblin_king', 'dragon_lair', 'lich_castle'];
-        // Для отображения названий (можно брать с сервера, но пока хардкод)
         const BOSS_NAMES = {
             'goblin_king': 'Король гоблинов',
             'dragon_lair': 'Огненный дракон',
@@ -251,18 +250,18 @@
         };
 
         // Глобальные переменные
-        let currentBossIndex = 0; // индекс в BOSS_IDS
+        let currentBossIndex = 0;
         let currentBossId = BOSS_IDS[0];
         let isAttacking = false;
         let cubes = [];
         let scene, camera, renderer, controls;
-        let bossGroup; // группа для текущего босса
+        let bossGroup = null;
+        let threeReady = false; // флаг готовности Three.js
 
-        // Аудио (создадим после взаимодействия, чтобы избежать политики автозапуска)
-        let audioClick = new Audio('https://github.com/VladislavBroPiton/telegram-clicker-bot/blob/main/creatorshome-pickaxe-blow-333695.mp3'); // замени на свои
+        // Аудио
+        let audioClick = new Audio('https://github.com/VladislavBroPiton/telegram-clicker-bot/blob/main/creatorshome-pickaxe-blow-333695.mp3');
         let audioBossHit = new Audio('https://github.com/VladislavBroPiton/telegram-clicker-bot/blob/main/creatorshome-pickaxe-blow-333695.mp3');
         let audioVictory = new Audio('https://github.com/VladislavBroPiton/telegram-clicker-bot/blob/main/creatorshome-pickaxe-blow-333695.mp3');
-        // Предзагрузим
         audioClick.load();
         audioBossHit.load();
         audioVictory.load();
@@ -323,7 +322,7 @@
         const initData = tg.initData;
         debugLog('initData: ' + (initData ? initData.substring(0,50) + '...' : 'нет'));
 
-        // --- API С УЛУЧШЕННОЙ ОТЛАДКОЙ ---
+        // --- API ---
         async function apiCall(endpoint, method = 'GET', body = null) {
             const headers = { 'Content-Type': 'application/json' };
             if (initData) headers['X-Telegram-Init-Data'] = initData;
@@ -381,26 +380,28 @@
             bossHealthFill.style.width = percent + '%';
         }
 
-        // --- ФУНКЦИЯ СОЗДАНИЯ МОДЕЛИ БОССА ПО ID ---
+        // --- ФУНКЦИЯ СОЗДАНИЯ МОДЕЛИ БОССА (вызывается только после ready) ---
         function createBossModel(bossId) {
+            console.log('createBossModel called for', bossId);
+            if (!bossGroup) {
+                console.error('bossGroup not ready');
+                return null;
+            }
             const group = new THREE.Group();
 
             if (bossId === 'goblin_king') {
-                // Тело
                 const bodyGeom = new THREE.CylinderGeometry(1.2, 1.5, 2, 8);
                 const bodyMat = new THREE.MeshStandardMaterial({ color: 0x44aa88, emissive: 0x112233 });
                 const body = new THREE.Mesh(bodyGeom, bodyMat);
                 body.position.y = 1;
                 group.add(body);
 
-                // Голова
                 const headGeom = new THREE.SphereGeometry(0.8, 8);
                 const headMat = new THREE.MeshStandardMaterial({ color: 0x88ccaa });
                 const head = new THREE.Mesh(headGeom, headMat);
                 head.position.y = 2.2;
                 group.add(head);
 
-                // Корона
                 const crownGeom = new THREE.ConeGeometry(0.6, 0.5, 4);
                 const crownMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
                 const crown = new THREE.Mesh(crownGeom, crownMat);
@@ -408,7 +409,6 @@
                 crown.rotation.y = Math.PI/4;
                 group.add(crown);
 
-                // Глаза
                 const eyeGeom = new THREE.SphereGeometry(0.15);
                 const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
                 const pupilMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
@@ -428,21 +428,18 @@
                 group.add(pupilR);
             }
             else if (bossId === 'dragon_lair') {
-                // Тело
                 const bodyGeom = new THREE.CylinderGeometry(1.2, 1.2, 2.5, 8);
                 const bodyMat = new THREE.MeshStandardMaterial({ color: 0xaa4422, emissive: 0x331100 });
                 const body = new THREE.Mesh(bodyGeom, bodyMat);
                 body.position.y = 1.2;
                 group.add(body);
 
-                // Шея
                 const neckGeom = new THREE.CylinderGeometry(0.6, 0.8, 1.5);
                 const neck = new THREE.Mesh(neckGeom, bodyMat);
                 neck.position.set(0, 2.2, 0.5);
                 neck.rotation.x = 0.3;
                 group.add(neck);
 
-                // Голова
                 const headGeom = new THREE.ConeGeometry(0.7, 1, 6);
                 const headMat = new THREE.MeshStandardMaterial({ color: 0xcc5533 });
                 const head = new THREE.Mesh(headGeom, headMat);
@@ -450,7 +447,6 @@
                 head.rotation.x = -0.2;
                 group.add(head);
 
-                // Крылья
                 const wingGeom = new THREE.ConeGeometry(1.2, 0.2, 4);
                 const wingMat = new THREE.MeshStandardMaterial({ color: 0x993322 });
                 const wingL = new THREE.Mesh(wingGeom, wingMat);
@@ -464,7 +460,6 @@
                 wingR.rotation.y = 0.2;
                 group.add(wingR);
 
-                // Хвост
                 const tailGeom = new THREE.ConeGeometry(0.5, 1.5, 4);
                 const tail = new THREE.Mesh(tailGeom, bodyMat);
                 tail.position.set(0, 0.5, -1.5);
@@ -472,21 +467,18 @@
                 group.add(tail);
             }
             else if (bossId === 'lich_castle') {
-                // Тело
                 const bodyGeom = new THREE.CylinderGeometry(0.8, 1.0, 3, 6);
                 const bodyMat = new THREE.MeshStandardMaterial({ color: 0x557799, emissive: 0x113344 });
                 const body = new THREE.Mesh(bodyGeom, bodyMat);
                 body.position.y = 1.5;
                 group.add(body);
 
-                // Голова
                 const headGeom = new THREE.SphereGeometry(0.7, 6);
                 const headMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
                 const head = new THREE.Mesh(headGeom, headMat);
                 head.position.y = 3.0;
                 group.add(head);
 
-                // Глазницы
                 const socketGeom = new THREE.SphereGeometry(0.2);
                 const socketMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
                 const socketL = new THREE.Mesh(socketGeom, socketMat);
@@ -496,7 +488,6 @@
                 socketR.position.set(0.3, 3.1, 0.6);
                 group.add(socketR);
 
-                // Светящиеся глаза
                 const glowGeom = new THREE.SphereGeometry(0.1);
                 const glowMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x004444 });
                 const glowL = new THREE.Mesh(glowGeom, glowMat);
@@ -506,7 +497,6 @@
                 glowR.position.set(0.3, 3.1, 0.8);
                 group.add(glowR);
 
-                // Посох
                 const staffGeom = new THREE.CylinderGeometry(0.1, 0.1, 3);
                 const staffMat = new THREE.MeshStandardMaterial({ color: 0x886644 });
                 const staff = new THREE.Mesh(staffGeom, staffMat);
@@ -533,15 +523,9 @@
             goldSpan.textContent = data.gold;
             updateExpBar(data.level, data.exp);
             updateInventoryDisplay(data.inventory);
-            if (data.active_tool) {
-                activeToolSpan.textContent = data.active_tool; // ожидаем, что сервер вернёт название
-            } else {
-                activeToolSpan.textContent = 'неизвестно';
-            }
+            activeToolSpan.textContent = data.active_tool || 'неизвестно';
 
-            // Инициализация боссов
             if (data.boss_progress) {
-                // Найдём первого непобеждённого
                 let found = false;
                 for (let i = 0; i < BOSS_IDS.length; i++) {
                     const bid = BOSS_IDS[i];
@@ -554,11 +538,21 @@
                     }
                 }
                 if (!found && BOSS_IDS.length > 0) {
-                    // все побеждены – покажем первого
                     currentBossIndex = 0;
                     currentBossId = BOSS_IDS[0];
                 }
-                loadBossInfo(currentBossId);
+                // Загружаем информацию о текущем боссе, но только если Three.js готов
+                if (threeReady) {
+                    loadBossInfo(currentBossId);
+                } else {
+                    // Если ещё не готов, ждём инициализацию
+                    const waitForThree = setInterval(() => {
+                        if (threeReady) {
+                            clearInterval(waitForThree);
+                            loadBossInfo(currentBossId);
+                        }
+                    }, 100);
+                }
             }
         }
 
@@ -570,12 +564,22 @@
                 updateBossHealth(data.current_health, data.max_health);
                 bossHealthDiv.style.display = 'block';
 
-                // Обновляем модель босса
-                while(bossGroup.children.length > 0) {
-                    bossGroup.remove(bossGroup.children[0]);
+                if (bossGroup && threeReady) {
+                    // Удаляем старую модель
+                    while(bossGroup.children.length > 0) {
+                        bossGroup.remove(bossGroup.children[0]);
+                    }
+                    // Создаём новую
+                    const newBoss = createBossModel(bid);
+                    if (newBoss) {
+                        bossGroup.add(newBoss);
+                        console.log('Boss model added for', bid);
+                    } else {
+                        console.error('Failed to create boss model');
+                    }
+                } else {
+                    console.warn('bossGroup not ready, cannot create model');
                 }
-                const newBoss = createBossModel(bid);
-                bossGroup.add(newBoss);
 
                 updateBossNavigation();
             }
@@ -586,136 +590,6 @@
             bossIndexSpan.textContent = `${currentBossIndex+1}/${BOSS_IDS.length}`;
             document.getElementById('prev-boss').classList.toggle('disabled', currentBossIndex === 0);
             document.getElementById('next-boss').classList.toggle('disabled', currentBossIndex === BOSS_IDS.length-1);
-        }
-
-        document.getElementById('prev-boss').addEventListener('click', () => {
-            if (currentBossIndex > 0) {
-                currentBossIndex--;
-                currentBossId = BOSS_IDS[currentBossIndex];
-                loadBossInfo(currentBossId);
-            }
-        });
-        document.getElementById('next-boss').addEventListener('click', () => {
-            if (currentBossIndex < BOSS_IDS.length-1) {
-                currentBossIndex++;
-                currentBossId = BOSS_IDS[currentBossIndex];
-                loadBossInfo(currentBossId);
-            }
-        });
-
-        // --- ЧАСТИЦЫ ПРИ УДАРЕ ---
-        function createHitParticles(position) {
-            if (!scene) return;
-            const particleCount = 15;
-            const geometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(particleCount * 3);
-            const colors = new Float32Array(particleCount * 3);
-            for (let i = 0; i < particleCount; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const speed = 0.2 + Math.random() * 0.3;
-                positions[i*3] = position.x;
-                positions[i*3+1] = position.y;
-                positions[i*3+2] = position.z;
-                // цвета: красные/оранжевые
-                colors[i*3] = 1;
-                colors[i*3+1] = 0.3 + Math.random()*0.3;
-                colors[i*3+2] = 0.1;
-            }
-            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-            const material = new THREE.PointsMaterial({ size: 0.2, vertexColors: true, transparent: true });
-            const particles = new THREE.Points(geometry, material);
-            scene.add(particles);
-
-            // Анимация разлёта
-            const startTime = performance.now();
-            function animateParticles() {
-                const elapsed = performance.now() - startTime;
-                if (elapsed > 500) {
-                    scene.remove(particles);
-                    return;
-                }
-                const positionsAttr = geometry.attributes.position;
-                for (let i = 0; i < particleCount; i++) {
-                    const angle = Math.random() * Math.PI * 2; // упрощённо, но для эффекта сойдёт
-                    positionsAttr.array[i*3] += Math.cos(angle) * 0.05;
-                    positionsAttr.array[i*3+1] += Math.sin(angle) * 0.05;
-                    positionsAttr.array[i*3+2] += (Math.random() - 0.5) * 0.05;
-                }
-                positionsAttr.needsUpdate = true;
-                requestAnimationFrame(animateParticles);
-            }
-            animateParticles();
-        }
-
-        // --- АТАКА НА БОССА ---
-        async function attackBoss() {
-            if (isAttacking) return;
-            if (!currentBossId) {
-                showError('Босс не выбран');
-                return;
-            }
-
-            isAttacking = true;
-            // Визуальный эффект: вспышка (для группы сложно, можно временно изменить цвет первого материала)
-            if (bossGroup.children.length > 0) {
-                // Просто для примера: слегка увеличим масштаб и вернём
-                bossGroup.scale.set(0.9, 0.9, 0.9);
-                setTimeout(() => bossGroup.scale.set(0.8, 0.8, 0.8), 150);
-            }
-            // Звук удара
-            audioBossHit.currentTime = 0;
-            audioBossHit.play().catch(() => {}); // игнорируем ошибки автозапуска
-
-            try {
-                const data = await apiCall('boss/attack', 'POST', { boss_id: currentBossId });
-                if (!data) return;
-
-                if (data.error) {
-                    showError(data.error);
-                    return;
-                }
-
-                // Успех – обновляем ресурсы
-                if (data.new_gold !== undefined) goldSpan.textContent = data.new_gold;
-                if (data.new_exp !== undefined) {
-                    hudExp.textContent = data.new_exp;
-                    // нужно также получить уровень, но сервер не возвращает; можно перезагрузить пользователя
-                    // пока просто обновим опыт, а уровень подтянем позже
-                }
-                if (data.inventory) updateInventoryDisplay(data.inventory);
-
-                // Здоровье босса
-                if (data.current_health !== undefined && data.max_health !== undefined) {
-                    updateBossHealth(data.current_health, data.max_health);
-                    createHitParticles(bossGroup.position.clone()); // частицы
-                }
-
-                // Если босс побеждён
-                if (data.defeated) {
-                    audioVictory.currentTime = 0;
-                    audioVictory.play().catch(() => {});
-                    // Показываем лут (если сервер вернул список выпавшего)
-                    if (data.loot) {
-                        showLoot(data.loot);
-                    } else {
-                        showLoot('Награда получена!');
-                    }
-                    // Скрываем босса или блокируем атаку
-                    bossGroup.visible = false;
-                    bossHealthDiv.style.display = 'none';
-                } else {
-                    showSuccess('Удар!');
-                }
-
-                // Перезагрузим пользователя, чтобы получить актуальный уровень и опыт
-                loadUser();
-            } catch (e) {
-                console.error(e);
-            } finally {
-                isAttacking = false;
-            }
         }
 
         // --- ИНИЦИАЛИЗАЦИЯ 3D ---
@@ -777,9 +651,12 @@
                 cubes.push(cube);
             });
 
-            // Группа для босса (изначально пустая)
+            // Группа для босса
             bossGroup = new THREE.Group();
             scene.add(bossGroup);
+
+            threeReady = true; // теперь можно создавать модели
+            console.log('Three.js ready');
 
             // Рэйкастер
             const raycaster = new THREE.Raycaster();
@@ -807,12 +684,10 @@
                                 hudExp.textContent = data.new_exp;
                                 updateInventoryDisplay(data.inventory);
                                 showSuccess(`+${data.gold}💰`);
-                                // обновим уровень/опыт
                                 loadUser();
                             }
                         });
                     } else if (hit.parent === bossGroup || bossGroup.children.includes(hit)) {
-                        // Клик по любой части босса
                         attackBoss();
                     }
                 }
@@ -856,13 +731,10 @@
                 if (bossGroup && bossGroup.children.length > 0) {
                     const bossId = currentBossId;
                     if (bossId === 'goblin_king') {
-                        // Покачивание
                         bossGroup.position.y = 1.5 + Math.sin(Date.now() * 0.003) * 0.1;
                     } else if (bossId === 'dragon_lair') {
-                        // Вращение для динамики
                         bossGroup.rotation.y += 0.005;
                     } else if (bossId === 'lich_castle') {
-                        // Медленное вращение
                         bossGroup.rotation.y += 0.002;
                     }
                 }
@@ -880,6 +752,117 @@
             });
         }
 
+        // --- ОБРАБОТЧИКИ НАВИГАЦИИ ---
+        document.getElementById('prev-boss').addEventListener('click', () => {
+            if (currentBossIndex > 0) {
+                currentBossIndex--;
+                currentBossId = BOSS_IDS[currentBossIndex];
+                loadBossInfo(currentBossId);
+            }
+        });
+        document.getElementById('next-boss').addEventListener('click', () => {
+            if (currentBossIndex < BOSS_IDS.length-1) {
+                currentBossIndex++;
+                currentBossId = BOSS_IDS[currentBossIndex];
+                loadBossInfo(currentBossId);
+            }
+        });
+
+        // --- АТАКА НА БОССА ---
+        async function attackBoss() {
+            if (isAttacking) return;
+            if (!currentBossId) {
+                showError('Босс не выбран');
+                return;
+            }
+
+            isAttacking = true;
+            if (bossGroup.children.length > 0) {
+                bossGroup.scale.set(0.9, 0.9, 0.9);
+                setTimeout(() => bossGroup.scale.set(0.8, 0.8, 0.8), 150);
+            }
+            audioBossHit.currentTime = 0;
+            audioBossHit.play().catch(() => {});
+
+            try {
+                const data = await apiCall('boss/attack', 'POST', { boss_id: currentBossId });
+                if (!data) return;
+
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+
+                if (data.new_gold !== undefined) goldSpan.textContent = data.new_gold;
+                if (data.new_exp !== undefined) hudExp.textContent = data.new_exp;
+                if (data.inventory) updateInventoryDisplay(data.inventory);
+
+                if (data.current_health !== undefined && data.max_health !== undefined) {
+                    updateBossHealth(data.current_health, data.max_health);
+                    createHitParticles(bossGroup.position.clone());
+                }
+
+                if (data.defeated) {
+                    audioVictory.currentTime = 0;
+                    audioVictory.play().catch(() => {});
+                    showLoot(data.loot ? data.loot : 'Награда получена!');
+                    bossGroup.visible = false;
+                    bossHealthDiv.style.display = 'none';
+                } else {
+                    showSuccess('Удар!');
+                }
+
+                loadUser();
+            } catch (e) {
+                console.error(e);
+            } finally {
+                isAttacking = false;
+            }
+        }
+
+        // --- ЧАСТИЦЫ ПРИ УДАРЕ ---
+        function createHitParticles(position) {
+            if (!scene) return;
+            const particleCount = 15;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                positions[i*3] = position.x;
+                positions[i*3+1] = position.y;
+                positions[i*3+2] = position.z;
+                colors[i*3] = 1;
+                colors[i*3+1] = 0.3 + Math.random()*0.3;
+                colors[i*3+2] = 0.1;
+            }
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({ size: 0.2, vertexColors: true, transparent: true });
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            const startTime = performance.now();
+            function animateParticles() {
+                const elapsed = performance.now() - startTime;
+                if (elapsed > 500) {
+                    scene.remove(particles);
+                    return;
+                }
+                const positionsAttr = geometry.attributes.position;
+                for (let i = 0; i < particleCount; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    positionsAttr.array[i*3] += Math.cos(angle) * 0.05;
+                    positionsAttr.array[i*3+1] += Math.sin(angle) * 0.05;
+                    positionsAttr.array[i*3+2] += (Math.random() - 0.5) * 0.05;
+                }
+                positionsAttr.needsUpdate = true;
+                requestAnimationFrame(animateParticles);
+            }
+            animateParticles();
+        }
+
         // --- СТАРТ ---
         document.getElementById('test-button').addEventListener('click', () => {
             apiCall('click', 'POST', { resourceId: 0 }).then(data => {
@@ -892,7 +875,7 @@
             });
         });
 
-        // Инициализация
+        // Запускаем инициализацию 3D и загрузку пользователя
         init3D();
         loadUser();
     </script>
