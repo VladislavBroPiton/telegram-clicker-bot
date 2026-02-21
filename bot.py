@@ -1843,20 +1843,46 @@ async def button_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 # ==================== API ДЛЯ MINI APP ====================
 
+import hashlib
+import hmac
+from urllib.parse import parse_qsl
+
 def verify_telegram_data(bot_token: str, init_data: str) -> dict | None:
+    """
+    Проверяет подпись данных, полученных от Telegram Web App.
+    Возвращает объект user при успехе, иначе None.
+    """
     try:
-        from urllib.parse import parse_qsl
-        import json
+        # Парсим строку запроса в словарь
         data = dict(parse_qsl(init_data))
+        received_hash = data.pop('hash', None)
+        if not received_hash:
+            logger.warning("No hash in init data")
+            return None
+
+        # Сортируем ключи и формируем строку для проверки
+        items = sorted(data.items())
+        data_check_string = '\n'.join(f"{k}={v}" for k, v in items)
+
+        # Создаём секретный ключ из токена бота
+        secret_key = hashlib.sha256(bot_token.encode()).digest()
+        computed_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+
+        # Сравниваем хеши (время-константное сравнение не обязательно, но можно использовать hmac.compare_digest)
+        if not hmac.compare_digest(computed_hash, received_hash):
+            logger.warning("Hash mismatch")
+            return None
+
+        # Извлекаем пользователя
         user_str = data.get('user')
         if not user_str:
-            print("verify_telegram_data: no user")
+            logger.warning("No user field in init data")
             return None
+
         user = json.loads(user_str)
-        print(f"verify_telegram_data: user_id={user.get('id')}")
         return user
     except Exception as e:
-        print(f"verify_telegram_data error: {e}")
+        logger.error(f"Verification error: {e}")
         return None
 
 async def api_user(request):
@@ -2169,5 +2195,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
