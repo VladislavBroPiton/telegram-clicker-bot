@@ -316,24 +316,36 @@
                     const rect = renderer.domElement.getBoundingClientRect();
                     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
                     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-                    
+
+                    debugLog(`Клик мышью: экран (${event.clientX},${event.clientY}) -> нормализовано (${mouse.x.toFixed(2)}, ${mouse.y.toFixed(2)})`);
+
                     raycaster.setFromCamera(mouse, camera);
                     const intersects = raycaster.intersectObjects([...cubes, boss]);
-                    
+
                     if (intersects.length > 0) {
                         const hit = intersects[0].object;
+                        debugLog(`Попал в объект: type=${hit.userData.type}, id=${hit.userData.id}, расстояние=${intersects[0].distance.toFixed(2)}`);
+
                         if (hit.userData.type === 'resource') {
+                            showError(`Клик по ресурсу ${hit.userData.id}`);
                             apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
                                 if (data) {
                                     document.getElementById('gold').textContent = data.new_gold;
                                     document.getElementById('exp').textContent = data.new_exp;
                                     const inv = Object.entries(data.inventory).filter(([,v]) => v>0).map(([k,v]) => `${k}:${v}`).join(', ');
                                     document.getElementById('inventory').textContent = inv || 'пусто';
-                                }
-                            });
-                        }
-                    }
+                                    showError(`+${data.gold}💰`);
                 }
+            });
+        } else if (hit.userData.type === 'boss') {
+            showError('Клик по боссу (скоро будет)');
+            // здесь позже
+        }
+    } else {
+        debugLog('Пересечений нет');
+        showError('Мимо');
+    }
+}
 
                 // Добавляем обработчики
                 renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
@@ -362,4 +374,5 @@
     </script>
 </body>
 </html>
+
 
