@@ -61,6 +61,8 @@
         white-space: pre-wrap;
         word-break: break-word;
         border: 2px solid yellow;
+        max-height: 200px;
+        overflow: auto;
     }
     #error-message {
         position: absolute;
@@ -93,19 +95,27 @@
         border: 2px solid #0f0;
         display: none;
     }
-    #testButton {
+    .test-buttons {
         position: absolute;
         bottom: 10px;
         right: 10px;
         z-index: 2000;
+        display: flex;
+        gap: 10px;
+        pointer-events: auto;
+    }
+    .test-buttons button {
         background: red;
         color: white;
         padding: 10px 20px;
         border: none;
         border-radius: 5px;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: bold;
-        pointer-events: auto;
+        cursor: pointer;
+    }
+    .test-buttons button.secondary {
+        background: orange;
     }
 </style>
     <script type="importmap">
@@ -130,7 +140,10 @@
     <div id="debug-info" style="display: none;"></div>
     <div id="error-message" style="display: none;"></div>
     <div id="success-message" style="display: none;"></div>
-    <button id="testButton">ТЕСТ</button>
+    <div class="test-buttons">
+        <button id="testClickButton">ТЕСТ КЛИК</button>
+        <button id="testBossAttackButton" class="secondary">ТЕСТ АТАКА БОССА</button>
+    </div>
 
     <script type="module">
         // --- НАСТРОЙКА: Адрес вашего бота на Render ---
@@ -147,7 +160,7 @@
         function debugLog(msg) {
             const el = document.getElementById('debug-info');
             el.style.display = 'block';
-            el.innerHTML = msg;
+            el.innerHTML = msg + '<br>' + el.innerHTML; // новые сообщения сверху
             console.log(msg);
         }
 
@@ -176,29 +189,43 @@
         const initData = tg.initData;
         debugLog('initData: ' + (initData ? initData.substring(0,50) + '...' : 'нет'));
 
-        // API (с отладкой ответов)
+        // API с расширенной отладкой
         async function apiCall(endpoint, method = 'GET', body = null) {
             const headers = { 'Content-Type': 'application/json' };
             if (initData) headers['X-Telegram-Init-Data'] = initData;
             const options = { method, headers };
             if (body) options.body = JSON.stringify(body);
+            
+            const logMsg = `➡️ Запрос ${method} /api/${endpoint} ` + (body ? `тело: ${JSON.stringify(body)}` : '');
+            debugLog(logMsg);
+            
             try {
+                // Добавляем таймаут 10 секунд
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                options.signal = controller.signal;
+                
                 const response = await fetch(`${API_BASE_URL}/api/${endpoint}`, options);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText.substring(0,100)}`);
+                }
                 const json = await response.json();
-                // ОТЛАДКА: выводим ответ в консоль и на экран
-                console.log(`API ответ от ${endpoint}:`, json);
-                debugLog(`Ответ от ${endpoint}: ${JSON.stringify(json, null, 2)}`);
+                debugLog(`✅ Ответ от ${endpoint}: ${JSON.stringify(json, null, 2)}`);
                 return json;
             } catch (e) {
-                showError(`Ошибка API ${endpoint}: ${e.message}`);
+                const errorMsg = `❌ Ошибка API ${endpoint}: ${e.message}`;
+                debugLog(errorMsg);
+                showError(errorMsg);
                 return null;
             }
         }
 
         // Универсальное чтение здоровья из объекта
         function extractBossHealth(data) {
-            // Пробуем разные варианты полей, которые могут прийти от сервера
+            // Пробуем разные варианты полей
             let current = data.current_health ?? data.health ?? data.hp ?? data.boss?.health ?? data.boss_health ?? 0;
             let max = data.max_health ?? data.maxHealth ?? data.max_hp ?? data.max ?? data.boss?.max_health ?? data.boss_max_health ?? 1000;
             return { current, max };
@@ -208,7 +235,6 @@
         function updateBossHealth(current, max) {
             document.getElementById('boss-current-health').textContent = current;
             document.getElementById('boss-max-health').textContent = max;
-            // Защита от деления на ноль
             const percent = max > 0 ? (current / max) * 100 : 0;
             document.getElementById('boss-health-fill').style.width = percent + '%';
         }
@@ -219,16 +245,32 @@
             document.getElementById('boss-health').style.display = 'none';
         }
 
+        // Визуальный эффект атаки (мигание)
+        function flashBoss() {
+            if (!bossMesh) return;
+            bossMesh.material.emissive.setHex(0x880000);
+            setTimeout(() => {
+                if (bossMesh) bossMesh.material.emissive.setHex(0x440000);
+            }, 100);
+        }
+
         // Атака на босса
         async function attackBoss() {
-            if (isAttacking) return;
+            if (isAttacking) {
+                debugLog('⏳ Атака уже выполняется, пропускаем');
+                return;
+            }
             if (!currentBossId) {
                 showError('Босс не выбран');
+                debugLog('⚠️ currentBossId не задан');
                 return;
             }
 
             isAttacking = true;
+            flashBoss(); // визуальный отклик
+
             try {
+                debugLog(`⚔️ Атакуем босса ${currentBossId}`);
                 const data = await apiCall('boss/attack', 'POST', { boss_id: currentBossId });
                 if (!data) return;
 
@@ -256,23 +298,24 @@
                         document.getElementById('inventory').textContent = inv || 'пусто';
                     }
 
-                    // Обновляем здоровье босса (универсально)
+                    // Обновляем здоровье босса
                     const { current, max } = extractBossHealth(data);
                     if (current !== undefined && max !== undefined) {
                         updateBossHealth(current, max);
                         if (current <= 0) {
                             hideBoss();
-                            showSuccess('Босс повержен! 🎉');
+                            showSuccess('🎉 Босс повержен!');
                         } else {
-                            showSuccess('Удар!');
+                            showSuccess('💥 Удар!');
                         }
+                    } else {
+                        debugLog('⚠️ В ответе нет данных о здоровье босса');
                     }
                 } else {
                     showError(data.error || 'Ошибка атаки');
                 }
             } catch (e) {
-                showError('Ошибка при атаке');
-                console.error(e);
+                // Ошибка уже обработана в apiCall
             } finally {
                 isAttacking = false;
             }
@@ -303,22 +346,29 @@
             const data = await apiCall(`boss/${bid}`);
             if (data) {
                 currentBossId = bid;
-                // Универсально читаем здоровье
                 const { current, max } = extractBossHealth(data);
                 updateBossHealth(current, max);
-                if (bossMesh) bossMesh.visible = true;  // показываем модель босса
+                if (bossMesh) bossMesh.visible = true;
+                debugLog(`🐲 Босс ${bid} загружен: здоровье ${current}/${max}`);
             }
         }
 
-        // Тестовая кнопка
-        document.getElementById('testButton').onclick = async () => {
-            showError('Тестовый клик отправлен...');
+        // Тестовые кнопки
+        document.getElementById('testClickButton').onclick = async () => {
+            debugLog('🖱️ Тестовый клик по ресурсу 0');
             const data = await apiCall('click', 'POST', { resourceId: 0 });
             if (data) {
-                showSuccess(`Успех! Золото: ${data.new_gold}`);
                 document.getElementById('gold').textContent = data.new_gold;
                 document.getElementById('exp').textContent = data.new_exp;
+                const inv = Object.entries(data.inventory).filter(([,v]) => v>0).map(([k,v]) => `${k}:${v}`).join(', ');
+                document.getElementById('inventory').textContent = inv || 'пусто';
+                showSuccess(`+${data.gold}💰`);
             }
+        };
+
+        document.getElementById('testBossAttackButton').onclick = () => {
+            debugLog('🖱️ Тестовая атака босса по кнопке');
+            attackBoss();
         };
 
         // 3D сцена
@@ -398,17 +448,16 @@
                     mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
                     mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
                     
-                    debugLog(`Касание: screen (${touch.clientX},${touch.clientY}) -> нормализовано (${mouse.x.toFixed(2)}, ${mouse.y.toFixed(2)})`);
+                    debugLog(`📱 Касание: экран (${touch.clientX},${touch.clientY}) -> норм (${mouse.x.toFixed(2)}, ${mouse.y.toFixed(2)})`);
 
                     raycaster.setFromCamera(mouse, camera);
                     const intersects = raycaster.intersectObjects([...cubes, bossMesh]);
                     
                     if (intersects.length > 0) {
                         const hit = intersects[0].object;
-                        debugLog(`Попал в объект: type=${hit.userData.type}, id=${hit.userData.id}, расстояние=${intersects[0].distance.toFixed(2)}`);
+                        debugLog(`🎯 Попал в объект: type=${hit.userData.type}, id=${hit.userData.id}, dist=${intersects[0].distance.toFixed(2)}`);
                         
                         if (hit.userData.type === 'resource') {
-                            showError(`Клик по ресурсу ${hit.userData.id}`);
                             apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
                                 if (data) {
                                     document.getElementById('gold').textContent = data.new_gold;
@@ -422,8 +471,7 @@
                             attackBoss();
                         }
                     } else {
-                        debugLog('Пересечений нет');
-                        showError('Мимо');
+                        debugLog('❌ Пересечений нет');
                     }
                 }
 
@@ -433,17 +481,16 @@
                     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
                     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-                    debugLog(`Клик мышью: экран (${event.clientX},${event.clientY}) -> нормализовано (${mouse.x.toFixed(2)}, ${mouse.y.toFixed(2)})`);
+                    debugLog(`🖱️ Клик: экран (${event.clientX},${event.clientY}) -> норм (${mouse.x.toFixed(2)}, ${mouse.y.toFixed(2)})`);
 
                     raycaster.setFromCamera(mouse, camera);
                     const intersects = raycaster.intersectObjects([...cubes, bossMesh]);
 
                     if (intersects.length > 0) {
                         const hit = intersects[0].object;
-                        debugLog(`Попал в объект: type=${hit.userData.type}, id=${hit.userData.id}, расстояние=${intersects[0].distance.toFixed(2)}`);
+                        debugLog(`🎯 Попал в объект: type=${hit.userData.type}, id=${hit.userData.id}, dist=${intersects[0].distance.toFixed(2)}`);
 
                         if (hit.userData.type === 'resource') {
-                            showError(`Клик по ресурсу ${hit.userData.id}`);
                             apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
                                 if (data) {
                                     document.getElementById('gold').textContent = data.new_gold;
@@ -457,8 +504,7 @@
                             attackBoss();
                         }
                     } else {
-                        debugLog('Пересечений нет');
-                        showError('Мимо');
+                        debugLog('❌ Пересечений нет');
                     }
                 }
 
