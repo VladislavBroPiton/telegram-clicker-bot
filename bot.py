@@ -680,16 +680,27 @@ async def get_inventory(uid: int) -> dict:
         return {row['resource_id']: row['amount'] for row in rows}
 
 async def add_resource(uid: int, rid: str, amt: int = 1) -> bool:
+    """Добавляет ресурс игроку. Если ресурса ещё нет – создаёт запись."""
     async with db_pool.acquire() as conn:
+        # Проверяем текущее количество
         current = await conn.fetchval("SELECT amount FROM inventory WHERE user_id=$1 AND resource_id=$2", uid, rid)
         if current is None:
             current = 0
         new_amount = current + amt
+        # Защита от переполнения
         if new_amount > MAX_RESOURCE_AMOUNT:
             new_amount = MAX_RESOURCE_AMOUNT
             if new_amount <= current:
-                return False
-        await conn.execute("UPDATE inventory SET amount = $1 WHERE user_id=$2 AND resource_id=$3", new_amount, uid, rid)
+                return False  # уже максимум, ничего не делаем
+        # Вставляем или обновляем
+        await conn.execute("""
+            INSERT INTO inventory (user_id, resource_id, amount)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (user_id, resource_id) DO UPDATE
+            SET amount = $3
+        """, uid, rid, new_amount)
+        # Отладка (можно убрать позже)
+        print(f"✅ add_resource: user={uid}, res={rid}, added {amt}, new total={new_amount}")
         return True
 
 async def remove_resource(uid: int, rid: str, amt: int = 1) -> bool:
@@ -1945,6 +1956,7 @@ async def api_boss_attack(request):
                 await add_resource(uid, res, amt)
                 res_name = RESOURCES.get(res, {}).get('name', res)
                 loot_items.append(f"{res_name} x{amt}")
+                print(f"🎁 Начислено {amt} ресурса {res}")
 
         # Отладочный вывод в логи Render
         print(f"🔥 Босс {boss_id} побеждён! Награда: {loot_items}")
@@ -2157,6 +2169,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
