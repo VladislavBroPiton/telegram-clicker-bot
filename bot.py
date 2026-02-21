@@ -1888,24 +1888,22 @@ async def api_user(request):
         'boss_progress': boss_progress
     })
 
-async def api_boss_attack(request: Request):
+async def api_boss_attack(request):
     init_data = request.headers.get('x-telegram-init-data')
     if not init_data:
         return JSONResponse({'error': 'Missing init data'}, status_code=401)
-    
+
     user = verify_telegram_data(TOKEN, init_data)
     if not user:
         return JSONResponse({'error': 'Invalid init data'}, status_code=403)
-    
+
     uid = user['id']
-    
-    # Получаем тело запроса (должен содержать boss_id)
+
     body = await request.json()
     boss_id = body.get('boss_id')
     if not boss_id or boss_id not in BOSS_LOCATIONS:
         return JSONResponse({'error': 'Invalid boss_id'}, status_code=400)
-    
-    # Проверяем доступность босса для игрока
+
     stats = await get_player_stats(uid)
     bloc = BOSS_LOCATIONS[boss_id]
     if stats['level'] < bloc['min_level']:
@@ -1913,61 +1911,61 @@ async def api_boss_attack(request: Request):
     tool_level = await get_active_tool_level(uid)
     if tool_level < bloc['min_tool_level']:
         return JSONResponse({'error': 'Tool level too low'}, status_code=403)
-    
-    # Проверяем, не побеждён ли босс
+
     prog = await get_boss_progress(uid, boss_id)
     if prog['defeated']:
         return JSONResponse({'error': 'Boss already defeated'}, status_code=400)
-    
-    # Рассчитываем урон (как в обычном клике)
+
+    # Рассчитываем урон
     gold, exp, is_crit = get_click_reward(stats)
     damage = gold
     if is_crit:
         damage *= 2
-    
+
+    # Список для лута (пока пустой)
+    loot_items = []
+
     # Наносим урон
     defeated = await update_boss_health(uid, boss_id, damage)
-    
-    # Если босс побеждён – выдаём награду
-    loot_items = []   # создаём список
 
-if defeated:
-    boss = bloc['boss']
-    
-    # Золото и опыт
-    gold_reward = boss['reward_gold']
-    exp_reward = boss['exp_reward']
-    loot_items.append(f"{gold_reward}💰")
-    loot_items.append(f"{exp_reward}✨")
-    
-    async with db_pool.acquire() as conn:
-        await conn.execute(
-            "UPDATE players SET gold = gold + $1, exp = exp + $2 WHERE user_id = $3",
-            gold_reward, exp_reward, uid
-        )
-        
-        # Ресурсы
-        for res, (min_amt, max_amt) in boss['reward_resources'].items():
-            amt = random.randint(min_amt, max_amt)
-            await add_resource(uid, res, amt)
-            # Добавляем в лут название ресурса и количество
-            res_name = RESOURCES.get(res, {}).get('name', res)
-            loot_items.append(f"{res_name} x{amt}")
-    
-    await check_achievements(uid)
+    if defeated:
+        boss = bloc['boss']
+        gold_reward = boss['reward_gold']
+        exp_reward = boss['exp_reward']
 
-# ... далее, после всего, в JSON-ответе добавляем поле 'loot'
-return JSONResponse({
-    'damage': damage,
-    'is_crit': is_crit,
-    'defeated': defeated,
-    'current_health': new_prog['current_health'],
-    'max_health': bloc['boss']['health'],
-    'new_gold': new_stats['gold'],
-    'new_exp': new_stats['exp'],
-    'inventory': new_inv,
-    'loot': loot_items   # ← массив строк с описанием наград
-})
+        # Добавляем в лут золото и опыт
+        loot_items.append(f"{gold_reward}💰")
+        loot_items.append(f"{exp_reward}✨")
+
+        async with db_pool.acquire() as conn:
+            await conn.execute(
+                "UPDATE players SET gold = gold + $1, exp = exp + $2 WHERE user_id = $3",
+                gold_reward, exp_reward, uid
+            )
+            for res, (min_amt, max_amt) in boss['reward_resources'].items():
+                amt = random.randint(min_amt, max_amt)
+                await add_resource(uid, res, amt)
+                res_name = RESOURCES.get(res, {}).get('name', res)
+                loot_items.append(f"{res_name} x{amt}")
+
+        await check_achievements(uid)  # без отправки сообщений
+
+    # Получаем свежие данные
+    new_prog = await get_boss_progress(uid, boss_id)
+    new_stats = await get_player_stats(uid)
+    new_inv = await get_inventory(uid)
+
+    return JSONResponse({
+        'damage': damage,
+        'is_crit': is_crit,
+        'defeated': defeated,
+        'current_health': new_prog['current_health'],
+        'max_health': bloc['boss']['health'],
+        'new_gold': new_stats['gold'],
+        'new_exp': new_stats['exp'],
+        'inventory': new_inv,
+        'loot': loot_items   # <-- добавили это поле
+    })
 
 async def api_boss_info(request: Request):
     init_data = request.headers.get('x-telegram-init-data')
@@ -2161,6 +2159,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
