@@ -1921,7 +1921,7 @@ async def api_boss_attack(request):
     if is_crit:
         damage *= 2
 
-    loot_items = []   # список наград
+    loot_items = []  # список наград
     defeated = await update_boss_health(uid, boss_id, damage)
 
     if defeated:
@@ -1929,7 +1929,7 @@ async def api_boss_attack(request):
         gold_reward = boss['reward_gold']
         exp_reward = boss['exp_reward']
 
-        # Добавляем золото и опыт в лут
+        # Добавляем в лут золото и опыт
         loot_items.append(f"{gold_reward}💰")
         loot_items.append(f"{exp_reward}✨")
 
@@ -1946,9 +1946,12 @@ async def api_boss_attack(request):
                 res_name = RESOURCES.get(res, {}).get('name', res)
                 loot_items.append(f"{res_name} x{amt}")
 
-        await check_achievements(uid)   # проверяем достижения
+        # Отладочный вывод в логи Render
+        print(f"🔥 Босс {boss_id} побеждён! Награда: {loot_items}")
 
-    # Получаем свежие данные
+        await check_achievements(uid)
+
+    # Получаем свежие данные после атаки
     new_prog = await get_boss_progress(uid, boss_id)
     new_stats = await get_player_stats(uid)
     new_inv = await get_inventory(uid)
@@ -2154,6 +2157,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
