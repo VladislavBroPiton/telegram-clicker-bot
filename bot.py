@@ -1922,7 +1922,7 @@ async def api_boss_attack(request):
     if is_crit:
         damage *= 2
 
-    loot_items = []
+    loot_items = []  # список полученных наград
 
     # Наносим урон
     defeated = await update_boss_health(uid, boss_id, damage)
@@ -1932,26 +1932,29 @@ async def api_boss_attack(request):
         gold_reward = boss['reward_gold']
         exp_reward = boss['exp_reward']
 
+        # Добавляем золото и опыт
         loot_items.append(f"{gold_reward}💰")
         loot_items.append(f"{exp_reward}✨")
 
         async with db_pool.acquire() as conn:
+            # Начисляем золото и опыт
             await conn.execute(
                 "UPDATE players SET gold = gold + $1, exp = exp + $2 WHERE user_id = $3",
                 gold_reward, exp_reward, uid
             )
+            # Начисляем ресурсы
             for res, (min_amt, max_amt) in boss['reward_resources'].items():
                 amt = random.randint(min_amt, max_amt)
                 await add_resource(uid, res, amt)
                 res_name = RESOURCES.get(res, {}).get('name', res)
                 loot_items.append(f"{res_name} x{amt}")
 
-        await check_achievements(uid)
+        await check_achievements(uid)  # проверяем достижения без отправки в чат
 
-    # Получаем свежие данные
+    # Получаем свежие данные после атаки
     new_prog = await get_boss_progress(uid, boss_id)
     new_stats = await get_player_stats(uid)
-    new_inv = await get_inventory(uid)   # <--- полный инвентарь
+    new_inv = await get_inventory(uid)
 
     return JSONResponse({
         'damage': damage,
@@ -1961,8 +1964,8 @@ async def api_boss_attack(request):
         'max_health': bloc['boss']['health'],
         'new_gold': new_stats['gold'],
         'new_exp': new_stats['exp'],
-        'inventory': new_inv,             # <--- возвращаем полный инвентарь
-        'loot': loot_items
+        'inventory': new_inv,
+        'loot': loot_items   # <-- теперь обязательно будет
     })
 
 async def api_boss_info(request: Request):
@@ -2157,6 +2160,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
