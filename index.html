@@ -3,107 +3,32 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Шахтёрская глубина 3D (отладка)</title>
+    <title>Тест Three.js</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; }
-
-/* ... (стили как в предыдущем коде, я их оставлю для краткости, но в вашем файле они уже есть) ... */
-        #hud, #boss-health {
-            position: absolute;
-            color: white;
-            background: rgba(20, 20, 30, 0.85);
-            backdrop-filter: blur(4px);
-            padding: 10px 14px;
-            border-radius: 16px;
-            z-index: 200;
-            pointer-events: none;
-            border: 1px solid rgba(255,215,0,0.3);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            font-size: 14px;
-        }
-        #hud { top: 10px; left: 10px; }
-        #boss-health { top: 10px; right: 10px; width: 220px; display: none; border-color: #ff4444; }
-        .health-bar { width: 100%; height: 16px; background-color: #333; border-radius: 8px; overflow: hidden; margin-top: 6px; }
-        .health-fill { height: 100%; background: linear-gradient(90deg, #ff4444, #ff8844); width: 100%; transition: width 0.2s; }
-        .boss-navigation { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; pointer-events: auto; }
-        .boss-nav-btn { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 20px; width: 40px; height: 40px; border-radius: 20px; cursor: pointer; }
-        .boss-nav-btn:active { background: rgba(255,255,255,0.4); }
-        .boss-nav-btn.disabled { opacity: 0.3; pointer-events: none; }
-        #debug-info, #error-message, #success-message, #loot-message { position: absolute; left: 10px; right: 10px; background: rgba(0,0,0,0.9); padding: 10px; border-radius: 8px; z-index: 1000; font-size: 14px; white-space: pre-wrap; word-break: break-word; pointer-events: none; }
-        #debug-info { bottom: 80px; border: 2px solid yellow; color: white; max-height: 150px; overflow: auto; }
-        #error-message { bottom: 10px; border: 2px solid red; color: #ff8888; }
-        #success-message { bottom: 60px; border: 2px solid #0f0; color: #aaffaa; }
-        #loot-message { top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.95); border: 2px solid gold; color: gold; font-size: 18px; text-align: center; padding: 20px; border-radius: 20px; display: none; }
-        #test-button { position: absolute; bottom: 10px; right: 10px; z-index: 2000; background: #ff4444; color: white; padding: 8px 16px; border: none; border-radius: 20px; font-size: 14px; font-weight: bold; pointer-events: auto; }
-        #tool-display { margin-top: 8px; font-size: 13px; color: #ffaa66; border-top: 1px solid #444; padding-top: 6px; }
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        #hud { position: absolute; top: 10px; left: 10px; color: white; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 8px; z-index: 200; }
+        #debug { position: absolute; bottom: 10px; left: 10px; background: black; color: yellow; padding: 5px; max-height: 200px; overflow: auto; z-index: 1000; }
     </style>
     <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
-            }
-        }
+        { "imports": { "three": "https://unpkg.com/three@0.128.0/build/three.module.js" } }
     </script>
 </head>
 <body>
-    <div id="hud">...</div> <!-- полный hud из предыдущего кода, я сократил для ответа, но вы используйте тот же -->
-    <div id="boss-health">...</div>
-    <div id="debug-info" style="display: none;"></div>
-    <div id="error-message" style="display: none;"></div>
-    <div id="success-message" style="display: none;"></div>
-    <div id="loot-message">🎁 ПОБЕДА!<br><span id="loot-details"></span></div>
-    <button id="test-button">ТЕСТ</button>
+    <div id="hud">
+        💰 <span id="gold">0</span> | ✨ <span id="exp">0</span><br>
+        Уровень <span id="level">1</span>
+    </div>
+    <div id="debug"></div>
 
     <script type="module">
         // --- КОНФИГУРАЦИЯ ---
         const API_BASE_URL = 'https://telegram-clicker-bot-zi6c.onrender.com';
-        const EXP_PER_LEVEL = 100;
-        const BOSS_IDS = ['goblin_king', 'dragon_lair', 'lich_castle'];
-        const BOSS_NAMES = {
-            'goblin_king': 'Король гоблинов',
-            'dragon_lair': 'Огненный дракон',
-            'lich_castle': 'Архилич'
-        };
-
-        // Глобальные переменные
-        let currentBossIndex = 0;
-        let currentBossId = BOSS_IDS[0];
-        let isAttacking = false;
-        let cubes = [];
-        let scene, camera, renderer, controls;
-        let bossGroup = null;
-        let threeReady = false;
-
-        // Элементы DOM
-        const hudLevel = document.getElementById('level');
-        const hudExp = document.getElementById('exp');
-        const hudExpCurrent = document.getElementById('exp-current');
-        const expBarFill = document.getElementById('exp-bar-fill');
-        const goldSpan = document.getElementById('gold');
-        const inventorySpan = document.getElementById('inventory');
-        const activeToolSpan = document.getElementById('active-tool');
-        const bossHealthDiv = document.getElementById('boss-health');
-        const bossNameSpan = document.getElementById('boss-name');
-        const bossCurrentHealth = document.getElementById('boss-current-health');
-        const bossMaxHealth = document.getElementById('boss-max-health');
-        const bossHealthFill = document.getElementById('boss-health-fill');
-        const bossIndexSpan = document.getElementById('boss-index');
-        const debugInfo = document.getElementById('debug-info');
-        const errorMsg = document.getElementById('error-message');
-        const successMsg = document.getElementById('success-message');
-        const lootMsg = document.getElementById('loot-message');
-        const lootDetails = document.getElementById('loot-details');
-
-        function debugLog(msg) {
-            debugInfo.style.display = 'block';
-            debugInfo.innerHTML = msg + '<br>' + debugInfo.innerHTML;
+        const debugDiv = document.getElementById('debug');
+        function log(msg) {
+            debugDiv.innerHTML += msg + '<br>';
             console.log(msg);
         }
-
-        function showError(msg) { errorMsg.style.display = 'block'; errorMsg.innerHTML = msg; }
-        function showSuccess(msg) { successMsg.style.display = 'block'; successMsg.innerHTML = msg; setTimeout(() => successMsg.style.display = 'none', 2000); }
-        function showLoot(items) { lootDetails.innerHTML = items; lootMsg.style.display = 'block'; setTimeout(() => lootMsg.style.display = 'none', 4000); }
 
         // --- ТЕЛЕГРАМ ---
         let tg;
@@ -112,10 +37,10 @@
             tg.ready();
             tg.expand();
         } catch (e) {
-            tg = { ready: () => {}, expand: () => {}, HapticFeedback: { impactOccurred: () => {} }, initData: "" };
+            tg = { initData: '' };
         }
         const initData = tg.initData;
-        debugLog('initData: ' + (initData ? initData.substring(0,50) + '...' : 'нет'));
+        log('initData: ' + (initData ? initData.substring(0,50) + '...' : 'нет'));
 
         // --- API ---
         async function apiCall(endpoint, method = 'GET', body = null) {
@@ -123,274 +48,114 @@
             if (initData) headers['X-Telegram-Init-Data'] = initData;
             const options = { method, headers };
             if (body) options.body = JSON.stringify(body);
-            debugLog(`➡️ Запрос ${method} /api/${endpoint}`);
             try {
-                const response = await fetch(`${API_BASE_URL}/api/${endpoint}`, options);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const json = await response.json();
-                debugLog(`✅ Ответ от ${endpoint}: ${JSON.stringify(json).substring(0,100)}`);
-                return json;
+                const res = await fetch(`${API_BASE_URL}/api/${endpoint}`, options);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.json();
             } catch (e) {
-                debugLog(`❌ Ошибка API ${endpoint}: ${e.message}`);
+                log(`Ошибка API ${endpoint}: ${e.message}`);
                 return null;
             }
         }
 
-        function updateExpBar(level, exp) {
-            hudLevel.textContent = level;
-            hudExp.textContent = exp;
-            hudExpCurrent.textContent = exp;
-            expBarFill.style.width = (exp / EXP_PER_LEVEL * 100) + '%';
-        }
-
-        function updateInventoryDisplay(inv) {
-            if (!inv) { inventorySpan.textContent = '—'; return; }
-            const entries = Object.entries(inv).filter(([,v]) => v > 0);
-            inventorySpan.textContent = entries.length ? entries.map(([k,v]) => `${k}:${v}`).join(', ') : 'пусто';
-        }
-
-        function updateBossHealth(current, max) {
-            bossCurrentHealth.textContent = current;
-            bossMaxHealth.textContent = max;
-            bossHealthFill.style.width = (max ? (current / max) * 100 : 0) + '%';
-        }
-
-        // --- УПРОЩЁННАЯ МОДЕЛЬ БОССА ДЛЯ ТЕСТА (красный куб) ---
-        function createBossModel(bossId) {
-            debugLog(`createBossModel called for ${bossId}`);
-            const group = new THREE.Group();
-            // Временно используем простой куб для проверки видимости
-            const geom = new THREE.BoxGeometry(2, 2, 2);
-            const mat = new THREE.MeshStandardMaterial({ color: 0xff0000 }); // ярко-красный
-            const cube = new THREE.Mesh(geom, mat);
-            cube.position.y = 1; // чтобы центр куба был на высоте 1
-            group.add(cube);
-            group.scale.set(1, 1, 1);
-            group.position.y = 1.5; // общий центр группы
-            debugLog('Тестовая модель (красный куб) создана');
-            return group;
-        }
-
-        // --- ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ ---
+        // --- ЗАГРУЗКА ДАННЫХ ПОЛЬЗОВАТЕЛЯ ---
         async function loadUser() {
             const data = await apiCall('user');
-            if (!data) return;
-            goldSpan.textContent = data.gold;
-            updateExpBar(data.level, data.exp);
-            updateInventoryDisplay(data.inventory);
-            activeToolSpan.textContent = data.active_tool || 'неизвестно';
-
-            if (data.boss_progress) {
-                let found = false;
-                for (let i = 0; i < BOSS_IDS.length; i++) {
-                    if (data.boss_progress[BOSS_IDS[i]] && !data.boss_progress[BOSS_IDS[i]].defeated) {
-                        currentBossIndex = i;
-                        currentBossId = BOSS_IDS[i];
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) currentBossIndex = 0;
-                currentBossId = BOSS_IDS[currentBossIndex];
-                bossIndexSpan.textContent = `${currentBossIndex+1}/${BOSS_IDS.length}`;
-                if (threeReady) loadBossInfo(currentBossId);
-                else setTimeout(() => loadBossInfo(currentBossId), 500);
-            }
-        }
-
-        // --- ЗАГРУЗКА ИНФОРМАЦИИ О БОССЕ ---
-        async function loadBossInfo(bid) {
-            debugLog(`loadBossInfo for ${bid}`);
-            const data = await apiCall(`boss/${bid}`);
             if (data) {
-                bossNameSpan.textContent = BOSS_NAMES[bid] || bid;
-                updateBossHealth(data.current_health, data.max_health);
-                bossHealthDiv.style.display = 'block';
-                if (bossGroup && threeReady) {
-                    // Удаляем старую модель
-                    while(bossGroup.children.length > 0) bossGroup.remove(bossGroup.children[0]);
-                    debugLog('Removing old boss model');
-                    // Создаём новую
-                    const newBoss = createBossModel(bid);
-                    bossGroup.add(newBoss);
-                    debugLog(`Boss model added for ${bid}, children count: ${bossGroup.children.length}`);
-
-                    // Принудительно центрируем камеру на боссе
-                    if (camera) {
-                        camera.position.set(5, 4, 8);
-                        controls.target.set(0, 2, 0);
-                        controls.update();
-                    }
-                }
-                updateBossNavigation();
+                document.getElementById('gold').textContent = data.gold;
+                document.getElementById('exp').textContent = data.exp;
+                document.getElementById('level').textContent = data.level;
             }
         }
 
-        // --- НАВИГАЦИЯ ---
-        function updateBossNavigation() {
-            bossIndexSpan.textContent = `${currentBossIndex+1}/${BOSS_IDS.length}`;
-            const prevBtn = document.getElementById('prev-boss');
-            const nextBtn = document.getElementById('next-boss');
-            if (prevBtn && nextBtn) {
-                prevBtn.classList.toggle('disabled', currentBossIndex === 0);
-                nextBtn.classList.toggle('disabled', currentBossIndex === BOSS_IDS.length-1);
-                debugLog(`prevBossBtn: ${!prevBtn.classList.contains('disabled')}, nextBossBtn: ${!nextBtn.classList.contains('disabled')}`);
-            }
-        }
+        // --- ИНИЦИАЛИЗАЦИЯ THREE.JS ---
+        import('three').then(THREE => {
+            log('Three.js загружен');
 
-        // --- ИНИЦИАЛИЗАЦИЯ 3D ---
-        async function init3D() {
-            debugLog('init3D started');
-            const THREE = await import('three');
-            const { OrbitControls } = await import('https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js');
-
-            scene = new THREE.Scene();
+            // Сцена
+            const scene = new THREE.Scene();
             scene.background = new THREE.Color(0x111122);
 
-            camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
+            // Камера
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(5, 4, 8);
             camera.lookAt(0, 2, 0);
 
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(innerWidth, innerHeight);
+            // Рендерер
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            controls = new OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.target.set(0, 2, 0);
-
             // Освещение
-            scene.add(new THREE.AmbientLight(0x404060));
-            const light1 = new THREE.DirectionalLight(0xffffff, 1);
-            light1.position.set(5, 10, 7);
-            scene.add(light1);
-            const light2 = new THREE.DirectionalLight(0xffaa88, 0.5);
-            light2.position.set(-5, 5, -5);
-            scene.add(light2);
+            const ambientLight = new THREE.AmbientLight(0x404060);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
 
-            // Пол
-            scene.add(new THREE.GridHelper(20, 20, 0xaaaaaa, 0x444444));
+            // Пол (сетка)
+            const gridHelper = new THREE.GridHelper(20, 20, 0xaaaaaa, 0x444444);
+            scene.add(gridHelper);
 
-            // ТЕСТОВЫЙ КУБ (зелёный) в центре сцены
-            const testCube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color: 0x00ff00}));
-            testCube.position.set(0, 2, 0);
-            scene.add(testCube);
-            debugLog('✅ Тестовый куб добавлен (зелёный в центре)');
+            // --- ТЕСТОВЫЙ КРАСНЫЙ КУБ ---
+            const cubeGeom = new THREE.BoxGeometry(2, 2, 2);
+            const cubeMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x330000 });
+            const cube = new THREE.Mesh(cubeGeom, cubeMat);
+            cube.position.set(0, 2, 0); // центр на высоте 2
+            scene.add(cube);
+            log('Красный куб добавлен в центр');
 
-            // Кубы-ресурсы (как в оригинале)
-            const positions = [[-3,1.5,-2], [3,1.5,-2], [0,1.5,2], [-2,1.5,3], [2,1.5,3]];
-            positions.forEach((pos, i) => {
-                const cube = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshStandardMaterial({ color: 0xaaaaaa }));
-                cube.position.set(pos[0], pos[1], pos[2]);
-                cube.userData = { type: 'resource', id: i };
-                scene.add(cube);
-                cubes.push(cube);
-            });
-
-            // Группа для босса
-            bossGroup = new THREE.Group();
-            scene.add(bossGroup);
-            threeReady = true;
-            debugLog('Three.js initialized, bossGroup created');
-
-            // Обработчики кликов
-            const raycaster = new THREE.Raycaster();
-            const mouse = new THREE.Vector2();
-
-            function onTouchStart(event) {
-                event.preventDefault();
-                const touch = event.touches[0];
-                if (!touch) return;
-                const rect = renderer.domElement.getBoundingClientRect();
-                mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
-                mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
-                raycaster.setFromCamera(mouse, camera);
-                const intersects = raycaster.intersectObjects([...cubes, ...bossGroup.children]);
-                if (intersects.length > 0) {
-                    const hit = intersects[0].object;
-                    if (hit.userData.type === 'resource') {
-                        // клик по ресурсу
-                        apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
-                            if (data) {
-                                goldSpan.textContent = data.new_gold;
-                                hudExp.textContent = data.new_exp;
-                                updateInventoryDisplay(data.inventory);
-                                loadUser();
-                            }
-                        });
-                    } else if (hit.parent === bossGroup || bossGroup.children.includes(hit)) {
-                        attackBoss();
-                    }
-                }
-            }
-            renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
-            renderer.domElement.addEventListener('click', onTouchStart); // для мыши
-
-            // Анимация
+            // Анимация вращения
             function animate() {
-                cubes.forEach(c => c.rotation.y += 0.01);
-                if (bossGroup && bossGroup.children.length > 0) {
-                    bossGroup.rotation.y += 0.01; // просто вращение для видимости
-                }
-                controls.update();
+                cube.rotation.y += 0.01;
                 renderer.render(scene, camera);
                 requestAnimationFrame(animate);
             }
             animate();
 
+            // Обработка ресайза окна
             window.addEventListener('resize', () => {
-                camera.aspect = innerWidth/innerHeight;
+                camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
-                renderer.setSize(innerWidth, innerHeight);
+                renderer.setSize(window.innerWidth, window.innerHeight);
             });
-        }
 
-        // --- АТАКА НА БОССА ---
-        async function attackBoss() {
-            if (isAttacking) return;
-            isAttacking = true;
-            const data = await apiCall('boss/attack', 'POST', { boss_id: currentBossId });
-            if (data) {
-                if (data.new_gold !== undefined) goldSpan.textContent = data.new_gold;
-                if (data.new_exp !== undefined) hudExp.textContent = data.new_exp;
-                if (data.inventory) updateInventoryDisplay(data.inventory);
-                if (data.current_health !== undefined) updateBossHealth(data.current_health, data.max_health);
-                if (data.defeated) {
-                    showLoot(data.loot || 'Победа!');
-                    bossGroup.visible = false;
-                    bossHealthDiv.style.display = 'none';
+            // --- ОБРАБОТЧИК КЛИКА ПО КУБУ (для проверки) ---
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+
+            function onClick(event) {
+                const rect = renderer.domElement.getBoundingClientRect();
+                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObject(cube);
+
+                if (intersects.length > 0) {
+                    log('Клик по кубу!');
+                    apiCall('click', 'POST', { resourceId: 0 }).then(data => {
+                        if (data) {
+                            document.getElementById('gold').textContent = data.new_gold;
+                            document.getElementById('exp').textContent = data.new_exp;
+                            loadUser();
+                        }
+                    });
                 }
-                loadUser();
             }
-            isAttacking = false;
-        }
 
-        // --- ИНИЦИАЛИЗАЦИЯ НАВИГАЦИИ ---
-        const prevBtn = document.getElementById('prev-boss');
-        const nextBtn = document.getElementById('next-boss');
-        if (prevBtn && nextBtn) {
-            prevBtn.addEventListener('click', () => {
-                if (currentBossIndex > 0) {
-                    currentBossIndex--;
-                    currentBossId = BOSS_IDS[currentBossIndex];
-                    loadBossInfo(currentBossId);
-                }
-            });
-            nextBtn.addEventListener('click', () => {
-                if (currentBossIndex < BOSS_IDS.length-1) {
-                    currentBossIndex++;
-                    currentBossId = BOSS_IDS[currentBossIndex];
-                    loadBossInfo(currentBossId);
-                }
-            });
-        }
+            renderer.domElement.addEventListener('click', onClick);
+            renderer.domElement.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                onClick(e.touches[0]);
+            }, { passive: false });
 
-        // --- СТАРТ ---
-        init3D();
-        loadUser();
-        document.getElementById('test-button').addEventListener('click', () => {
-            apiCall('click', 'POST', { resourceId: 0 }).then(loadUser);
+        }).catch(err => {
+            log('Ошибка загрузки Three.js: ' + err.message);
         });
+
+        // Загружаем пользователя при старте
+        loadUser();
     </script>
 </body>
 </html>
