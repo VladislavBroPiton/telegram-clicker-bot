@@ -11,25 +11,25 @@
         position: absolute;
         top: 10px;
         left: 10px;
-        right: 220px;        /* ← отодвигаем от правого края, чтобы освободить место для босса */
+        right: 220px;
         color: white;
         background: rgba(0,0,0,0.7);
         padding: 10px;
         border-radius: 8px;
-        z-index: 200;         /* ← выше, чем у босса */
+        z-index: 200;
         pointer-events: none;
-        word-wrap: break-word; /* чтобы длинный текст переносился */
+        word-wrap: break-word;
     }
     #boss-health {
         position: absolute;
         top: 10px;
         right: 10px;
-        width: 200px;          /* фиксированная ширина */
+        width: 200px;
         color: white;
         background: rgba(0,0,0,0.7);
         padding: 10px;
         border-radius: 8px;
-        z-index: 150;          /* ← ниже, чем у hud */
+        z-index: 150;
         display: none;
         pointer-events: none;
     }
@@ -77,6 +77,22 @@
         word-break: break-word;
         border: 2px solid red;
     }
+    #success-message {
+        position: absolute;
+        bottom: 60px;
+        left: 10px;
+        right: 10px;
+        color: #0f0;
+        background: rgba(0,0,0,0.9);
+        padding: 10px;
+        border-radius: 5px;
+        z-index: 1000;
+        font-size: 14px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        border: 2px solid #0f0;
+        display: none;
+    }
     #testButton {
         position: absolute;
         bottom: 10px;
@@ -113,12 +129,19 @@
     </div>
     <div id="debug-info" style="display: none;"></div>
     <div id="error-message" style="display: none;"></div>
+    <div id="success-message" style="display: none;"></div>
     <button id="testButton">ТЕСТ</button>
 
     <script type="module">
         // --- НАСТРОЙКА: Адрес вашего бота на Render ---
         const API_BASE_URL = 'https://telegram-clicker-bot-zi6c.onrender.com'; // <--- ИЗМЕНИТЕ ЭТО!
         // ---------------------------------------------
+
+        // Глобальные переменные модуля
+        let currentBossId = null;
+        let isAttacking = false;
+        let bossMesh = null;
+        let cubes = [];
 
         // Отладка
         function debugLog(msg) {
@@ -132,6 +155,13 @@
             const el = document.getElementById('error-message');
             el.style.display = 'block';
             el.innerHTML = msg;
+        }
+
+        function showSuccess(msg) {
+            const el = document.getElementById('success-message');
+            el.style.display = 'block';
+            el.innerHTML = msg;
+            setTimeout(() => { el.style.display = 'none'; }, 2000);
         }
 
         // Telegram
@@ -162,16 +192,90 @@
             }
         }
 
-        // Тестовая кнопка
-        document.getElementById('testButton').onclick = async () => {
-            showError('Тестовый клик отправлен...');
-            const data = await apiCall('click', 'POST', { resourceId: 0 });
-            if (data) {
-                showError(`Успех! Золото: ${data.new_gold}`);
-                document.getElementById('gold').textContent = data.new_gold;
-                document.getElementById('exp').textContent = data.new_exp;
+        // Обновление здоровья босса в интерфейсе
+        function updateBossHealth(current, max) {
+            document.getElementById('boss-current-health').textContent = current;
+            document.getElementById('boss-max-health').textContent = max;
+            const percent = (current / max) * 100;
+            document.getElementById('boss-health-fill').style.width = percent + '%';
+        }
+
+        // Скрыть босса и его интерфейс
+        function hideBoss() {
+            if (bossMesh) bossMesh.visible = false;
+            document.getElementById('boss-health').style.display = 'none';
+        }
+
+        // Атака на босса
+        async function attackBoss() {
+            if (isAttacking) return;
+            if (!currentBossId) {
+                showError('Босс не выбран');
+                return;
             }
-        };
+
+            isAttacking = true;
+            try {
+                const data = await apiCall('boss/attack', 'POST', { boss_id: currentBossId });
+                if (!data) return;
+
+                if (data.success) {
+                    // Обновляем золото и опыт (поддерживаем оба возможных формата)
+                    if (data.new_gold !== undefined) {
+                        document.getElementById('gold').textContent = data.new_gold;
+                    } else if (data.user && data.user.gold !== undefined) {
+                        document.getElementById('gold').textContent = data.user.gold;
+                    }
+
+                    if (data.new_exp !== undefined) {
+                        document.getElementById('exp').textContent = data.new_exp;
+                    } else if (data.user && data.user.experience !== undefined) {
+                        document.getElementById('exp').textContent = data.user.experience;
+                    }
+
+                    // Обновляем инвентарь
+                    let inventoryObj = null;
+                    if (data.inventory) {
+                        inventoryObj = data.inventory;
+                    } else if (data.user && data.user.inventory) {
+                        inventoryObj = data.user.inventory;
+                    }
+                    if (inventoryObj) {
+                        const inv = Object.entries(inventoryObj)
+                            .filter(([,v]) => v > 0)
+                            .map(([k,v]) => `${k}:${v}`)
+                            .join(', ');
+                        document.getElementById('inventory').textContent = inv || 'пусто';
+                    }
+
+                    // Обновляем здоровье босса
+                    if (data.boss) {
+                        updateBossHealth(data.boss.health, data.boss.max_health);
+                        if (data.boss.health <= 0) {
+                            hideBoss();
+                            showSuccess('Босс повержен! 🎉');
+                        } else {
+                            showSuccess('Удар!');
+                        }
+                    } else if (data.boss_health !== undefined && data.boss_max_health !== undefined) {
+                        updateBossHealth(data.boss_health, data.boss_max_health);
+                        if (data.boss_health <= 0) {
+                            hideBoss();
+                            showSuccess('Босс повержен! 🎉');
+                        } else {
+                            showSuccess('Удар!');
+                        }
+                    }
+                } else {
+                    showError(data.error || 'Ошибка атаки');
+                }
+            } catch (e) {
+                showError('Ошибка при атаке');
+                console.error(e);
+            } finally {
+                isAttacking = false;
+            }
+        }
 
         // Загрузка пользователя
         async function loadUser() {
@@ -196,12 +300,25 @@
         async function loadBossInfo(bid) {
             const data = await apiCall(`boss/${bid}`);
             if (data) {
+                currentBossId = bid;          // запоминаем текущего босса
                 document.getElementById('boss-current-health').textContent = data.current_health;
-                document.getElementById('boss-max-health').textContent = data.max_health;
+                document.getElementById('boss-max-health').textcontent = data.max_health;
                 const percent = (data.current_health / data.max_health) * 100;
                 document.getElementById('boss-health-fill').style.width = percent + '%';
+                if (bossMesh) bossMesh.visible = true;  // показываем модель босса
             }
         }
+
+        // Тестовая кнопка
+        document.getElementById('testButton').onclick = async () => {
+            showError('Тестовый клик отправлен...');
+            const data = await apiCall('click', 'POST', { resourceId: 0 });
+            if (data) {
+                showSuccess(`Успех! Золото: ${data.new_gold}`);
+                document.getElementById('gold').textContent = data.new_gold;
+                document.getElementById('exp').textContent = data.new_exp;
+            }
+        };
 
         // 3D сцена
         import('three').then((THREE) => {
@@ -229,13 +346,12 @@
                 light2.position.set(-5, 5, -5);
                 scene.add(light2);
 
-                // Пол с сеткой (чтобы лучше видеть)
+                // Пол с сеткой
                 const gridHelper = new THREE.GridHelper(20, 20, 0xaaaaaa, 0x444444);
                 gridHelper.position.y = 0;
                 scene.add(gridHelper);
 
-                // Кубы-ресурсы (большие и яркие)
-                const cubes = [];
+                // Кубы-ресурсы
                 const positions = [
                     [-3, 1.5, -2],
                     [ 3, 1.5, -2],
@@ -244,7 +360,7 @@
                     [ 2, 1.5,  3]
                 ];
                 positions.forEach((pos, i) => {
-                    const geom = new THREE.BoxGeometry(2, 2, 2); // увеличенный размер
+                    const geom = new THREE.BoxGeometry(2, 2, 2);
                     const mat = new THREE.MeshStandardMaterial({ 
                         color: i === 0 ? 0xffaa00 : i === 1 ? 0xcc8800 : i === 2 ? 0xaaaaaa : i === 3 ? 0x44aa88 : 0x8844aa,
                         emissive: 0x222222,
@@ -266,6 +382,7 @@
                 boss.userData = { type: 'boss' };
                 boss.visible = false;
                 scene.add(boss);
+                bossMesh = boss;  // сохраняем в глобальную переменную
 
                 // Рэйкастер
                 const raycaster = new THREE.Raycaster();
@@ -273,18 +390,17 @@
 
                 // Обработчик касаний для мобильных
                 function onTouchStart(event) {
-                    event.preventDefault(); // чтобы не вызывать ещё и клик
+                    event.preventDefault();
                     const touch = event.touches[0];
                     if (!touch) return;
                     const rect = renderer.domElement.getBoundingClientRect();
-                    // Вычисляем нормализованные координаты мыши (-1 до 1)
                     mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
                     mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
                     
                     debugLog(`Касание: screen (${touch.clientX},${touch.clientY}) -> нормализовано (${mouse.x.toFixed(2)}, ${mouse.y.toFixed(2)})`);
 
                     raycaster.setFromCamera(mouse, camera);
-                    const intersects = raycaster.intersectObjects([...cubes, boss]);
+                    const intersects = raycaster.intersectObjects([...cubes, bossMesh]);
                     
                     if (intersects.length > 0) {
                         const hit = intersects[0].object;
@@ -298,12 +414,12 @@
                                     document.getElementById('exp').textContent = data.new_exp;
                                     const inv = Object.entries(data.inventory).filter(([,v]) => v>0).map(([k,v]) => `${k}:${v}`).join(', ');
                                     document.getElementById('inventory').textContent = inv || 'пусто';
-                                    showError(`+${data.gold}💰`);
+                                    showSuccess(`+${data.gold}💰`);
                                 }
                             });
                         } else if (hit.userData.type === 'boss') {
-                            showError('Клик по боссу (скоро будет)');
-                            // здесь можно добавить атаку босса
+                            // Вызов атаки на босса
+                            attackBoss();
                         }
                     } else {
                         debugLog('Пересечений нет');
@@ -320,7 +436,7 @@
                     debugLog(`Клик мышью: экран (${event.clientX},${event.clientY}) -> нормализовано (${mouse.x.toFixed(2)}, ${mouse.y.toFixed(2)})`);
 
                     raycaster.setFromCamera(mouse, camera);
-                    const intersects = raycaster.intersectObjects([...cubes, boss]);
+                    const intersects = raycaster.intersectObjects([...cubes, bossMesh]);
 
                     if (intersects.length > 0) {
                         const hit = intersects[0].object;
@@ -334,18 +450,17 @@
                                     document.getElementById('exp').textContent = data.new_exp;
                                     const inv = Object.entries(data.inventory).filter(([,v]) => v>0).map(([k,v]) => `${k}:${v}`).join(', ');
                                     document.getElementById('inventory').textContent = inv || 'пусто';
-                                    showError(`+${data.gold}💰`);
+                                    showSuccess(`+${data.gold}💰`);
+                                }
+                            });
+                        } else if (hit.userData.type === 'boss') {
+                            attackBoss();
+                        }
+                    } else {
+                        debugLog('Пересечений нет');
+                        showError('Мимо');
+                    }
                 }
-            });
-        } else if (hit.userData.type === 'boss') {
-            showError('Клик по боссу (скоро будет)');
-            // здесь позже
-        }
-    } else {
-        debugLog('Пересечений нет');
-        showError('Мимо');
-    }
-}
 
                 // Добавляем обработчики
                 renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
@@ -354,7 +469,7 @@
                 // Анимация
                 function animate() {
                     cubes.forEach(c => c.rotation.y += 0.01);
-                    if (boss.visible) boss.rotation.y += 0.01;
+                    if (bossMesh && bossMesh.visible) bossMesh.rotation.y += 0.01;
                     controls.update();
                     renderer.render(scene, camera);
                     requestAnimationFrame(animate);
@@ -374,5 +489,3 @@
     </script>
 </body>
 </html>
-
-
