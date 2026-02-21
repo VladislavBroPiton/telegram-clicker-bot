@@ -1850,29 +1850,24 @@ def verify_telegram_data(bot_token: str, init_data: str) -> dict | None:
         return None
 
 async def api_user(request: Request):
+    # Получаем заголовок с данными от Telegram
     init_data = request.headers.get('x-telegram-init-data')
-    origin = request.headers.get('origin', '')
-    
-    # Определяем, от какого пользователя пришёл запрос
-    uid = None
-    if init_data:
-        # Если есть данные от Telegram, проверяем подпись
-        user = verify_telegram_data(TOKEN, init_data)
-        if not user:
-            return JSONResponse({'error': 'Invalid signature'}, status_code=403)
-        uid = user['id']
-    elif "github.io" in origin or "localhost" in origin:
-        # ВРЕМЕННО: для теста из браузера на GitHub Pages (или локально)
-        uid = 5683729883  # ⚠️ СЮДА ВСТАВЬТЕ СВОЙ ID, например 123456789
-    else:
-        # Если нет ни init_data, ни разрешённого источника — ошибка
+    if not init_data:
         return JSONResponse({'error': 'Missing init data'}, status_code=401)
     
-    # Дальше код без изменений — получаем данные игрока
+    # Извлекаем пользователя
+    user = verify_telegram_data(TOKEN, init_data)
+    if not user:
+        return JSONResponse({'error': 'Invalid init data'}, status_code=403)
+    
+    uid = user['id']
+    
+    # Получаем данные игрока (как и раньше)
     stats = await get_player_stats(uid)
     inv = await get_inventory(uid)
     current_location = await get_player_current_location(uid)
     
+    # Прогресс боссов
     boss_progress = {}
     async with db_pool.acquire() as conn:
         rows = await conn.fetch("SELECT boss_id, current_health, defeated FROM boss_progress WHERE user_id = $1", uid)
@@ -1895,24 +1890,22 @@ async def api_user(request: Request):
 
 async def api_boss_attack(request: Request):
     init_data = request.headers.get('x-telegram-init-data')
-    origin = request.headers.get('origin', '')
-    
-    uid = None
-    if init_data:
-        user = verify_telegram_data(TOKEN, init_data)
-        if not user:
-            return JSONResponse({'error': 'Invalid signature'}, status_code=403)
-        uid = user['id']
-    elif "github.io" in origin or "localhost" in origin:
-        uid = 5683729883  # ⚠️ СЮДА ВСТАВЬТЕ СВОЙ ID
-    else:
+    if not init_data:
         return JSONResponse({'error': 'Missing init data'}, status_code=401)
     
+    user = verify_telegram_data(TOKEN, init_data)
+    if not user:
+        return JSONResponse({'error': 'Invalid init data'}, status_code=403)
+    
+    uid = user['id']
+    
+    # Получаем тело запроса (должен содержать boss_id)
     body = await request.json()
     boss_id = body.get('boss_id')
     if not boss_id or boss_id not in BOSS_LOCATIONS:
         return JSONResponse({'error': 'Invalid boss_id'}, status_code=400)
     
+    # Проверяем доступность босса для игрока
     stats = await get_player_stats(uid)
     bloc = BOSS_LOCATIONS[boss_id]
     if stats['level'] < bloc['min_level']:
@@ -1921,17 +1914,21 @@ async def api_boss_attack(request: Request):
     if tool_level < bloc['min_tool_level']:
         return JSONResponse({'error': 'Tool level too low'}, status_code=403)
     
+    # Проверяем, не побеждён ли босс
     prog = await get_boss_progress(uid, boss_id)
     if prog['defeated']:
         return JSONResponse({'error': 'Boss already defeated'}, status_code=400)
     
+    # Рассчитываем урон (как в обычном клике)
     gold, exp, is_crit = get_click_reward(stats)
     damage = gold
     if is_crit:
         damage *= 2
     
+    # Наносим урон
     defeated = await update_boss_health(uid, boss_id, damage)
     
+    # Если босс побеждён – выдаём награду
     if defeated:
         boss = bloc['boss']
         async with db_pool.acquire() as conn:
@@ -1942,8 +1939,9 @@ async def api_boss_attack(request: Request):
             for res, (min_amt, max_amt) in boss['reward_resources'].items():
                 amt = random.randint(min_amt, max_amt)
                 await add_resource(uid, res, amt)
-        await check_achievements(uid)
+        await check_achievements(uid)  # Не отправляем сообщение в чат, просто проверяем
     
+    # Получаем свежие данные
     new_prog = await get_boss_progress(uid, boss_id)
     new_stats = await get_player_stats(uid)
     new_inv = await get_inventory(uid)
@@ -1961,22 +1959,19 @@ async def api_boss_attack(request: Request):
 
 async def api_boss_info(request: Request):
     init_data = request.headers.get('x-telegram-init-data')
-    origin = request.headers.get('origin', '')
-    
-    uid = None
-    if init_data:
-        user = verify_telegram_data(TOKEN, init_data)
-        if not user:
-            return JSONResponse({'error': 'Invalid signature'}, status_code=403)
-        uid = user['id']
-    elif "github.io" in origin or "localhost" in origin:
-        uid = 5683729883  # ⚠️ СЮДА ВСТАВЬТЕ СВОЙ ID
-    else:
+    if not init_data:
         return JSONResponse({'error': 'Missing init data'}, status_code=401)
+    
+    user = verify_telegram_data(TOKEN, init_data)
+    if not user:
+        return JSONResponse({'error': 'Invalid init data'}, status_code=403)
+    
+    uid = user['id']
     
     boss_id = request.path_params.get('boss_id')
     if not boss_id or boss_id not in BOSS_LOCATIONS:
         return JSONResponse({'error': 'Invalid boss_id'}, status_code=400)
+    
     prog = await get_boss_progress(uid, boss_id)
     return JSONResponse({
         'current_health': prog['current_health'],
@@ -1986,27 +1981,20 @@ async def api_boss_info(request: Request):
 
 async def api_click(request: Request):
     init_data = request.headers.get('x-telegram-init-data')
-    origin = request.headers.get('origin', '')
-    
-    # --- Определяем пользователя (как и в других API-функциях) ---
-    uid = None
-    if init_data:
-        user = verify_telegram_data(TOKEN, init_data)
-        if not user:
-            return JSONResponse({'error': 'Invalid signature'}, status_code=403)
-        uid = user['id']
-    elif "github.io" in origin or "localhost" in origin:
-        # ВРЕМЕННО: для теста из браузера
-        uid = 5683729883  # ⚠️ НЕ ЗАБУДЬТЕ ЗАМЕНИТЬ!
-    else:
+    if not init_data:
         return JSONResponse({'error': 'Missing init data'}, status_code=401)
-    # ------------------------------------------------------------
-
-    # Получаем текущую локацию игрока
+    
+    user = verify_telegram_data(TOKEN, init_data)
+    if not user:
+        return JSONResponse({'error': 'Invalid init data'}, status_code=403)
+    
+    uid = user['id']
+    
+    # Получаем текущую локацию
     loc_id = await get_player_current_location(uid)
     loc = LOCATIONS.get(loc_id, LOCATIONS['coal_mine'])
     
-    # --- Логика добычи (скопирована из mine_action) ---
+    # Логика добычи
     rnd = random.random()
     cum = 0
     found = None
@@ -2017,10 +2005,10 @@ async def api_click(request: Request):
             found = r['res_id']
             amt = random.randint(r['min'], r['max'])
             break
-
+    
     stats = await get_player_stats(uid)
     gold, exp, is_crit = get_click_reward(stats)
-
+    
     if found:
         active_tool = await get_active_tool(uid)
         tool_level = await get_tool_level(uid, active_tool)
@@ -2029,9 +2017,8 @@ async def api_click(request: Request):
             multiplier = 1 + (tool_power - 1) * 0.2
             amt = int(amt * multiplier)
             amt = max(1, amt)
-    # ----------------------------------------------------
-
-    # --- Обновление данных в базе ---
+    
+    # Обновляем игрока
     async with db_pool.acquire() as conn:
         await conn.execute(
             "UPDATE players SET gold = gold + $1, exp = exp + $2, total_clicks = total_clicks + 1, total_gold_earned = total_gold_earned + $3 WHERE user_id = $4",
@@ -2044,13 +2031,13 @@ async def api_click(request: Request):
             )
         else:
             await conn.execute("UPDATE players SET current_crit_streak = 0 WHERE user_id = $1", uid)
-
+    
     await level_up_if_needed(uid)
-
+    
     if found:
         await add_resource(uid, found, amt)
-
-    # --- Обновление заданий и достижений ---
+    
+    # Обновляем задания и достижения
     await update_daily_task_progress(uid, 'Труженик', 1)
     await update_daily_task_progress(uid, 'Золотоискатель', gold)
     if is_crit:
@@ -2063,13 +2050,13 @@ async def api_click(request: Request):
         await update_weekly_task_progress(uid, 'Критический удар', 1)
     if found:
         await update_weekly_task_progress(uid, 'Коллекционер', amt)
-
-    await check_achievements(uid)  # Проверяем, но не отправляем сообщения в чат
-
-    # --- Получаем свежие данные для ответа ---
+    
+    await check_achievements(uid)  # Проверяем достижения без отправки сообщений
+    
+    # Возвращаем обновлённые данные
     new_stats = await get_player_stats(uid)
     new_inv = await get_inventory(uid)
-
+    
     return JSONResponse({
         'gold': gold,
         'exp': exp,
@@ -2162,6 +2149,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
