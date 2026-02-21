@@ -3,21 +3,63 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Шахтёрская глубина 3D (тест конуса)</title>
+    <title>Шахтёрская глубина 3D (отладка модели)</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Стили как в оригинале (можно оставить те же, я их сокращу для краткости, но вы используйте полные) */
-        body { margin: 0; overflow: hidden; font-family: sans-serif; touch-action: none; }
-        #hud, #boss-health { position: absolute; color: white; background: rgba(20,20,30,0.85); backdrop-filter: blur(4px); padding: 10px; border-radius: 16px; z-index: 200; pointer-events: none; border: 1px solid rgba(255,215,0,0.3); }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; }
+        #hud, #boss-health {
+            position: absolute;
+            color: white;
+            background: rgba(20,20,30,0.85);
+            backdrop-filter: blur(4px);
+            padding: 10px 14px;
+            border-radius: 16px;
+            z-index: 200;
+            pointer-events: none;
+            border: 1px solid rgba(255,215,0,0.3);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            font-size: 14px;
+        }
         #hud { top: 10px; left: 10px; }
         #boss-health { top: 10px; right: 10px; width: 220px; display: none; border-color: #ff4444; }
-        .health-bar { width: 100%; height: 16px; background: #333; border-radius: 8px; overflow: hidden; margin-top: 6px; }
+        .health-bar { width: 100%; height: 16px; background-color: #333; border-radius: 8px; overflow: hidden; margin-top: 6px; }
         .health-fill { height: 100%; background: linear-gradient(90deg, #ff4444, #ff8844); width: 100%; transition: width 0.2s; }
         .boss-navigation { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; pointer-events: auto; }
         .boss-nav-btn { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 20px; width: 40px; height: 40px; border-radius: 20px; cursor: pointer; }
+        .boss-nav-btn:active { background: rgba(255,255,255,0.4); }
         .boss-nav-btn.disabled { opacity: 0.3; pointer-events: none; }
-        #debug-info { position: absolute; bottom: 10px; left: 10px; background: black; color: yellow; padding: 5px; max-height: 200px; overflow: auto; z-index: 1000; }
-        #test-button { position: absolute; bottom: 10px; right: 10px; z-index: 2000; background: #ff4444; color: white; padding: 8px 16px; border: none; border-radius: 20px; font-size: 14px; cursor: pointer; }
+        #debug-info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.9);
+            color: #0f0;
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 1000;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow: auto;
+            pointer-events: none;
+            border: 2px solid #0f0;
+        }
+        #test-button {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            z-index: 2000;
+            background: #ff4444;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            pointer-events: auto;
+        }
+        #tool-display { margin-top: 8px; font-size: 13px; color: #ffaa66; border-top: 1px solid #444; padding-top: 6px; }
     </style>
     <script type="importmap">
         {
@@ -29,17 +71,23 @@
 </head>
 <body>
     <div id="hud">
-        <div>💰 <span id="gold">0</span> ✨ <span id="exp">0</span></div>
+        <div style="display: flex; justify-content: space-between;">
+            <span>💰 <span id="gold">0</span></span>
+            <span>✨ <span id="exp">0</span></span>
+        </div>
         <div>Уровень <span id="level">1</span> • <span id="exp-current">0</span>/100</div>
-        <div>📦 <span id="inventory">—</span></div>
-        <div id="tool-display">🧰 <span id="active-tool">загрузка...</span></div>
+        <div>📦 Инвентарь: <span id="inventory">—</span></div>
+        <div id="tool-display">🧰 Инструмент: <span id="active-tool">загрузка...</span></div>
     </div>
     <div id="boss-health">
-        <div><span id="boss-name"></span> <span id="boss-current-health">0</span>/<span id="boss-max-health">0</span></div>
+        <div style="display: flex; justify-content: space-between;">
+            <span>👾 <span id="boss-name"></span></span>
+            <span><span id="boss-current-health">0</span>/<span id="boss-max-health">0</span></span>
+        </div>
         <div class="health-bar"><div class="health-fill" id="boss-health-fill"></div></div>
         <div class="boss-navigation">
             <button class="boss-nav-btn" id="prev-boss">←</button>
-            <span id="boss-index">1/3</span>
+            <span style="font-size: 14px;" id="boss-index">1/3</span>
             <button class="boss-nav-btn" id="next-boss">→</button>
         </div>
     </div>
@@ -65,6 +113,7 @@
         let scene, camera, renderer, controls;
         let bossGroup = null;
         let threeReady = false;
+        let testCube = null; // для отладки
 
         // Элементы DOM
         const hudLevel = document.getElementById('level');
@@ -82,7 +131,7 @@
         const debugInfo = document.getElementById('debug-info');
 
         function debugLog(msg) {
-            debugInfo.innerHTML += msg + '<br>';
+            debugInfo.innerHTML += new Date().toLocaleTimeString() + ': ' + msg + '<br>';
             console.log(msg);
         }
 
@@ -132,32 +181,61 @@
             bossHealthFill.style.width = (max ? (current / max) * 100 : 0) + '%';
         }
 
-        // --- УПРОЩЁННАЯ МОДЕЛЬ БОССА (ЗЕЛЁНЫЙ КОНУС) ---
+        // --- МОДЕЛЬ БОССА (упрощённая, но яркая) ---
         function createBossModel(bossId) {
             debugLog(`createBossModel called for ${bossId}`);
             const group = new THREE.Group();
-            // Простой конус
-            const geom = new THREE.ConeGeometry(1.5, 3, 8);
-            const mat = new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x003300 });
+            
+            // Основное тело - яркий конус
+            const geom = new THREE.ConeGeometry(1.5, 3, 16);
+            const mat = new THREE.MeshStandardMaterial({ 
+                color: bossId === 'goblin_king' ? 0xffaa00 :
+                       bossId === 'dragon_lair' ? 0xff3333 :
+                       0xaa44ff,
+                emissive: 0x222222,
+                roughness: 0.3,
+                metalness: 0.1
+            });
             const cone = new THREE.Mesh(geom, mat);
             cone.position.y = 1.5; // центр конуса на высоте 1.5
             group.add(cone);
-            // Добавим маленький кубик сверху для различия боссов
+
+            // Добавим отличительный элемент сверху
+            let top;
             if (bossId === 'goblin_king') {
-                const top = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.5,0.5), new THREE.MeshStandardMaterial({ color: 0xffaa00 }));
+                top = new THREE.Mesh(new THREE.BoxGeometry(0.8,0.8,0.8), new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 }));
                 top.position.y = 3.0;
-                group.add(top);
             } else if (bossId === 'dragon_lair') {
-                const top = new THREE.Mesh(new THREE.ConeGeometry(0.5,1,4), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
+                top = new THREE.Mesh(new THREE.ConeGeometry(0.7,1.2,8), new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x330000 }));
                 top.position.y = 3.0;
-                group.add(top);
-            } else if (bossId === 'lich_castle') {
-                const top = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            } else {
+                top = new THREE.Mesh(new THREE.SphereGeometry(0.7), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x444444 }));
                 top.position.y = 3.0;
-                group.add(top);
             }
+            group.add(top);
+
+            // Добавим глаза для большей заметности
+            const eyeGeom = new THREE.SphereGeometry(0.2);
+            const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            const pupilGeom = new THREE.SphereGeometry(0.1);
+            const pupilMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+            
+            const eyeL = new THREE.Mesh(eyeGeom, eyeMat);
+            eyeL.position.set(-0.5, 2.2, 1.2);
+            group.add(eyeL);
+            const pupilL = new THREE.Mesh(pupilGeom, pupilMat);
+            pupilL.position.set(-0.5, 2.2, 1.4);
+            group.add(pupilL);
+            
+            const eyeR = new THREE.Mesh(eyeGeom, eyeMat);
+            eyeR.position.set(0.5, 2.2, 1.2);
+            group.add(eyeR);
+            const pupilR = new THREE.Mesh(pupilGeom, pupilMat);
+            pupilR.position.set(0.5, 2.2, 1.4);
+            group.add(pupilR);
+
             group.scale.set(0.8, 0.8, 0.8);
-            group.position.y = 1.5;
+            group.position.y = 1.5; // центр группы на высоте 1.5
             return group;
         }
 
@@ -189,7 +267,7 @@
             }
         }
 
-        // --- ЗАГРУЗКА ИНФОРМАЦИИ О БОССЕ ---
+        // --- ЗАГРУЗКА ИНФОРМАЦИИ О БОССЕ С ОТЛАДКОЙ ---
         async function loadBossInfo(bid) {
             debugLog(`loadBossInfo for ${bid}`);
             const data = await apiCall(`boss/${bid}`);
@@ -198,16 +276,32 @@
                 updateBossHealth(data.current_health, data.max_health);
                 bossHealthDiv.style.display = 'block';
                 if (bossGroup && threeReady) {
+                    // Удаляем старую модель
                     while(bossGroup.children.length > 0) bossGroup.remove(bossGroup.children[0]);
+                    debugLog('Старая модель удалена');
+                    
+                    // Создаём новую
                     const newBoss = createBossModel(bid);
                     bossGroup.add(newBoss);
-                    debugLog(`Boss model added for ${bid}, children: ${bossGroup.children.length}`);
+                    debugLog(`Новая модель добавлена, детей: ${bossGroup.children.length}`);
+                    
+                    // Принудительно устанавливаем позицию
+                    bossGroup.position.set(0, 1.5, 0);
+                    bossGroup.scale.set(0.8, 0.8, 0.8);
+                    
+                    // Вычисляем bounding box модели
+                    const box = new THREE.Box3().setFromObject(bossGroup);
+                    debugLog(`Boss group position: ${bossGroup.position.x.toFixed(2)}, ${bossGroup.position.y.toFixed(2)}, ${bossGroup.position.z.toFixed(2)}`);
+                    debugLog(`Bounding box min: (${box.min.x.toFixed(2)}, ${box.min.y.toFixed(2)}, ${box.min.z.toFixed(2)}) max: (${box.max.x.toFixed(2)}, ${box.max.y.toFixed(2)}, ${box.max.z.toFixed(2)})`);
+                    
                     // Центрируем камеру на боссе
-                    if (camera) {
+                    if (camera && controls) {
                         camera.position.set(5, 4, 8);
                         controls.target.set(0, 2, 0);
                         controls.update();
                     }
+                } else {
+                    debugLog('bossGroup не готов или threeReady false');
                 }
                 updateBossNavigation();
             }
@@ -260,25 +354,29 @@
             controls.enableDamping = true;
             controls.target.set(0, 2, 0);
 
-            // Освещение
-            const ambient = new THREE.AmbientLight(0x404060);
+            // Освещение - добавим побольше
+            const ambient = new THREE.AmbientLight(0x606080);
             scene.add(ambient);
-            const light1 = new THREE.DirectionalLight(0xffffff, 1);
+            const light1 = new THREE.DirectionalLight(0xffffff, 1.2);
             light1.position.set(5, 10, 7);
             scene.add(light1);
-            const light2 = new THREE.DirectionalLight(0xffaa88, 0.5);
+            const light2 = new THREE.DirectionalLight(0xffaa88, 0.8);
             light2.position.set(-5, 5, -5);
             scene.add(light2);
+            // Добавим точечный свет спереди
+            const pointLight = new THREE.PointLight(0xffffff, 0.5);
+            pointLight.position.set(2, 3, 5);
+            scene.add(pointLight);
 
             // Пол
             const gridHelper = new THREE.GridHelper(20, 20, 0xaaaaaa, 0x444444);
             scene.add(gridHelper);
 
-            // ТЕСТОВЫЙ КРАСНЫЙ КУБ В ЦЕНТРЕ (для проверки)
-            const testCube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color: 0xff0000}));
-            testCube.position.set(0, 2, 0);
+            // ТЕСТОВЫЙ КРАСНЫЙ КУБ - поднимем выше, чтобы не мешал
+            testCube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color: 0xff0000, emissive: 0x330000}));
+            testCube.position.set(0, 4, 0); // высоко
             scene.add(testCube);
-            debugLog('✅ Тестовый красный куб добавлен');
+            debugLog('✅ Тестовый красный куб добавлен на высоте 4');
 
             // Кубы-ресурсы (как в оригинале)
             const positions = [[-3,1.5,-2], [3,1.5,-2], [0,1.5,2], [-2,1.5,3], [2,1.5,3]];
@@ -336,7 +434,7 @@
             // Анимация
             function animate() {
                 cubes.forEach(c => c.rotation.y += 0.01);
-                testCube.rotation.y += 0.01;
+                if (testCube) testCube.rotation.y += 0.01;
                 if (bossGroup && bossGroup.children.length > 0) {
                     bossGroup.rotation.y += 0.01;
                 }
