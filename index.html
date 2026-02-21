@@ -27,8 +27,8 @@
 #hud {
     top: 10px;
     left: 10px;
-    right: auto; /* убираем фиксированный right */
-    max-width: calc(100% - 240px); /* чтобы не залезать на панель босса */
+    right: auto;
+    max-width: calc(100% - 240px);
 }
 
 #boss-health {
@@ -49,14 +49,26 @@
     }
     #boss-health {
         top: auto;
-        bottom: 10px; /* перемещаем панель босса вниз */
+        bottom: 10px; /* панель босса внизу */
         right: 10px;
         left: 10px;
         width: auto;
     }
-    /* Панели отладки тоже подвигаем, чтобы не мешали */
-    #debug-info, #error-message, #success-message, #loot-message {
+    /* Панели отладки поднимаем выше, чтобы не перекрывать панель босса */
+    #debug-info {
         bottom: auto;
+        top: 70px;
+        max-height: calc(100% - 200px);
+    }
+    #error-message {
+        bottom: 70px;
+        top: auto;
+    }
+    #success-message {
+        bottom: 120px;
+        top: auto;
+    }
+    #loot-message {
         top: 50%;
         transform: translateY(-50%);
     }
@@ -71,6 +83,10 @@
     #boss-health {
         font-size: 12px;
         padding: 6px 10px;
+    }
+    #debug-info, #error-message, #success-message, #loot-message {
+        font-size: 12px;
+        padding: 6px;
     }
 }
 
@@ -722,5 +738,6 @@
     </script>
 </body>
 </html>
+
 
 
