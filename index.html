@@ -43,9 +43,24 @@
             width: 100%;
             transition: width 0.2s;
         }
+        #debug-info {
+            position: absolute;
+            bottom: 80px;
+            left: 10px;
+            right: 10px;
+            color: white;
+            background: rgba(0,0,0,0.9);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            border: 2px solid yellow;
+        }
         #error-message {
             position: absolute;
-            bottom: 60px;
+            bottom: 10px;
             left: 10px;
             right: 10px;
             color: red;
@@ -58,29 +73,19 @@
             word-break: break-word;
             border: 2px solid red;
         }
-        #debug {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            color: lime;
-            background: black;
-            padding: 5px;
-            font-size: 12px;
-            z-index: 300;
-            max-width: 90%;
-            word-break: break-all;
-        }
         #testButton {
             position: absolute;
             bottom: 10px;
             right: 10px;
-            z-index: 1000;
+            z-index: 2000;
             background: red;
             color: white;
-            padding: 10px;
+            padding: 10px 20px;
             border: none;
             border-radius: 5px;
-            font-size: 16px;
+            font-size: 18px;
+            font-weight: bold;
+            pointer-events: auto;
         }
     </style>
     <script type="importmap">
@@ -102,16 +107,23 @@
         <div class="health-bar"><div class="health-fill" id="boss-health-fill" style="width:100%"></div></div>
         <div><span id="boss-current-health">0</span>/<span id="boss-max-health">0</span></div>
     </div>
+    <div id="debug-info" style="display: none;"></div>
     <div id="error-message" style="display: none;"></div>
-    <div id="debug"></div>
-    <button id="testButton">Тест клика</button>
+    <button id="testButton">ТЕСТ</button>
 
     <script type="module">
         // --- НАСТРОЙКА: Адрес вашего бота на Render ---
         const API_BASE_URL = 'https://telegram-clicker-bot-zi6c.onrender.com'; // <--- ИЗМЕНИТЕ ЭТО!
         // ---------------------------------------------
 
-        // Функция для показа ошибок
+        // Отладка
+        function debugLog(msg) {
+            const el = document.getElementById('debug-info');
+            el.style.display = 'block';
+            el.innerHTML = msg;
+            console.log(msg);
+        }
+
         function showError(msg) {
             const el = document.getElementById('error-message');
             el.style.display = 'block';
@@ -128,9 +140,9 @@
             tg = { ready: () => {}, expand: () => {}, HapticFeedback: { impactOccurred: () => {} }, initData: "" };
         }
         const initData = tg.initData;
-        document.getElementById('debug').innerHTML = 'initData: ' + (initData ? initData.substring(0,50) + '...' : 'нет');
+        debugLog('initData: ' + (initData ? initData.substring(0,50) + '...' : 'нет'));
 
-        // API вызов
+        // API
         async function apiCall(endpoint, method = 'GET', body = null) {
             const headers = { 'Content-Type': 'application/json' };
             if (initData) headers['X-Telegram-Init-Data'] = initData;
@@ -148,7 +160,7 @@
 
         // Тестовая кнопка
         document.getElementById('testButton').onclick = async () => {
-            showError('Отправка тестового клика...');
+            showError('Тестовый клик отправлен...');
             const data = await apiCall('click', 'POST', { resourceId: 0 });
             if (data) {
                 showError(`Успех! Золото: ${data.new_gold}`);
@@ -163,7 +175,6 @@
             if (!data) return;
             document.getElementById('gold').textContent = data.gold;
             document.getElementById('exp').textContent = data.exp;
-            // Инвентарь
             const inv = Object.entries(data.inventory).filter(([,v]) => v>0).map(([k,v]) => `${k}:${v}`).join(', ');
             document.getElementById('inventory').textContent = inv || 'пусто';
             if (data.boss_progress) {
@@ -194,49 +205,60 @@
                 const scene = new THREE.Scene();
                 scene.background = new THREE.Color(0x111122);
                 const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
-                camera.position.set(5,5,10);
+                camera.position.set(8, 6, 12);
+                camera.lookAt(0, 1, 0);
                 const renderer = new THREE.WebGLRenderer({ antialias: true });
                 renderer.setSize(innerWidth, innerHeight);
                 document.body.appendChild(renderer.domElement);
                 const controls = new OrbitControls(camera, renderer.domElement);
                 controls.enableDamping = true;
                 controls.maxPolarAngle = Math.PI/2;
+                controls.target.set(0, 1, 0);
 
                 // Освещение
-                scene.add(new THREE.AmbientLight(0x404060));
-                const light = new THREE.DirectionalLight(0xffffff, 1);
-                light.position.set(1,2,1);
-                scene.add(light);
+                const ambient = new THREE.AmbientLight(0x404060);
+                scene.add(ambient);
+                const light1 = new THREE.DirectionalLight(0xffffff, 1);
+                light1.position.set(5, 10, 7);
+                scene.add(light1);
+                const light2 = new THREE.DirectionalLight(0xffaa88, 0.5);
+                light2.position.set(-5, 5, -5);
+                scene.add(light2);
 
-                // Пол
-                const floor = new THREE.Mesh(
-                    new THREE.PlaneGeometry(20,20),
-                    new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 })
-                );
-                floor.rotation.x = -Math.PI/2;
-                floor.position.y = 0;
-                scene.add(floor);
+                // Пол с сеткой (чтобы лучше видеть)
+                const gridHelper = new THREE.GridHelper(20, 20, 0xaaaaaa, 0x444444);
+                gridHelper.position.y = 0;
+                scene.add(gridHelper);
 
-                // Кубы-ресурсы
+                // Кубы-ресурсы (большие и яркие)
                 const cubes = [];
-                const positions = [[-3,0.5,-3], [3,0.5,-3], [0,0.5,3], [-2,0.5,2], [2,0.5,2]];
+                const positions = [
+                    [-3, 1.5, -2],
+                    [ 3, 1.5, -2],
+                    [ 0, 1.5,  2],
+                    [-2, 1.5,  3],
+                    [ 2, 1.5,  3]
+                ];
                 positions.forEach((pos, i) => {
-                    const cube = new THREE.Mesh(
-                        new THREE.BoxGeometry(1,1,1),
-                        new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x222222 })
-                    );
+                    const geom = new THREE.BoxGeometry(2, 2, 2); // увеличенный размер
+                    const mat = new THREE.MeshStandardMaterial({ 
+                        color: i === 0 ? 0xffaa00 : i === 1 ? 0xcc8800 : i === 2 ? 0xaaaaaa : i === 3 ? 0x44aa88 : 0x8844aa,
+                        emissive: 0x222222,
+                        roughness: 0.3,
+                        metalness: 0.1
+                    });
+                    const cube = new THREE.Mesh(geom, mat);
                     cube.position.set(pos[0], pos[1], pos[2]);
                     cube.userData = { type: 'resource', id: i };
                     scene.add(cube);
                     cubes.push(cube);
                 });
 
-                // Босс-конус
-                const boss = new THREE.Mesh(
-                    new THREE.ConeGeometry(1,2,8),
-                    new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0x440000 })
-                );
-                boss.position.set(0,1,0);
+                // Босс
+                const bossGeom = new THREE.ConeGeometry(1.5, 3, 8);
+                const bossMat = new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0x440000 });
+                const boss = new THREE.Mesh(bossGeom, bossMat);
+                boss.position.set(0, 1.5, 0);
                 boss.userData = { type: 'boss' };
                 boss.visible = false;
                 scene.add(boss);
@@ -245,36 +267,78 @@
                 const raycaster = new THREE.Raycaster();
                 const mouse = new THREE.Vector2();
 
-                window.addEventListener('click', (e) => {
-                    mouse.x = (e.clientX / innerWidth) * 2 - 1;
-                    mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+                // Обработчик касаний для мобильных
+                function onTouchStart(event) {
+                    event.preventDefault(); // чтобы не вызывать ещё и клик
+                    const touch = event.touches[0];
+                    if (!touch) return;
+                    const rect = renderer.domElement.getBoundingClientRect();
+                    // Вычисляем нормализованные координаты мыши (-1 до 1)
+                    mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+                    mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+                    
+                    debugLog(`Касание: screen (${touch.clientX},${touch.clientY}) -> нормализовано (${mouse.x.toFixed(2)}, ${mouse.y.toFixed(2)})`);
+
                     raycaster.setFromCamera(mouse, camera);
                     const intersects = raycaster.intersectObjects([...cubes, boss]);
-                    if (intersects.length === 0) {
-                        showError('Клик мимо');
-                        return;
+                    
+                    if (intersects.length > 0) {
+                        const hit = intersects[0].object;
+                        debugLog(`Попал в объект: type=${hit.userData.type}, id=${hit.userData.id}, расстояние=${intersects[0].distance.toFixed(2)}`);
+                        
+                        if (hit.userData.type === 'resource') {
+                            showError(`Клик по ресурсу ${hit.userData.id}`);
+                            apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
+                                if (data) {
+                                    document.getElementById('gold').textContent = data.new_gold;
+                                    document.getElementById('exp').textContent = data.new_exp;
+                                    const inv = Object.entries(data.inventory).filter(([,v]) => v>0).map(([k,v]) => `${k}:${v}`).join(', ');
+                                    document.getElementById('inventory').textContent = inv || 'пусто';
+                                    showError(`+${data.gold}💰`);
+                                }
+                            });
+                        } else if (hit.userData.type === 'boss') {
+                            showError('Клик по боссу (скоро будет)');
+                            // здесь можно добавить атаку босса
+                        }
+                    } else {
+                        debugLog('Пересечений нет');
+                        showError('Мимо');
                     }
-                    const hit = intersects[0].object;
-                    if (hit.userData.type === 'resource') {
-                        showError(`Клик по ресурсу ${hit.userData.id}`);
-                        apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
-                            if (data) {
-                                document.getElementById('gold').textContent = data.new_gold;
-                                document.getElementById('exp').textContent = data.new_exp;
-                                // обновить инвентарь
-                                const inv = Object.entries(data.inventory).filter(([,v]) => v>0).map(([k,v]) => `${k}:${v}`).join(', ');
-                                document.getElementById('inventory').textContent = inv || 'пусто';
-                            }
-                        });
-                    } else if (hit.userData.type === 'boss') {
-                        showError('Клик по боссу');
-                        // здесь позже
+                }
+
+                // Для компьютера оставляем click
+                function onClick(event) {
+                    const rect = renderer.domElement.getBoundingClientRect();
+                    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                    
+                    raycaster.setFromCamera(mouse, camera);
+                    const intersects = raycaster.intersectObjects([...cubes, boss]);
+                    
+                    if (intersects.length > 0) {
+                        const hit = intersects[0].object;
+                        if (hit.userData.type === 'resource') {
+                            apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
+                                if (data) {
+                                    document.getElementById('gold').textContent = data.new_gold;
+                                    document.getElementById('exp').textContent = data.new_exp;
+                                    const inv = Object.entries(data.inventory).filter(([,v]) => v>0).map(([k,v]) => `${k}:${v}`).join(', ');
+                                    document.getElementById('inventory').textContent = inv || 'пусто';
+                                }
+                            });
+                        }
                     }
-                });
+                }
+
+                // Добавляем обработчики
+                renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
+                renderer.domElement.addEventListener('click', onClick);
 
                 // Анимация
                 function animate() {
-                    cubes.forEach(c => c.rotation.y += 0.005);
+                    cubes.forEach(c => c.rotation.y += 0.01);
+                    if (boss.visible) boss.rotation.y += 0.01;
                     controls.update();
                     renderer.render(scene, camera);
                     requestAnimationFrame(animate);
