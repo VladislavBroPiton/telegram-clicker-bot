@@ -246,7 +246,21 @@
             }, 100);
         }
 
-        // Атака на босса
+        // Обновление инвентаря (вынесено в отдельную функцию)
+        function updateInventoryDisplay(inventoryObj) {
+            if (!inventoryObj) {
+                document.getElementById('inventory').textContent = '—';
+                return;
+            }
+            const entries = Object.entries(inventoryObj).filter(([,v]) => v > 0);
+            if (entries.length === 0) {
+                document.getElementById('inventory').textContent = 'пусто';
+            } else {
+                document.getElementById('inventory').textContent = entries.map(([k,v]) => `${k}:${v}`).join(', ');
+            }
+        }
+
+        // Атака на босса (исправленная версия)
         async function attackBoss() {
             setDebugStatus(`Атака? isAttacking=${isAttacking}, currentBossId=${currentBossId}`);
             
@@ -274,51 +288,44 @@
                     return;
                 }
 
-                if (data.success) {
-                    // Обновляем золото и опыт
-                    if (data.new_gold !== undefined) {
-                        document.getElementById('gold').textContent = data.new_gold;
-                    } else if (data.user?.gold !== undefined) {
-                        document.getElementById('gold').textContent = data.user.gold;
-                    }
+                // Если сервер вернул явную ошибку
+                if (data.error) {
+                    showError(data.error);
+                    setDebugStatus('Атака: ошибка - ' + data.error);
+                    isAttacking = false;
+                    return;
+                }
 
-                    if (data.new_exp !== undefined) {
-                        document.getElementById('exp').textContent = data.new_exp;
-                    } else if (data.user?.experience !== undefined) {
-                        document.getElementById('exp').textContent = data.user.experience;
-                    }
+                // Успех: обновляем ресурсы
+                if (data.new_gold !== undefined) {
+                    document.getElementById('gold').textContent = data.new_gold;
+                }
+                if (data.new_exp !== undefined) {
+                    document.getElementById('exp').textContent = data.new_exp;
+                }
 
-                    // Обновляем инвентарь
-                    let inventoryObj = data.inventory || data.user?.inventory;
-                    if (inventoryObj) {
-                        const inv = Object.entries(inventoryObj)
-                            .filter(([,v]) => v > 0)
-                            .map(([k,v]) => `${k}:${v}`)
-                            .join(', ');
-                        document.getElementById('inventory').textContent = inv || 'пусто';
-                    }
+                // Обновляем инвентарь
+                if (data.inventory) {
+                    updateInventoryDisplay(data.inventory);
+                }
 
-                    // Обновляем здоровье босса
-                    const { current, max } = extractBossHealth(data);
-                    if (current !== undefined && max !== undefined) {
-                        updateBossHealth(current, max);
-                        if (current <= 0) {
-                            hideBoss();
-                            showSuccess('🎉 Босс повержен!');
-                        } else {
-                            showSuccess('💥 Удар!');
-                        }
-                        setDebugStatus(`Атака успешна: здоровье ${current}/${max}`);
+                // Обновляем здоровье босса
+                const { current, max } = extractBossHealth(data);
+                if (current !== undefined && max !== undefined) {
+                    updateBossHealth(current, max);
+                    if (current <= 0) {
+                        hideBoss();
+                        showSuccess('🎉 Босс повержен!');
                     } else {
-                        debugLog('⚠️ В ответе нет данных о здоровье босса');
-                        setDebugStatus('Атака: нет здоровья в ответе');
+                        showSuccess('💥 Удар!');
                     }
+                    setDebugStatus(`Атака успешна: здоровье ${current}/${max}`);
                 } else {
-                    showError(data.error || 'Ошибка атаки');
-                    setDebugStatus('Атака: ошибка - ' + (data.error || 'неизвестно'));
+                    debugLog('⚠️ В ответе нет данных о здоровье босса');
+                    setDebugStatus('Атака: нет здоровья в ответе');
                 }
             } catch (e) {
-                // уже обработано в apiCall
+                // ошибка уже обработана в apiCall
                 setDebugStatus('Атака: исключение');
             } finally {
                 isAttacking = false;
@@ -335,8 +342,7 @@
             }
             document.getElementById('gold').textContent = data.gold;
             document.getElementById('exp').textContent = data.exp;
-            const inv = Object.entries(data.inventory).filter(([,v]) => v>0).map(([k,v]) => `${k}:${v}`).join(', ');
-            document.getElementById('inventory').textContent = inv || 'пусто';
+            updateInventoryDisplay(data.inventory);
             
             if (data.boss_progress) {
                 for (let [bid, prog] of Object.entries(data.boss_progress)) {
@@ -458,8 +464,7 @@
                                 if (data) {
                                     document.getElementById('gold').textContent = data.new_gold;
                                     document.getElementById('exp').textContent = data.new_exp;
-                                    const inv = Object.entries(data.inventory).filter(([,v]) => v>0).map(([k,v]) => `${k}:${v}`).join(', ');
-                                    document.getElementById('inventory').textContent = inv || 'пусто';
+                                    updateInventoryDisplay(data.inventory);
                                     showSuccess(`+${data.gold}💰`);
                                 }
                             });
@@ -492,8 +497,7 @@
                                 if (data) {
                                     document.getElementById('gold').textContent = data.new_gold;
                                     document.getElementById('exp').textContent = data.new_exp;
-                                    const inv = Object.entries(data.inventory).filter(([,v]) => v>0).map(([k,v]) => `${k}:${v}`).join(', ');
-                                    document.getElementById('inventory').textContent = inv || 'пусто';
+                                    updateInventoryDisplay(data.inventory);
                                     showSuccess(`+${data.gold}💰`);
                                 }
                             });
