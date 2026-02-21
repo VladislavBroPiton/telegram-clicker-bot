@@ -1833,26 +1833,27 @@ async def button_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 # ==================== API ДЛЯ MINI APP ====================
 
 def verify_telegram_data(bot_token: str, init_data: str) -> dict | None:
-    """
-    Парсит init_data и возвращает объект пользователя.
-    ВНИМАНИЕ: подпись НЕ ПРОВЕРЯЕТСЯ (только для теста)!
-    """
     try:
+        from urllib.parse import parse_qsl
+        import json
         data = dict(parse_qsl(init_data))
         user_str = data.get('user')
         if not user_str:
-            logger.error("verify_telegram_data: no 'user' field in init_data")
+            print("verify_telegram_data: no user")
             return None
         user = json.loads(user_str)
+        print(f"verify_telegram_data: user_id={user.get('id')}")
         return user
     except Exception as e:
-        logger.error(f"verify_telegram_data: error parsing initData: {e}")
+        print(f"verify_telegram_data error: {e}")
         return None
 
 async def api_user(request: Request):
     # Получаем заголовок с данными от Telegram
     init_data = request.headers.get('x-telegram-init-data')
     if not init_data:
+        # После того, как мы получили uid, добавим:
+        print(f"DEBUG api_user: uid={uid}, gold={stats['gold']}, level={stats['level']}")
         return JSONResponse({'error': 'Missing init data'}, status_code=401)
     
     # Извлекаем пользователя
@@ -2149,6 +2150,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
