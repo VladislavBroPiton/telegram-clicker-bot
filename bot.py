@@ -1834,17 +1834,19 @@ async def button_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 def verify_telegram_data(bot_token: str, init_data: str) -> dict | None:
     """
-    ВРЕМЕННО: упрощённая версия без проверки подписи.
-    Извлекает пользователя из init_data.
+    Парсит init_data и возвращает объект пользователя.
+    ВНИМАНИЕ: подпись НЕ ПРОВЕРЯЕТСЯ (только для теста)!
     """
     try:
         data = dict(parse_qsl(init_data))
-        if 'user' in data:
-            user = json.loads(data['user'])
-            return user
-        return None
+        user_str = data.get('user')
+        if not user_str:
+            logger.error("verify_telegram_data: no 'user' field in init_data")
+            return None
+        user = json.loads(user_str)
+        return user
     except Exception as e:
-        logger.error(f"Error parsing initData: {e}")
+        logger.error(f"verify_telegram_data: error parsing initData: {e}")
         return None
 
 async def api_user(request: Request):
@@ -2160,6 +2162,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
