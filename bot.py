@@ -1965,22 +1965,19 @@ async def api_boss_attack(request):
         'loot': loot_items   # обязательно
     })
     
-async def api_boss_info(request: Request):
+async def api_boss_info(request):
     init_data = request.headers.get('x-telegram-init-data')
     if not init_data:
         return JSONResponse({'error': 'Missing init data'}, status_code=401)
-    
     user = verify_telegram_data(TOKEN, init_data)
     if not user:
         return JSONResponse({'error': 'Invalid init data'}, status_code=403)
-    
     uid = user['id']
-    
     boss_id = request.path_params.get('boss_id')
     if not boss_id or boss_id not in BOSS_LOCATIONS:
         return JSONResponse({'error': 'Invalid boss_id'}, status_code=400)
-    
     prog = await get_boss_progress(uid, boss_id)
+    print(f"DEBUG: boss_info uid={uid} boss={boss_id} prog={prog}")   # <-- добавить эту строку
     return JSONResponse({
         'current_health': prog['current_health'],
         'defeated': prog['defeated'],
@@ -2157,6 +2154,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
