@@ -1916,15 +1916,12 @@ async def api_boss_attack(request):
     if prog['defeated']:
         return JSONResponse({'error': 'Boss already defeated'}, status_code=400)
 
-    # Рассчитываем урон
     gold, exp, is_crit = get_click_reward(stats)
     damage = gold
     if is_crit:
         damage *= 2
 
-    loot_items = []  # список полученных наград
-
-    # Наносим урон
+    loot_items = []   # список наград
     defeated = await update_boss_health(uid, boss_id, damage)
 
     if defeated:
@@ -1932,7 +1929,7 @@ async def api_boss_attack(request):
         gold_reward = boss['reward_gold']
         exp_reward = boss['exp_reward']
 
-        # Добавляем золото и опыт
+        # Добавляем золото и опыт в лут
         loot_items.append(f"{gold_reward}💰")
         loot_items.append(f"{exp_reward}✨")
 
@@ -1949,9 +1946,9 @@ async def api_boss_attack(request):
                 res_name = RESOURCES.get(res, {}).get('name', res)
                 loot_items.append(f"{res_name} x{amt}")
 
-        await check_achievements(uid)  # проверяем достижения без отправки в чат
+        await check_achievements(uid)   # проверяем достижения
 
-    # Получаем свежие данные после атаки
+    # Получаем свежие данные
     new_prog = await get_boss_progress(uid, boss_id)
     new_stats = await get_player_stats(uid)
     new_inv = await get_inventory(uid)
@@ -1965,9 +1962,9 @@ async def api_boss_attack(request):
         'new_gold': new_stats['gold'],
         'new_exp': new_stats['exp'],
         'inventory': new_inv,
-        'loot': loot_items   # <-- теперь обязательно будет
+        'loot': loot_items   # обязательно
     })
-
+    
 async def api_boss_info(request: Request):
     init_data = request.headers.get('x-telegram-init-data')
     if not init_data:
@@ -2160,6 +2157,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
