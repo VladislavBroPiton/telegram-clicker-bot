@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Шахтёрская глубина 3D (финальная версия)</title>
+    <title>Шахтёрская глубина 3D (рабочая версия)</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
@@ -112,6 +112,7 @@
         let bossGroup = null;
         let threeReady = false;
         let THREE;
+        let cameraAngle = 0;
 
         // Элементы DOM
         const hudLevel = document.getElementById('level');
@@ -190,7 +191,7 @@
             try {
                 const group = new THREE.Group();
                 // Огромный куб с BasicMaterial
-                const geom = new THREE.BoxGeometry(4, 4, 4); // ещё больше
+                const geom = new THREE.BoxGeometry(3, 3, 3);
                 const mat = new THREE.MeshBasicMaterial({ color: 0xffaa00 }); // ярко-оранжевый
                 const cube = new THREE.Mesh(geom, mat);
                 cube.position.set(0, 0, 0);
@@ -291,7 +292,7 @@
                 scene.background = new THREE.Color(0x111122);
 
                 camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
-                camera.position.set(0, 3, 10); // прямо по центру
+                camera.position.set(2, 3, 5); // начальная позиция
                 camera.lookAt(0, 2, 0);
 
                 renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -303,7 +304,7 @@
                 controls.target.set(0, 2, 0);
                 controls.update();
 
-                // Освещение для ресурсных кубов (не влияет на BasicMaterial)
+                // Освещение для ресурсных кубов
                 const ambient = new THREE.AmbientLight(0x404060);
                 scene.add(ambient);
                 const light1 = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -317,8 +318,8 @@
                 const gridHelper = new THREE.GridHelper(20, 20, 0xaaaaaa, 0x444444);
                 scene.add(gridHelper);
 
-                // КРАСНЫЙ КУБ-МАЯК (размер 2, чтобы был заметнее)
-                const redCube = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+                // КРАСНЫЙ КУБ-МАЯК
+                const redCube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
                 redCube.position.set(0, 4, 0);
                 scene.add(redCube);
                 debugLog('🔴 Красный куб-маяк на высоте 4');
@@ -348,7 +349,7 @@
 
                 // Добавляем голубую сферу в группу для проверки
                 const testSphere = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.8, 16),
+                    new THREE.SphereGeometry(0.5, 16),
                     new THREE.MeshBasicMaterial({ color: 0x00ffff })
                 );
                 testSphere.position.set(0, 0, 0);
@@ -362,7 +363,7 @@
 
                 // Розовая сфера в мировой позиции
                 const pinkSphere = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.6, 16),
+                    new THREE.SphereGeometry(0.3, 16),
                     new THREE.MeshBasicMaterial({ color: 0xff00ff })
                 );
                 pinkSphere.position.copy(worldPos);
@@ -409,14 +410,22 @@
                     handleClick(e.touches[0]);
                 }, { passive: false });
 
-                // Анимация
+                // Анимация с вращением камеры
                 function animate() {
+                    // Вращение камеры вокруг цели
+                    cameraAngle += 0.002;
+                    camera.position.x = 5 * Math.sin(cameraAngle);
+                    camera.position.z = 5 * Math.cos(cameraAngle);
+                    camera.position.y = 3; // фиксированная высота
+                    controls.target.set(0, 2, 0);
+                    controls.update();
+
                     cubes.forEach(c => c.rotation.y += 0.01);
                     redCube.rotation.y += 0.01;
                     if (bossGroup) {
                         bossGroup.rotation.y += 0.01;
                     }
-                    controls.update();
+
                     renderer.render(scene, camera);
                     requestAnimationFrame(animate);
                 }
