@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Шахтёрская глубина 3D (гарантированная видимость)</title>
+    <title>Шахтёрская глубина 3D (финальный тест)</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
@@ -190,9 +190,9 @@
             try {
                 const group = new THREE.Group();
                 
-                // ОГРОМНЫЙ ЗЕЛЁНЫЙ КУБ с базовым материалом (не зависит от света)
-                const geom = new THREE.BoxGeometry(3, 3, 3); // размер 3 для наглядности
-                const mat = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // всегда ярко-зелёный
+                // ОГРОМНЫЙ ЗЕЛЁНЫЙ КУБ
+                const geom = new THREE.BoxGeometry(3, 3, 3);
+                const mat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
                 const cube = new THREE.Mesh(geom, mat);
                 cube.position.set(0, 0, 0);
                 group.add(cube);
@@ -293,8 +293,9 @@
                 scene.background = new THREE.Color(0x111122);
 
                 camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
-                camera.position.set(5, 4, 8);
-                camera.lookAt(0, 2, 0);
+                // Направляем камеру прямо на точку (0,4,0)
+                camera.position.set(0, 5, 10);
+                camera.lookAt(0, 4, 0);
 
                 renderer = new THREE.WebGLRenderer({ antialias: true });
                 renderer.setSize(innerWidth, innerHeight);
@@ -302,9 +303,11 @@
 
                 controls = new OrbitControls(camera, renderer.domElement);
                 controls.enableDamping = true;
-                controls.target.set(0, 2, 0);
+                controls.target.set(0, 4, 0);
+                controls.update();
+                debugLog('🎥 Камера направлена на (0,4,0)');
 
-                // Освещение не нужно для MeshBasicMaterial, но оставим для других объектов
+                // Освещение (не обязательно для BasicMaterial, но для других объектов)
                 const ambient = new THREE.AmbientLight(0x404060);
                 scene.add(ambient);
                 const light1 = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -321,13 +324,13 @@
                 const gridHelper = new THREE.GridHelper(20, 20, 0xaaaaaa, 0x444444);
                 scene.add(gridHelper);
 
-                // ТЕСТОВЫЙ КРАСНЫЙ КУБ (тоже с базовым материалом для гарантии)
+                // ТЕСТОВЫЙ КРАСНЫЙ КУБ (тоже BasicMaterial)
                 const testCube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color: 0xff0000}));
                 testCube.position.set(0, 4, 0);
                 scene.add(testCube);
                 debugLog('✅ Тестовый красный куб добавлен на высоте 4');
 
-                // Кубы-ресурсы (пусть остаются с обычным материалом, они видны)
+                // Кубы-ресурсы
                 const positions = [[-3,1.5,-2], [3,1.5,-2], [0,1.5,2], [-2,1.5,3], [2,1.5,3]];
                 positions.forEach((pos, i) => {
                     const cube = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshStandardMaterial({ color: 0xaaaaaa }));
@@ -346,7 +349,7 @@
                 bossGroup.add(initialBoss);
                 debugLog(`Начальная модель добавлена, детей: ${bossGroup.children.length}`);
 
-                // ВРЕМЕННО: помещаем босса прямо в красный куб
+                // Помещаем группу босса в центр красного куба
                 bossGroup.position.set(0, 4, 0);
                 bossGroup.scale.set(1, 1, 1);
                 debugLog('🔧 Босс перемещён в точку красного куба (0,4,0)');
