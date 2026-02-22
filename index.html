@@ -343,34 +343,44 @@
                 });
 
                 // Группа для босса
-                bossGroup = new THREE.Group();
-                scene.add(bossGroup);
+bossGroup = new THREE.Group();
+scene.add(bossGroup);
 
-                // Сразу создаём модель текущего босса
-                const initialBoss = createBossModel(currentBossId);
-                bossGroup.add(initialBoss);
-                debugLog(`Начальная модель добавлена, детей: ${bossGroup.children.length}`);
+// Сразу создаём модель текущего босса
+const initialBoss = createBossModel(currentBossId);
+bossGroup.add(initialBoss);
+debugLog(`Начальная модель добавлена, детей: ${bossGroup.children.length}`);
 
-                // Помещаем босса в центр, на высоту 2 (чуть выше пола)
-                bossGroup.position.set(0, 2, 0);
-                debugLog(`bossGroup позиция: (${bossGroup.position.x}, ${bossGroup.position.y}, ${bossGroup.position.z})`);
-                // Вычисляем мировую позицию группы босса
-                const worldPos = new THREE.Vector3();
-                bossGroup.getWorldPosition(worldPos);
-                debugLog(`Мировая позиция босса: (${worldPos.x.toFixed(2)}, ${worldPos.y.toFixed(2)}, ${worldPos.z.toFixed(2)})`);
+// Добавляем яркую голубую сферу прямо в группу для проверки видимости группы
+const testSphereInGroup = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5, 16),
+    new THREE.MeshBasicMaterial({ color: 0x00ffff }) // голубая
+);
+testSphereInGroup.position.set(0, 0, 0); // центр группы
+bossGroup.add(testSphereInGroup);
+debugLog('🟦 Голубая сфера добавлена в группу босса');
 
-                // Добавляем яркую сферу в эту точку для визуальной проверки
-                const sphereGeom = new THREE.SphereGeometry(0.3);
-                const sphereMat = new THREE.MeshBasicMaterial({ color: 0xff00ff }); // ярко-розовая
-                const sphere = new THREE.Mesh(sphereGeom, sphereMat);
-                sphere.position.copy(worldPos);
-                scene.add(sphere);
-                debugLog('🔮 Розовая сфера добавлена в мировую позицию босса');
+// Помещаем босса в центр, на высоту 2 (чуть выше пола)
+bossGroup.position.set(0, 2, 0);
+debugLog(`bossGroup позиция: (${bossGroup.position.x}, ${bossGroup.position.y}, ${bossGroup.position.z})`);
 
-                threeReady = true;
-                debugLog('Three.js готов, bossGroup создана');
+// Вычисляем мировую позицию группы босса
+const worldPos = new THREE.Vector3();
+bossGroup.getWorldPosition(worldPos);
+debugLog(`Мировая позиция босса: (${worldPos.x.toFixed(2)}, ${worldPos.y.toFixed(2)}, ${worldPos.z.toFixed(2)})`);
 
-                // Рэйкастер для кликов
+// Добавляем яркую сферу в эту точку для визуальной проверки
+const sphereGeom = new THREE.SphereGeometry(0.3);
+const sphereMat = new THREE.MeshBasicMaterial({ color: 0xff00ff }); // ярко-розовая
+const sphere = new THREE.Mesh(sphereGeom, sphereMat);
+sphere.position.copy(worldPos);
+scene.add(sphere);
+debugLog('🔮 Розовая сфера добавлена в мировую позицию босса');
+
+threeReady = true;
+debugLog('Three.js готов, bossGroup создана');
+
+// Рэйкастер для кликов
                 const raycaster = new THREE.Raycaster();
                 const mouse = new THREE.Vector2();
 
@@ -461,5 +471,6 @@
     </script>
 </body>
 </html>
+
 
 
