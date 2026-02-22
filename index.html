@@ -180,82 +180,84 @@
             bossHealthFill.style.width = (max ? (current / max) * 100 : 0) + '%';
         }
 
-        // --- МОДЕЛЬ БОССА (с тестовой сферой) ---
-function createBossModel(bossId) {
-    debugLog(`createBossModel called for ${bossId}`);
-    if (!THREE) {
-        debugLog('THREE не определён!');
-        return new THREE.Group();
-    }
-    try {
-        const group = new THREE.Group();
-        
-        // 🔴 ТЕСТОВАЯ СФЕРА для проверки видимости группы
-        const testSphere = new THREE.Mesh(
-            new THREE.SphereGeometry(0.5, 16),
-            new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x440000 })
-        );
-        testSphere.position.set(0, 2, 0); // в центре группы на высоте глаз
-        group.add(testSphere);
-        debugLog('🔴 Тестовая сфера добавлена в группу босса');
-        
-        // Основное тело - яркий конус
-        const geom = new THREE.ConeGeometry(1.5, 3, 16);
-        const mat = new THREE.MeshStandardMaterial({ 
-            color: bossId === 'goblin_king' ? 0xffaa00 :
-                   bossId === 'dragon_lair' ? 0xff3333 : 0xaa44ff,
-            emissive: 0x222222,
-            roughness: 0.3,
-            metalness: 0.1
-        });
-        const cone = new THREE.Mesh(geom, mat);
-        cone.position.y = 1.5;
-        group.add(cone);
+        // --- МОДЕЛЬ БОССА (яркая, с тестовой сферой) ---
+        function createBossModel(bossId) {
+            debugLog(`createBossModel called for ${bossId}`);
+            if (!THREE) {
+                debugLog('THREE не определён!');
+                return new THREE.Group();
+            }
+            try {
+                const group = new THREE.Group();
+                
+                // 🔴 ТЕСТОВАЯ ПОЛУПРОЗРАЧНАЯ СФЕРА для проверки видимости группы
+                const testSphere = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.8, 16),
+                    new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x440000, transparent: true, opacity: 0.7 })
+                );
+                testSphere.position.set(0, 2, 0);
+                group.add(testSphere);
+                debugLog('🔴 Тестовая сфера добавлена в группу босса');
+                
+                // Основное тело - яркий конус
+                const geom = new THREE.ConeGeometry(1.5, 3, 16);
+                const mat = new THREE.MeshStandardMaterial({ 
+                    color: bossId === 'goblin_king' ? 0xffaa00 :
+                           bossId === 'dragon_lair' ? 0xff3333 : 0xaa44ff,
+                    emissive: 0x222222,
+                    roughness: 0.3,
+                    metalness: 0.1
+                });
+                const cone = new THREE.Mesh(geom, mat);
+                cone.position.y = 1.5;
+                group.add(cone);
 
-        // Отличительный элемент сверху
-        let top;
-        if (bossId === 'goblin_king') {
-            top = new THREE.Mesh(new THREE.BoxGeometry(0.8,0.8,0.8), new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 }));
-            top.position.y = 3.0;
-        } else if (bossId === 'dragon_lair') {
-            top = new THREE.Mesh(new THREE.ConeGeometry(0.7,1.2,8), new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x330000 }));
-            top.position.y = 3.0;
-        } else {
-            top = new THREE.Mesh(new THREE.SphereGeometry(0.7), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x444444 }));
-            top.position.y = 3.0;
+                // Отличительный элемент сверху
+                let top;
+                if (bossId === 'goblin_king') {
+                    top = new THREE.Mesh(new THREE.BoxGeometry(0.8,0.8,0.8), new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 }));
+                    top.position.y = 3.0;
+                } else if (bossId === 'dragon_lair') {
+                    top = new THREE.Mesh(new THREE.ConeGeometry(0.7,1.2,8), new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x330000 }));
+                    top.position.y = 3.0;
+                } else {
+                    top = new THREE.Mesh(new THREE.SphereGeometry(0.7), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x444444 }));
+                    top.position.y = 3.0;
+                }
+                group.add(top);
+
+                // Глаза
+                const eyeGeom = new THREE.SphereGeometry(0.2);
+                const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+                const pupilGeom = new THREE.SphereGeometry(0.1);
+                const pupilMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+                
+                const eyeL = new THREE.Mesh(eyeGeom, eyeMat);
+                eyeL.position.set(-0.5, 2.2, 1.2);
+                group.add(eyeL);
+                const pupilL = new THREE.Mesh(pupilGeom, pupilMat);
+                pupilL.position.set(-0.5, 2.2, 1.4);
+                group.add(pupilL);
+                
+                const eyeR = new THREE.Mesh(eyeGeom, eyeMat);
+                eyeR.position.set(0.5, 2.2, 1.2);
+                group.add(eyeR);
+                const pupilR = new THREE.Mesh(pupilGeom, pupilMat);
+                pupilR.position.set(0.5, 2.2, 1.4);
+                group.add(pupilR);
+
+                // Увеличим масштаб для наглядности
+                group.scale.set(1.5, 1.5, 1.5);
+                // Поднимем группу чуть выше, чтобы центр был на высоте ~2
+                group.position.y = 1.5; 
+                
+                debugLog('✅ Модель успешно создана');
+                return group;
+            } catch (e) {
+                debugLog(`❌ Ошибка в createBossModel: ${e.message}`);
+                return new THREE.Group();
+            }
         }
-        group.add(top);
-
-        // Глаза
-        const eyeGeom = new THREE.SphereGeometry(0.2);
-        const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-        const pupilGeom = new THREE.SphereGeometry(0.1);
-        const pupilMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
-        
-        const eyeL = new THREE.Mesh(eyeGeom, eyeMat);
-        eyeL.position.set(-0.5, 2.2, 1.2);
-        group.add(eyeL);
-        const pupilL = new THREE.Mesh(pupilGeom, pupilMat);
-        pupilL.position.set(-0.5, 2.2, 1.4);
-        group.add(pupilL);
-        
-        const eyeR = new THREE.Mesh(eyeGeom, eyeMat);
-        eyeR.position.set(0.5, 2.2, 1.2);
-        group.add(eyeR);
-        const pupilR = new THREE.Mesh(pupilGeom, pupilMat);
-        pupilR.position.set(0.5, 2.2, 1.4);
-        group.add(pupilR);
-
-        group.scale.set(0.8, 0.8, 0.8);
-        group.position.y = 1.5;
-        
-        debugLog('✅ Модель успешно создана');
-        return group;
-    } catch (e) {
-        debugLog(`❌ Ошибка в createBossModel: ${e.message}`);
-        return new THREE.Group();
-    }
-}
 
         // --- ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ ---
         async function loadUser() {
@@ -356,8 +358,8 @@ function createBossModel(bossId) {
                 controls.enableDamping = true;
                 controls.target.set(0, 2, 0);
 
-                // Освещение
-                const ambient = new THREE.AmbientLight(0x404060);
+                // Освещение - добавим побольше
+                const ambient = new THREE.AmbientLight(0x606080);
                 scene.add(ambient);
                 const light1 = new THREE.DirectionalLight(0xffffff, 1.2);
                 light1.position.set(5, 10, 7);
@@ -372,12 +374,6 @@ function createBossModel(bossId) {
                 // Пол
                 const gridHelper = new THREE.GridHelper(20, 20, 0xaaaaaa, 0x444444);
                 scene.add(gridHelper);
-
-                // ТЕСТОВЫЙ КРАСНЫЙ КУБ
-                const testCube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color: 0xff0000, emissive: 0x330000}));
-                testCube.position.set(0, 4, 0);
-                scene.add(testCube);
-                debugLog('✅ Тестовый красный куб добавлен на высоте 4');
 
                 // Кубы-ресурсы
                 const positions = [[-3,1.5,-2], [3,1.5,-2], [0,1.5,2], [-2,1.5,3], [2,1.5,3]];
@@ -411,13 +407,11 @@ function createBossModel(bossId) {
                     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
                     raycaster.setFromCamera(mouse, camera);
-                    const intersects = raycaster.intersectObjects([...cubes, ...bossGroup.children, testCube]);
+                    const intersects = raycaster.intersectObjects([...cubes, ...bossGroup.children]);
 
                     if (intersects.length > 0) {
                         const hit = intersects[0].object;
-                        if (hit === testCube) {
-                            debugLog('Клик по тестовому кубу!');
-                        } else if (hit.userData.type === 'resource') {
+                        if (hit.userData.type === 'resource') {
                             apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
                                 if (data) {
                                     goldSpan.textContent = data.new_gold;
@@ -441,7 +435,6 @@ function createBossModel(bossId) {
                 // Анимация
                 function animate() {
                     cubes.forEach(c => c.rotation.y += 0.01);
-                    testCube.rotation.y += 0.01;
                     if (bossGroup && bossGroup.children.length > 0) {
                         bossGroup.rotation.y += 0.01;
                     }
@@ -492,4 +485,3 @@ function createBossModel(bossId) {
     </script>
 </body>
 </html>
-
