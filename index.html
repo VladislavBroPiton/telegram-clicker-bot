@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Шахтёрская глубина 3D</title>
+    <title>Шахтёрская глубина 3D — легендарные боссы</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; }
@@ -42,7 +42,7 @@
             overflow: auto;
             pointer-events: none;
             border: 2px solid #0f0;
-            display: none; /* Скрыто по умолчанию */
+            display: none;
         }
         #test-button {
             position: absolute;
@@ -113,6 +113,7 @@
         let bossGroup = null;
         let threeReady = false;
         let THREE;
+        let stars = []; // для фоновых звёзд
 
         // Элементы DOM
         const hudLevel = document.getElementById('level');
@@ -129,9 +130,8 @@
         const bossIndexSpan = document.getElementById('boss-index');
         const debugInfo = document.getElementById('debug-info');
 
-        // Включение/выключение отладки (можно добавить кнопку)
-        const DEBUG = false; // Установите true, чтобы видеть отладочные сообщения
-
+        // Отладка (выключена)
+        const DEBUG = false;
         function debugLog(msg) {
             if (DEBUG) {
                 const time = new Date().toLocaleTimeString('ru-RU', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -184,6 +184,27 @@
             bossCurrentHealth.textContent = current;
             bossMaxHealth.textContent = max;
             bossHealthFill.style.width = (max ? (current / max) * 100 : 0) + '%';
+        }
+
+        // --- СОЗДАНИЕ ЗВЁЗДНОГО НЕБА ---
+        function createStars() {
+            if (!THREE) return;
+            const geometry = new THREE.BufferGeometry();
+            const count = 500;
+            const positions = new Float32Array(count * 3);
+            for (let i = 0; i < count; i++) {
+                const r = 50 + Math.random() * 50;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                positions[i*3] = r * Math.sin(phi) * Math.cos(theta);
+                positions[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+                positions[i*3+2] = r * Math.cos(phi);
+            }
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.3 });
+            const starsMesh = new THREE.Points(geometry, material);
+            scene.add(starsMesh);
+            stars.push(starsMesh);
         }
 
         // --- МОДЕЛЬ БОССА (детализированная) ---
@@ -261,18 +282,21 @@
                     head.rotation.x = -0.2;
                     group.add(head);
 
-                    // Крылья
+                    // Крылья (сделаем отдельными объектами для анимации)
                     const wingGeom = new THREE.ConeGeometry(1.2, 0.2, 4);
                     const wingMat = new THREE.MeshStandardMaterial({ color: 0x993322 });
                     const wingL = new THREE.Mesh(wingGeom, wingMat);
                     wingL.position.set(-1.2, 1.8, 0);
                     wingL.rotation.z = 0.3;
                     wingL.rotation.y = -0.2;
+                    wingL.userData = { type: 'wing', baseRotZ: 0.3, baseRotY: -0.2 };
                     group.add(wingL);
+
                     const wingR = wingL.clone();
                     wingR.position.set(1.2, 1.8, 0);
                     wingR.rotation.z = -0.3;
                     wingR.rotation.y = 0.2;
+                    wingR.userData = { type: 'wing', baseRotZ: -0.3, baseRotY: 0.2 };
                     group.add(wingR);
 
                     // Хвост
@@ -317,18 +341,22 @@
                     glowR.position.set(0.3, 3.1, 0.8);
                     group.add(glowR);
 
-                    // Посох
+                    // Посох (для анимации вращения)
+                    const staffGroup = new THREE.Group();
                     const staffGeom = new THREE.CylinderGeometry(0.1, 0.1, 3);
                     const staffMat = new THREE.MeshStandardMaterial({ color: 0x886644 });
                     const staff = new THREE.Mesh(staffGeom, staffMat);
-                    staff.position.set(1.2, 2.0, 0.5);
-                    staff.rotation.z = 0.2;
-                    group.add(staff);
+                    staff.position.y = 1.5;
+                    staffGroup.add(staff);
                     const staffTopGeom = new THREE.SphereGeometry(0.3);
                     const staffTopMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
                     const staffTop = new THREE.Mesh(staffTopGeom, staffTopMat);
-                    staffTop.position.set(1.2, 3.5, 0.5);
-                    group.add(staffTop);
+                    staffTop.position.y = 3.0;
+                    staffGroup.add(staffTop);
+                    staffGroup.position.set(1.2, 1.0, 0.5);
+                    staffGroup.rotation.z = 0.2;
+                    group.add(staffGroup);
+                    group.userData.staff = staffGroup; // сохраним для анимации
                 }
 
                 group.scale.set(0.8, 0.8, 0.8);
@@ -419,44 +447,81 @@
         // --- ЧАСТИЦЫ ПРИ УДАРЕ ---
         function createHitParticles(position) {
             if (!scene || !THREE) return;
-            const particleCount = 15;
+            const particleCount = 20;
             const geometry = new THREE.BufferGeometry();
             const positions = new Float32Array(particleCount * 3);
             const colors = new Float32Array(particleCount * 3);
             for (let i = 0; i < particleCount; i++) {
                 const angle = Math.random() * Math.PI * 2;
+                const speed = 0.1 + Math.random() * 0.2;
                 positions[i*3] = position.x;
                 positions[i*3+1] = position.y;
                 positions[i*3+2] = position.z;
                 colors[i*3] = 1;
-                colors[i*3+1] = 0.3 + Math.random()*0.3;
-                colors[i*3+2] = 0.1;
+                colors[i*3+1] = 0.5 + Math.random()*0.5;
+                colors[i*3+2] = 0;
             }
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
             geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-            const material = new THREE.PointsMaterial({ size: 0.2, vertexColors: true, transparent: true });
+            const material = new THREE.PointsMaterial({ size: 0.15, vertexColors: true, transparent: true });
             const particles = new THREE.Points(geometry, material);
             scene.add(particles);
 
             const startTime = performance.now();
             function animateParticles() {
                 const elapsed = performance.now() - startTime;
-                if (elapsed > 500) {
+                if (elapsed > 400) {
                     scene.remove(particles);
                     return;
                 }
                 const positionsAttr = geometry.attributes.position;
                 for (let i = 0; i < particleCount; i++) {
-                    const angle = Math.random() * Math.PI * 2;
-                    positionsAttr.array[i*3] += Math.cos(angle) * 0.05;
-                    positionsAttr.array[i*3+1] += Math.sin(angle) * 0.05;
-                    positionsAttr.array[i*3+2] += (Math.random() - 0.5) * 0.05;
+                    positionsAttr.array[i*3] += (Math.random() - 0.5) * 0.1;
+                    positionsAttr.array[i*3+1] += (Math.random() - 0.5) * 0.1;
+                    positionsAttr.array[i*3+2] += (Math.random() - 0.5) * 0.1;
                 }
                 positionsAttr.needsUpdate = true;
                 requestAnimationFrame(animateParticles);
             }
             animateParticles();
+        }
+
+        // --- ВСПЛЫВАЮЩИЙ ТЕКСТ УРОНА ---
+        function showDamageText(damage, position) {
+            if (!THREE) return;
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.font = 'Bold 24px Arial';
+            ctx.fillStyle = 'white';
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 3;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.strokeText(damage.toString(), 32, 32);
+            ctx.fillText(damage.toString(), 32, 32);
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ map: texture, depthTest: false, depthWrite: false });
+            const sprite = new THREE.Sprite(material);
+            sprite.scale.set(0.5, 0.5, 0.5);
+            sprite.position.copy(position);
+            sprite.position.y += 1;
+            scene.add(sprite);
+
+            const startTime = performance.now();
+            function animateSprite() {
+                const elapsed = performance.now() - startTime;
+                if (elapsed > 800) {
+                    scene.remove(sprite);
+                    return;
+                }
+                sprite.position.y += 0.01;
+                sprite.material.opacity = 1 - elapsed / 800;
+                requestAnimationFrame(animateSprite);
+            }
+            animateSprite();
         }
 
         // --- АТАКА ---
@@ -465,9 +530,27 @@
             isAttacking = true;
             // Эффект удара
             if (bossGroup) {
-                bossGroup.scale.set(0.9, 0.9, 0.9);
-                setTimeout(() => bossGroup.scale.set(0.8, 0.8, 0.8), 150);
+                // Вспышка (изменение emissive всех материалов)
+                bossGroup.traverse(obj => {
+                    if (obj.isMesh && obj.material.emissive) {
+                        obj.material.emissive.setHex(0x884422);
+                        setTimeout(() => obj.material.emissive.setHex(0x000000), 150);
+                    }
+                });
+                // Тряска
+                const originalPos = bossGroup.position.clone();
+                let shakeCount = 0;
+                const shakeInterval = setInterval(() => {
+                    bossGroup.position.x = originalPos.x + (Math.random() - 0.5) * 0.2;
+                    bossGroup.position.z = originalPos.z + (Math.random() - 0.5) * 0.2;
+                    shakeCount++;
+                    if (shakeCount > 5) {
+                        bossGroup.position.copy(originalPos);
+                        clearInterval(shakeInterval);
+                    }
+                }, 30);
             }
+
             const data = await apiCall('boss/attack', 'POST', { boss_id: currentBossId });
             if (data) {
                 if (data.new_gold !== undefined) goldSpan.textContent = data.new_gold;
@@ -479,6 +562,7 @@
                         const worldPos = new THREE.Vector3();
                         bossGroup.getWorldPosition(worldPos);
                         createHitParticles(worldPos);
+                        showDamageText(data.damage, worldPos);
                     }
                 }
                 if (data.defeated) {
@@ -499,7 +583,7 @@
                 const { OrbitControls } = await import('https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js');
 
                 scene = new THREE.Scene();
-                scene.background = new THREE.Color(0x111122);
+                scene.background = new THREE.Color(0x0a0a20); // тёмно-синий фон
 
                 camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
                 camera.position.set(2, 3, 5);
@@ -527,6 +611,9 @@
                 // Пол
                 const gridHelper = new THREE.GridHelper(20, 20, 0xaaaaaa, 0x444444);
                 scene.add(gridHelper);
+
+                // Звёзды
+                createStars();
 
                 // Кубы-ресурсы
                 const positions = [[-3,1.5,-2], [3,1.5,-2], [0,1.5,2], [-2,1.5,3], [2,1.5,3]];
@@ -592,9 +679,30 @@
                 // Анимация
                 function animate() {
                     cubes.forEach(c => c.rotation.y += 0.01);
-                    if (bossGroup) {
-                        bossGroup.rotation.y += 0.01;
+
+                    // Анимации боссов
+                    if (bossGroup && bossGroup.children.length > 0) {
+                        const bossId = currentBossId;
+                        const time = Date.now() / 500;
+
+                        if (bossId === 'goblin_king') {
+                            // Покачивание всем телом
+                            bossGroup.position.y = 2 + Math.sin(time) * 0.1;
+                        } else if (bossId === 'dragon_lair') {
+                            // Взмахи крыльев
+                            bossGroup.traverse(obj => {
+                                if (obj.userData && obj.userData.type === 'wing') {
+                                    obj.rotation.z = obj.userData.baseRotZ + Math.sin(time * 2) * 0.2;
+                                }
+                            });
+                        } else if (bossId === 'lich_castle') {
+                            // Вращение посоха
+                            if (bossGroup.userData.staff) {
+                                bossGroup.userData.staff.rotation.y += 0.02;
+                            }
+                        }
                     }
+
                     controls.update();
                     renderer.render(scene, camera);
                     requestAnimationFrame(animate);
