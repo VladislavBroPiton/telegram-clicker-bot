@@ -367,6 +367,18 @@
                 // Помещаем босса в центр, на высоту 2 (чуть выше пола)
                 bossGroup.position.set(0, 2, 0);
                 debugLog(`bossGroup позиция: (${bossGroup.position.x}, ${bossGroup.position.y}, ${bossGroup.position.z})`);
+                // Вычисляем мировую позицию группы босса
+                const worldPos = new THREE.Vector3();
+                bossGroup.getWorldPosition(worldPos);
+                debugLog(`Мировая позиция босса: (${worldPos.x.toFixed(2)}, ${worldPos.y.toFixed(2)}, ${worldPos.z.toFixed(2)})`);
+
+                // Добавляем яркую сферу в эту точку для визуальной проверки
+                const sphereGeom = new THREE.SphereGeometry(0.3);
+                const sphereMat = new THREE.MeshBasicMaterial({ color: 0xff00ff }); // ярко-розовая
+                const sphere = new THREE.Mesh(sphereGeom, sphereMat);
+                sphere.position.copy(worldPos);
+                scene.add(sphere);
+                debugLog('🔮 Розовая сфера добавлена в мировую позицию босса');
 
                 threeReady = true;
                 debugLog('Three.js готов, bossGroup создана');
@@ -462,3 +474,4 @@
     </script>
 </body>
 </html>
+
