@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Шахтёрская глубина 3D</title>
+    <title>Шахтёрская глубина 3D (исправление клика)</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; }
@@ -521,6 +521,7 @@
 
         // --- АТАКА ---
         async function attackBoss() {
+            console.log('attackBoss called'); // отладка
             if (isAttacking) return;
             isAttacking = true;
             if (bossGroup) {
@@ -639,6 +640,7 @@
 
                     if (intersects.length > 0) {
                         const hit = intersects[0].object;
+                        console.log('Hit object:', hit); // отладка
                         if (hit.userData.type === 'resource') {
                             apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
                                 if (data) {
@@ -648,7 +650,7 @@
                                     loadUser();
                                 }
                             });
-                        } else if (hit.userData.isBossPart) {
+                        } else if (hit.userData.isBossPart || hit.parent === bossGroup || bossGroup.children.includes(hit)) {
                             attackBoss();
                         }
                     }
