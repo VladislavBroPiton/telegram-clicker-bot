@@ -182,41 +182,28 @@
 
         // --- МОДЕЛЬ БОССА (яркая, простая, с BasicMaterial) ---
         function createBossModel(bossId) {
-            debugLog(`createBossModel for ${bossId}`);
-            if (!THREE) {
-                debugLog('THREE не определён!');
-                return new THREE.Group();
-            }
-            try {
-                const group = new THREE.Group();
-                
-                // Основное тело - большой куб с BasicMaterial (не зависит от света)
-                const geom = new THREE.BoxGeometry(2.5, 2.5, 2.5);
-                // Выбираем цвет в зависимости от босса
-                let color;
-                if (bossId === 'goblin_king') color = 0xffaa00; // оранжевый
-                else if (bossId === 'dragon_lair') color = 0xff3333; // красный
-                else color = 0xaa44ff; // фиолетовый
-                
-                const mat = new THREE.MeshBasicMaterial({ color: color });
-                const cube = new THREE.Mesh(geom, mat);
-                cube.position.set(0, 1.25, 0); // центр куба на высоте 1.25 (нижняя грань на 0, верхняя на 2.5)
-                group.add(cube);
-
-                // Добавим отличительный элемент сверху - маленький кубик
-                const topGeom = new THREE.BoxGeometry(1, 1, 1);
-                const topMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-                const top = new THREE.Mesh(topGeom, topMat);
-                top.position.set(0, 2.5, 0); // над основным кубом
-                group.add(top);
-
-                debugLog('✅ Модель босса создана');
-                return group;
-            } catch (e) {
-                debugLog(`❌ Ошибка в createBossModel: ${e.message}`);
-                return new THREE.Group();
-            }
-        }
+    debugLog(`createBossModel for ${bossId}`);
+    if (!THREE) {
+        debugLog('THREE не определён!');
+        return new THREE.Group();
+    }
+    try {
+        const group = new THREE.Group();
+        
+        // Яркий куб с базовым материалом (не зависит от света)
+        const geom = new THREE.BoxGeometry(2, 2, 2);
+        const mat = new THREE.MeshBasicMaterial({ color: 0xffaa00 }); // ярко-оранжевый
+        const cube = new THREE.Mesh(geom, mat);
+        cube.position.set(0, 0, 0); // центр группы
+        group.add(cube);
+        
+        debugLog('🟠 Яркий оранжевый куб создан');
+        return group;
+    } catch (e) {
+        debugLog(`❌ Ошибка в createBossModel: ${e.message}`);
+        return new THREE.Group();
+    }
+}
 
         // --- ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ ---
         async function loadUser() {
@@ -474,4 +461,5 @@
     </script>
 </body>
 </html>
+
 
