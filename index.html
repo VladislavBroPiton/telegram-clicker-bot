@@ -3,35 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Тест видимости - куб вместо модели</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>Тест Three.js</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
-        #hud, #boss-health {
-            position: absolute;
-            color: white;
-            background: rgba(20,20,30,0.85);
-            padding: 10px;
-            border-radius: 8px;
-            z-index: 200;
-            pointer-events: none;
-        }
-        #hud { top: 10px; left: 10px; }
-        #boss-health { top: 10px; right: 10px; width: 220px; display: none; }
-        #debug-info {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            right: 10px;
-            background: black;
-            color: #0f0;
-            padding: 10px;
-            border-radius: 8px;
-            z-index: 1000;
-            font-size: 12px;
-            max-height: 200px;
-            overflow: auto;
-        }
+        body { margin: 0; overflow: hidden; }
     </style>
     <script type="importmap">
         {
@@ -42,140 +16,66 @@
     </script>
 </head>
 <body>
-    <div id="hud">
-        <span>💰 <span id="gold">0</span> ✨ <span id="exp">0</span></span><br>
-        Уровень <span id="level">1</span>
-    </div>
-    <div id="boss-health">
-        <span id="boss-name"></span> <span id="boss-current-health">0</span>/<span id="boss-max-health">0</span>
-    </div>
-    <div id="debug-info"></div>
-
     <script type="module">
-        // --- КОНФИГУРАЦИЯ ---
-        const API_BASE_URL = 'https://telegram-clicker-bot-zi6c.onrender.com';
-        const BOSS_IDS = ['goblin_king', 'dragon_lair', 'lich_castle'];
-        const BOSS_NAMES = {
-            'goblin_king': 'Король гоблинов',
-            'dragon_lair': 'Огненный дракон',
-            'lich_castle': 'Архилич'
-        };
+        import * as THREE from 'three';
+        import { OrbitControls } from 'https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js';
 
-        let currentBossIndex = 0;
-        let currentBossId = BOSS_IDS[0];
-        let scene, camera, renderer, controls;
-        let THREE;
+        // Создаём сцену
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111122);
 
-        const debugInfo = document.getElementById('debug-info');
-        function debugLog(msg) {
-            debugInfo.innerHTML += new Date().toLocaleTimeString() + ': ' + msg + '<br>';
-            console.log(msg);
+        // Камера (ставим так, чтобы видеть центр)
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(2, 2, 5);
+        camera.lookAt(0, 0, 0);
+
+        // Рендерер
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Управление (чтобы можно было покрутить)
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.target.set(0, 0, 0);
+
+        // Освещение
+        const ambientLight = new THREE.AmbientLight(0x404060);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+        dirLight.position.set(1, 2, 1);
+        scene.add(dirLight);
+
+        // Пол (сетка)
+        const gridHelper = new THREE.GridHelper(10, 20, 0xaaaaaa, 0x444444);
+        scene.add(gridHelper);
+
+        // Оси координат
+        const axesHelper = new THREE.AxesHelper(5);
+        scene.add(axesHelper);
+
+        // ЯРКАЯ СФЕРА
+        const sphereGeom = new THREE.SphereGeometry(1, 32);
+        const sphereMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
+        const sphere = new THREE.Mesh(sphereGeom, sphereMat);
+        sphere.position.set(0, 1, 0);
+        scene.add(sphere);
+
+        // Анимация
+        function animate() {
+            sphere.rotation.y += 0.01;
+            controls.update();
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
         }
+        animate();
 
-        // --- ТЕЛЕГРАМ И API ---
-        let tg;
-        try {
-            tg = window.Telegram.WebApp;
-            tg.ready();
-            tg.expand();
-        } catch (e) {
-            tg = { initData: '' };
-        }
-        const initData = tg.initData;
-        debugLog('initData: ' + (initData ? initData.substring(0,50) + '...' : 'нет'));
-
-        async function apiCall(endpoint) {
-            const headers = { 'Content-Type': 'application/json' };
-            if (initData) headers['X-Telegram-Init-Data'] = initData;
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/${endpoint}`, { headers });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                return await res.json();
-            } catch (e) {
-                debugLog(`Ошибка API: ${e.message}`);
-                return null;
-            }
-        }
-
-        // --- ЗАГРУЗКА БОССА ДЛЯ HUD ---
-        async function loadBossInfo(bid) {
-            debugLog(`loadBossInfo for ${bid}`);
-            const data = await apiCall(`boss/${bid}`);
-            if (data) {
-                document.getElementById('boss-name').textContent = BOSS_NAMES[bid] || bid;
-                document.getElementById('boss-current-health').textContent = data.current_health;
-                document.getElementById('boss-max-health').textContent = data.max_health;
-                document.getElementById('boss-health').style.display = 'block';
-            }
-        }
-
-        // --- ИНИЦИАЛИЗАЦИЯ 3D ---
-        async function init3D() {
-            debugLog('init3D started');
-            const THREE_IMPORT = await import('three');
-            THREE = THREE_IMPORT;
-            const { OrbitControls } = await import('https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js');
-
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x111122);
-
-            camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
-            camera.position.set(5, 4, 8);
-            camera.lookAt(0, 3, 0);
-
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(innerWidth, innerHeight);
-            document.body.appendChild(renderer.domElement);
-
-            controls = new OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.target.set(0, 3, 0);
-
-            // Освещение
-            const ambient = new THREE.AmbientLight(0x606080);
-            scene.add(ambient);
-            const light1 = new THREE.DirectionalLight(0xffffff, 1.2);
-            light1.position.set(5, 10, 7);
-            scene.add(light1);
-            const light2 = new THREE.DirectionalLight(0xffaa88, 0.8);
-            light2.position.set(-5, 5, -5);
-            scene.add(light2);
-
-            // Пол-сетка
-            const gridHelper = new THREE.GridHelper(10, 10, 0xaaaaaa, 0x444444);
-            scene.add(gridHelper);
-
-            // Оси
-            const axesHelper = new THREE.AxesHelper(5);
-            scene.add(axesHelper);
-
-            // ТЕСТОВЫЙ КРАСНЫЙ КУБ (как ориентир)
-            const testCube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color: 0xff0000, emissive: 0x330000}));
-            testCube.position.set(0, 4, 0);
-            scene.add(testCube);
-            debugLog('Красный куб на высоте 4');
-
-            // Вместо сложной модели босса - простой яркий куб на высоте ~3.5
-            const bossCube = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshStandardMaterial({color: 0x00ff00, emissive: 0x224400}));
-            bossCube.position.set(0, 3.5, 0);
-            scene.add(bossCube);
-            debugLog('Зелёный куб на высоте 3.5');
-
-            // Анимация
-            function animate() {
-                testCube.rotation.y += 0.01;
-                bossCube.rotation.y += 0.01;
-                controls.update();
-                renderer.render(scene, camera);
-                requestAnimationFrame(animate);
-            }
-            animate();
-
-            // Загружаем данные босса для отображения в HUD
-            loadBossInfo('goblin_king');
-        }
-
-        init3D();
+        // Обработка ресайза
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
 </body>
 </html>
