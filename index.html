@@ -395,6 +395,11 @@
                 const initialBoss = createBossModel(currentBossId);
                 bossGroup.add(initialBoss);
                 debugLog(`Начальная модель добавлена, детей: ${bossGroup.children.length}`);
+                
+                // ВРЕМЕННО: помещаем босса прямо в красный куб и убираем масштаб
+                bossGroup.position.set(0, 4, 0);
+                bossGroup.scale.set(1, 1, 1);
+                debugLog('🔧 Босс перемещён в точку красного куба (0,4,0)');
 
                 threeReady = true;
                 debugLog('Three.js готов, bossGroup создана');
@@ -490,3 +495,4 @@
     </script>
 </body>
 </html>
+
