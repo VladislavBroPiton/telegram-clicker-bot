@@ -51,6 +51,7 @@
         let scene, camera, renderer, controls;
         let bossGroup = null;
         let THREE;
+        let cameraAngle = 0;
 
         const debugInfo = document.getElementById('debug-info');
         function debugLog(msg) {
@@ -78,16 +79,22 @@
             }
         }
 
-        // --- МОДЕЛЬ БОССА (жёлтый куб) ---
+        // --- МОДЕЛЬ БОССА (розовый куб с белой сферой) ---
         function createBossModel() {
             debugLog('createBossModel');
             if (!THREE) return new THREE.Group();
             const group = new THREE.Group();
             const geom = new THREE.BoxGeometry(3, 3, 3);
-            const mat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+            const mat = new THREE.MeshBasicMaterial({ color: 0xff69b4 }); // ярко-розовый
             const cube = new THREE.Mesh(geom, mat);
             group.add(cube);
-            debugLog('🟡 Жёлтый куб создан');
+            // Белая сфера внутри для контраста
+            const sphereGeom = new THREE.SphereGeometry(0.8);
+            const sphereMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const sphere = new THREE.Mesh(sphereGeom, sphereMat);
+            sphere.position.set(0, 0, 0);
+            group.add(sphere);
+            debugLog('🌸 Розовый куб и белая сфера созданы');
             return group;
         }
 
@@ -114,24 +121,21 @@
             controls.update();
             debugLog('Камера на (0,5,10) смотрит на (0,4,0)');
 
-            // Освещение для других объектов (не влияет на BasicMaterial)
+            // Освещение (не влияет на BasicMaterial)
             const ambient = new THREE.AmbientLight(0x404060);
             scene.add(ambient);
-            const light = new THREE.DirectionalLight(0xffffff, 1);
-            light.position.set(1, 1, 1);
-            scene.add(light);
 
             // Пол
             const gridHelper = new THREE.GridHelper(20, 20, 0xaaaaaa, 0x444444);
             scene.add(gridHelper);
 
-            // КРАСНЫЙ КУБ (тестовый)
+            // КРАСНЫЙ КУБ
             const redCube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
             redCube.position.set(0, 4, 0);
             scene.add(redCube);
             debugLog('🔴 Красный куб в (0,4,0)');
 
-            // СЕРЕБРИСТАЯ СФЕРА (для контроля позиции)
+            // СЕРЕБРИСТАЯ СФЕРА
             const sphereGeom = new THREE.SphereGeometry(0.5);
             const sphereMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, emissive: 0x333333 });
             const sphere = new THREE.Mesh(sphereGeom, sphereMat);
@@ -150,7 +154,7 @@
             bossGroup.position.set(0, 4, 0);
             debugLog(`bossGroup позиция: (${bossGroup.position.x}, ${bossGroup.position.y}, ${bossGroup.position.z})`);
 
-            // Загрузка данных босса для HUD
+            // Загрузка данных босса
             const data = await apiCall('boss/goblin_king');
             if (data) {
                 document.getElementById('boss-name').textContent = BOSS_NAMES['goblin_king'];
@@ -159,12 +163,20 @@
                 document.getElementById('boss-health').style.display = 'block';
             }
 
-            // Анимация
+            // Анимация с вращением камеры
             function animate() {
+                // Медленное вращение камеры вокруг цели
+                cameraAngle += 0.002;
+                camera.position.x = 10 * Math.sin(cameraAngle);
+                camera.position.z = 10 * Math.cos(cameraAngle);
+                camera.position.y = 5; // держим высоту
+                controls.target.set(0, 4, 0);
+                controls.update();
+
                 if (bossGroup) bossGroup.rotation.y += 0.01;
                 redCube.rotation.y += 0.01;
                 sphere.rotation.y += 0.01;
-                controls.update();
+
                 renderer.render(scene, camera);
                 requestAnimationFrame(animate);
             }
