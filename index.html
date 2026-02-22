@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Тест видимости модели</title>
+    <title>Тест видимости - куб вместо модели</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
@@ -64,17 +64,15 @@
         let currentBossIndex = 0;
         let currentBossId = BOSS_IDS[0];
         let scene, camera, renderer, controls;
-        let bossGroup = null;
         let THREE;
 
-        // Элементы DOM
         const debugInfo = document.getElementById('debug-info');
         function debugLog(msg) {
             debugInfo.innerHTML += new Date().toLocaleTimeString() + ': ' + msg + '<br>';
             console.log(msg);
         }
 
-        // --- ТЕЛЕГРАМ И API (сокращённо) ---
+        // --- ТЕЛЕГРАМ И API ---
         let tg;
         try {
             tg = window.Telegram.WebApp;
@@ -99,67 +97,7 @@
             }
         }
 
-        // --- МОДЕЛЬ БОССА (яркая) ---
-        function createBossModel(bossId) {
-            debugLog(`createBossModel for ${bossId}`);
-            if (!THREE) return new THREE.Group();
-            try {
-                const group = new THREE.Group();
-                const geom = new THREE.ConeGeometry(1.5, 3, 16);
-                const mat = new THREE.MeshStandardMaterial({ 
-                    color: bossId === 'goblin_king' ? 0xffaa00 :
-                           bossId === 'dragon_lair' ? 0xff3333 : 0xaa44ff,
-                    emissive: 0x222222
-                });
-                const cone = new THREE.Mesh(geom, mat);
-                cone.position.y = 1.5;
-                group.add(cone);
-
-                // Верхний элемент
-                let top;
-                if (bossId === 'goblin_king') {
-                    top = new THREE.Mesh(new THREE.BoxGeometry(0.8,0.8,0.8), new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 }));
-                    top.position.y = 3.0;
-                } else if (bossId === 'dragon_lair') {
-                    top = new THREE.Mesh(new THREE.ConeGeometry(0.7,1.2,8), new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x330000 }));
-                    top.position.y = 3.0;
-                } else {
-                    top = new THREE.Mesh(new THREE.SphereGeometry(0.7), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x444444 }));
-                    top.position.y = 3.0;
-                }
-                group.add(top);
-
-                // Глаза
-                const eyeGeom = new THREE.SphereGeometry(0.2);
-                const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-                const pupilGeom = new THREE.SphereGeometry(0.1);
-                const pupilMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
-                
-                const eyeL = new THREE.Mesh(eyeGeom, eyeMat);
-                eyeL.position.set(-0.5, 2.2, 1.2);
-                group.add(eyeL);
-                const pupilL = new THREE.Mesh(pupilGeom, pupilMat);
-                pupilL.position.set(-0.5, 2.2, 1.4);
-                group.add(pupilL);
-                
-                const eyeR = new THREE.Mesh(eyeGeom, eyeMat);
-                eyeR.position.set(0.5, 2.2, 1.2);
-                group.add(eyeR);
-                const pupilR = new THREE.Mesh(pupilGeom, pupilMat);
-                pupilR.position.set(0.5, 2.2, 1.4);
-                group.add(pupilR);
-
-                group.scale.set(0.8, 0.8, 0.8);
-                group.position.y = 1.5;
-                debugLog('Модель создана');
-                return group;
-            } catch (e) {
-                debugLog(`Ошибка: ${e.message}`);
-                return new THREE.Group();
-            }
-        }
-
-        // --- ЗАГРУЗКА БОССА ---
+        // --- ЗАГРУЗКА БОССА ДЛЯ HUD ---
         async function loadBossInfo(bid) {
             debugLog(`loadBossInfo for ${bid}`);
             const data = await apiCall(`boss/${bid}`);
@@ -182,7 +120,7 @@
             scene.background = new THREE.Color(0x111122);
 
             camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
-            camera.position.set(3, 3, 5); // ближе к центру
+            camera.position.set(5, 4, 8);
             camera.lookAt(0, 3, 0);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -194,44 +132,39 @@
             controls.target.set(0, 3, 0);
 
             // Освещение
-            const ambient = new THREE.AmbientLight(0x404060);
+            const ambient = new THREE.AmbientLight(0x606080);
             scene.add(ambient);
-            const light1 = new THREE.DirectionalLight(0xffffff, 1);
-            light1.position.set(2, 5, 3);
+            const light1 = new THREE.DirectionalLight(0xffffff, 1.2);
+            light1.position.set(5, 10, 7);
             scene.add(light1);
-            const light2 = new THREE.DirectionalLight(0xffaa88, 0.5);
-            light2.position.set(-2, 3, -2);
+            const light2 = new THREE.DirectionalLight(0xffaa88, 0.8);
+            light2.position.set(-5, 5, -5);
             scene.add(light2);
 
             // Пол-сетка
             const gridHelper = new THREE.GridHelper(10, 10, 0xaaaaaa, 0x444444);
             scene.add(gridHelper);
 
-            // Оси координат (для ориентира)
+            // Оси
             const axesHelper = new THREE.AxesHelper(5);
             scene.add(axesHelper);
 
-            // ЯРКАЯ ЖЁЛТАЯ СФЕРА в центре, где должна быть модель
-            const sphereGeom = new THREE.SphereGeometry(0.5);
-            const sphereMat = new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0x442200 });
-            const sphere = new THREE.Mesh(sphereGeom, sphereMat);
-            sphere.position.set(0, 3, 0); // центр модели примерно на y=3
-            scene.add(sphere);
-            debugLog('Жёлтая сфера добавлена в (0,3,0)');
+            // ТЕСТОВЫЙ КРАСНЫЙ КУБ (как ориентир)
+            const testCube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color: 0xff0000, emissive: 0x330000}));
+            testCube.position.set(0, 4, 0);
+            scene.add(testCube);
+            debugLog('Красный куб на высоте 4');
 
-            // Группа для босса
-            bossGroup = new THREE.Group();
-            scene.add(bossGroup);
-
-            // Создаём модель босса
-            const bossModel = createBossModel('goblin_king');
-            bossGroup.add(bossModel);
-            debugLog(`Модель добавлена, детей: ${bossGroup.children.length}`);
+            // Вместо сложной модели босса - простой яркий куб на высоте ~3.5
+            const bossCube = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshStandardMaterial({color: 0x00ff00, emissive: 0x224400}));
+            bossCube.position.set(0, 3.5, 0);
+            scene.add(bossCube);
+            debugLog('Зелёный куб на высоте 3.5');
 
             // Анимация
             function animate() {
-                if (bossGroup) bossGroup.rotation.y += 0.01;
-                sphere.rotation.y += 0.01;
+                testCube.rotation.y += 0.01;
+                bossCube.rotation.y += 0.01;
                 controls.update();
                 renderer.render(scene, camera);
                 requestAnimationFrame(animate);
