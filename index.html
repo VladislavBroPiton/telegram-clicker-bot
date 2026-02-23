@@ -587,35 +587,48 @@
                     scene.add(waterDrops);
                     environmentObjects.push(waterDrops);
 
-                    scene.fog = new THREE.FogExp2(0x111122, 0.02); // Уменьшено с 0.05
+                    scene.fog = new THREE.FogExp2(0x111122, 0.02);
                     break;
                 }
 
                 case 'dragon_lair': {
-                    // Лава (пол)
+                    // Лава (пол) с плавной анимацией
                     const canvas = document.createElement('canvas');
                     canvas.width = 128;
                     canvas.height = 128;
                     const ctx = canvas.getContext('2d');
                     lavaTexture = new THREE.CanvasTexture(canvas);
-                    
+
+                    // Функция обновления текстуры с использованием времени для плавного движения
                     function updateLavaTexture(time) {
                         ctx.fillStyle = '#ff4400';
                         ctx.fillRect(0, 0, 128, 128);
+                        
+                        // Рисуем прожилки, которые медленно движутся
                         ctx.strokeStyle = '#ffaa00';
                         ctx.lineWidth = 2;
                         for (let j = 0; j < 10; j++) {
+                            const x1 = (Math.sin(j * 2 + time * 0.002) * 20 + 64) % 128;
+                            const y1 = (Math.cos(j * 3 + time * 0.005) * 20 + 64) % 128;
+                            const x2 = (Math.sin(j * 2 + 1 + time * 0.002) * 20 + 64) % 128;
+                            const y2 = (Math.cos(j * 3 + 1 + time * 0.005) * 20 + 64) % 128;
                             ctx.beginPath();
-                            ctx.moveTo(Math.random()*128, Math.random()*128);
-                            ctx.lineTo(Math.random()*128, Math.random()*128);
+                            ctx.moveTo(x1, y1);
+                            ctx.lineTo(x2, y2);
                             ctx.stroke();
                         }
+                        
+                        // Рисуем пузырьки/пятна, которые тоже двигаются
                         ctx.fillStyle = '#ffaa00';
                         for (let j = 0; j < 30; j++) {
+                            const x = (Math.sin(j * 5 + time * 0.003) * 30 + 64) % 128;
+                            const y = (Math.cos(j * 7 + time * 0.004) * 30 + 64) % 128;
+                            const r = Math.random() * 5 + 2;
                             ctx.beginPath();
-                            ctx.arc(Math.random()*128, Math.random()*128, Math.random()*5+2, 0, 2*Math.PI);
+                            ctx.arc(x, y, r, 0, 2 * Math.PI);
                             ctx.fill();
                         }
+                        
                         lavaTexture.needsUpdate = true;
                     }
                     updateLavaTexture(0);
@@ -629,7 +642,7 @@
                     scene.add(lavaPlane);
                     environmentObjects.push(lavaPlane);
 
-                    // Пузырьки
+                    // Пузырьки (частицы) – замедлим их подъём
                     const bubbleGeom = new THREE.BufferGeometry();
                     const bubbleCount = 30;
                     const bubblePositions = new Float32Array(bubbleCount * 3);
@@ -725,7 +738,7 @@
                         environmentObjects.push(boneGroup);
                     }
 
-                    scene.fog = new THREE.FogExp2(0x330000, 0.03); // Уменьшено с 0.08
+                    scene.fog = new THREE.FogExp2(0x330000, 0.03);
                     break;
                 }
 
@@ -885,7 +898,7 @@
                         flyingSkulls.push(skull);
                     }
 
-                    scene.fog = new THREE.FogExp2(0x111122, 0.04); // Уменьшено с 0.1
+                    scene.fog = new THREE.FogExp2(0x111122, 0.04);
                     break;
                 }
                 default:
@@ -1330,35 +1343,50 @@
                         }
                     });
 
-                    // Анимация лавы и пузырьков
-                    if (lavaTexture) {
+                    // Анимация лавы (обновляем текстуру с текущим временем)
+                    if (lavaTexture && lavaPlane) {
+                        // Используем сохранённую функцию обновления, если она есть
+                        // В данном случае мы не имеем прямого доступа к updateLavaTexture, но можем пересоздать логику здесь
+                        // Однако проще: мы уже сохранили функцию в замыкании при создании? Нет, она не сохраняется глобально.
+                        // Поэтому нужно либо сохранить ссылку на неё, либо повторить код.
+                        // Для простоты повторим код обновления здесь, используя время.
                         const canvas = lavaTexture.image;
                         if (canvas) {
                             const ctx = canvas.getContext('2d');
                             ctx.fillStyle = '#ff4400';
-                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            ctx.fillRect(0, 0, 128, 128);
+                            
                             ctx.strokeStyle = '#ffaa00';
                             ctx.lineWidth = 2;
                             for (let j = 0; j < 10; j++) {
+                                const x1 = (Math.sin(j * 2 + time * 0.002) * 20 + 64) % 128;
+                                const y1 = (Math.cos(j * 3 + time * 0.005) * 20 + 64) % 128;
+                                const x2 = (Math.sin(j * 2 + 1 + time * 0.002) * 20 + 64) % 128;
+                                const y2 = (Math.cos(j * 3 + 1 + time * 0.005) * 20 + 64) % 128;
                                 ctx.beginPath();
-                                ctx.moveTo(Math.random()*canvas.width, Math.random()*canvas.height);
-                                ctx.lineTo(Math.random()*canvas.width, Math.random()*canvas.height);
+                                ctx.moveTo(x1, y1);
+                                ctx.lineTo(x2, y2);
                                 ctx.stroke();
                             }
+                            
                             ctx.fillStyle = '#ffaa00';
                             for (let j = 0; j < 30; j++) {
+                                const x = (Math.sin(j * 5 + time * 0.003) * 30 + 64) % 128;
+                                const y = (Math.cos(j * 7 + time * 0.004) * 30 + 64) % 128;
+                                const r = Math.random() * 5 + 2;
                                 ctx.beginPath();
-                                ctx.arc(Math.random()*canvas.width, Math.random()*canvas.height, Math.random()*5+2, 0, 2*Math.PI);
+                                ctx.arc(x, y, r, 0, 2 * Math.PI);
                                 ctx.fill();
                             }
                             lavaTexture.needsUpdate = true;
                         }
                     }
 
+                    // Пузырьки (замедленный подъём)
                     if (bubbleParticles) {
                         const positions = bubbleParticles.geometry.attributes.position.array;
                         for (let i = 1; i < positions.length; i += 3) {
-                            positions[i] += 0.01;
+                            positions[i] += 0.005; // было 0.01
                             if (positions[i] > 0.5) {
                                 positions[i] = -0.4;
                                 positions[i-1] = (Math.random() - 0.5) * 12;
@@ -1445,11 +1473,6 @@
                         const intensity = item.baseIntensity + Math.sin(time * 3 + idx) * 0.2;
                         item.light.intensity = Math.max(0.2, intensity);
                     });
-
-                    // Плотность тумана больше не меняется динамически
-                    // if (scene.fog && scene.fog.density) {
-                    //     scene.fog.density = 0.1 + Math.sin(time * 0.5) * 0.02;
-                    // }
 
                     controls.update();
                     renderer.render(scene, camera);
