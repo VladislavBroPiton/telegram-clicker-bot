@@ -230,98 +230,248 @@
             stars.push(starsMesh);
         }
 
-        // --- ВИЗУАЛЬНАЯ МОДЕЛЬ БОССА ---
+        // --- ВИЗУАЛЬНАЯ МОДЕЛЬ БОССА (улучшенная) ---
         function createVisualBossModel(bossId) {
             const group = new THREE.Group();
+
             if (bossId === 'goblin_king') {
-                // Тело
-                const bodyGeom = new THREE.CylinderGeometry(1.2, 1.5, 2, 8);
+                // --- Тело (цилиндр) ---
+                const bodyGeom = new THREE.CylinderGeometry(1.2, 1.5, 2.2, 8);
                 const bodyMat = new THREE.MeshStandardMaterial({ color: 0x44aa88, emissive: 0x112233 });
                 const body = new THREE.Mesh(bodyGeom, bodyMat);
-                body.position.y = 1;
+                body.position.y = 1.1;
                 group.add(body);
-                // Голова
+
+                // --- Нагрудник (полусфера спереди) ---
+                const chestGeom = new THREE.SphereGeometry(1.0, 8, 4, 0, Math.PI);
+                const chestMat = new THREE.MeshStandardMaterial({ color: 0xaa8866, emissive: 0x332211 });
+                const chest = new THREE.Mesh(chestGeom, chestMat);
+                chest.position.set(0, 1.2, 0.8);
+                chest.scale.set(0.9, 0.7, 0.4);
+                chest.rotation.x = 0.2;
+                group.add(chest);
+
+                // --- Плечевые накладки (шипы) ---
+                const spikeGeom = new THREE.ConeGeometry(0.4, 0.8, 6);
+                const spikeMat = new THREE.MeshStandardMaterial({ color: 0x886644, emissive: 0x221100 });
+                const spikeL = new THREE.Mesh(spikeGeom, spikeMat);
+                spikeL.position.set(-1.0, 1.8, 0.3);
+                spikeL.rotation.z = 0.3;
+                group.add(spikeL);
+                const spikeR = spikeL.clone();
+                spikeR.position.set(1.0, 1.8, 0.3);
+                spikeR.rotation.z = -0.3;
+                group.add(spikeR);
+
+                // --- Голова ---
                 const headGeom = new THREE.SphereGeometry(0.8, 8);
                 const headMat = new THREE.MeshStandardMaterial({ color: 0x88ccaa });
                 const head = new THREE.Mesh(headGeom, headMat);
-                head.position.y = 2.2;
+                head.position.y = 2.4;
                 group.add(head);
-                // Корона
-                const crownGeom = new THREE.ConeGeometry(0.6, 0.5, 4);
+
+                // --- Корона (три зубца) ---
                 const crownMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
-                const crown = new THREE.Mesh(crownGeom, crownMat);
-                crown.position.y = 2.8;
-                crown.rotation.y = Math.PI/4;
-                group.add(crown);
-                // Глаза
-                const eyeGeom = new THREE.SphereGeometry(0.15);
-                const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-                const pupilMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+                for (let i = -1; i <= 1; i++) {
+                    const crownSpike = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.7, 4), crownMat);
+                    crownSpike.position.set(i * 0.4, 3.0, 0.2);
+                    group.add(crownSpike);
+                }
+
+                // --- Глаза (свечение) ---
+                const eyeGeom = new THREE.SphereGeometry(0.2, 6);
+                const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffaa22, emissive: 0x442200 });
                 const eyeL = new THREE.Mesh(eyeGeom, eyeMat);
-                eyeL.position.set(-0.3, 2.3, 0.7);
+                eyeL.position.set(-0.3, 2.5, 0.7);
                 group.add(eyeL);
-                const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.07), pupilMat);
-                pupilL.position.set(-0.3, 2.3, 0.85);
-                group.add(pupilL);
-                const eyeR = new THREE.Mesh(eyeGeom, eyeMat);
-                eyeR.position.set(0.3, 2.3, 0.7);
+                const eyeR = eyeL.clone();
+                eyeR.position.set(0.3, 2.5, 0.7);
                 group.add(eyeR);
-                const pupilR = new THREE.Mesh(new THREE.SphereGeometry(0.07), pupilMat);
-                pupilR.position.set(0.3, 2.3, 0.85);
+
+                // --- Зрачки ---
+                const pupilGeom = new THREE.SphereGeometry(0.1, 4);
+                const pupilMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+                const pupilL = new THREE.Mesh(pupilGeom, pupilMat);
+                pupilL.position.set(-0.3, 2.5, 0.9);
+                group.add(pupilL);
+                const pupilR = pupilL.clone();
+                pupilR.position.set(0.3, 2.5, 0.9);
                 group.add(pupilR);
-            } else if (bossId === 'dragon_lair') {
-                // Тело
-                const bodyGeom = new THREE.CylinderGeometry(1.2, 1.2, 2.5, 8);
+
+                // --- Топор (оружие) ---
+                const axeGroup = new THREE.Group();
+                const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.2), new THREE.MeshStandardMaterial({ color: 0x8B4513 }));
+                handle.position.y = 0.6;
+                handle.rotation.z = 0.2;
+                axeGroup.add(handle);
+                const blade = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.6, 4), new THREE.MeshStandardMaterial({ color: 0x888888, emissive: 0x222222 }));
+                blade.position.set(0.5, 1.0, 0);
+                blade.rotation.z = -0.3;
+                blade.rotation.y = 0.2;
+                axeGroup.add(blade);
+                axeGroup.position.set(1.4, 1.2, 0.5);
+                axeGroup.rotation.y = 0.3;
+                group.add(axeGroup);
+
+                // --- Набедренная повязка (текстура через Canvas) ---
+                const canvas = document.createElement('canvas');
+                canvas.width = 32;
+                canvas.height = 32;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(0, 0, 32, 32);
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 5; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(i * 8, 0);
+                    ctx.lineTo(i * 8, 32);
+                    ctx.stroke();
+                }
+                const loinclothTex = new THREE.CanvasTexture(canvas);
+                const loinclothMat = new THREE.MeshStandardMaterial({ map: loinclothTex });
+                const loincloth = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.4, 0.5), loinclothMat);
+                loincloth.position.set(0, 0.2, 0.8);
+                group.add(loincloth);
+
+                // Сохраняем топор для анимации
+                group.userData = { axe: axeGroup };
+            }
+
+            else if (bossId === 'dragon_lair') {
+                // --- Тело (сегменты) ---
                 const bodyMat = new THREE.MeshStandardMaterial({ color: 0xaa4422, emissive: 0x331100 });
+                
+                // Основной корпус (сфера, вытянутая)
+                const bodyGeom = new THREE.SphereGeometry(1.2, 8);
                 const body = new THREE.Mesh(bodyGeom, bodyMat);
+                body.scale.set(1.5, 1.0, 1.2);
                 body.position.y = 1.2;
                 group.add(body);
-                // Шея
-                const neckGeom = new THREE.CylinderGeometry(0.6, 0.8, 1.5);
+
+                // Шея (цилиндр)
+                const neckGeom = new THREE.CylinderGeometry(0.8, 0.9, 1.5);
                 const neck = new THREE.Mesh(neckGeom, bodyMat);
-                neck.position.set(0, 2.2, 0.5);
+                neck.position.set(0, 2.2, 0.8);
                 neck.rotation.x = 0.3;
                 group.add(neck);
+
                 // Голова
-                const headGeom = new THREE.ConeGeometry(0.7, 1, 6);
-                const headMat = new THREE.MeshStandardMaterial({ color: 0xcc5533 });
+                const headGeom = new THREE.SphereGeometry(1.0, 8);
+                const headMat = new THREE.MeshStandardMaterial({ color: 0xcc5533, emissive: 0x331100 });
                 const head = new THREE.Mesh(headGeom, headMat);
-                head.position.set(0, 3.2, 1.2);
-                head.rotation.x = -0.2;
+                head.position.set(0, 3.2, 1.4);
+                head.scale.set(0.9, 0.9, 0.9);
                 group.add(head);
-                // Крылья
-                const wingGeom = new THREE.ConeGeometry(1.2, 0.2, 4);
+
+                // Рога (два конуса)
+                const hornMat = new THREE.MeshStandardMaterial({ color: 0x886644 });
+                for (let i = -1; i <= 1; i += 2) {
+                    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.8, 4), hornMat);
+                    horn.position.set(i * 0.5, 3.6, 1.6);
+                    horn.rotation.z = i * 0.2;
+                    horn.rotation.x = -0.2;
+                    group.add(horn);
+                }
+
+                // Глаза
+                const eyeGeom = new THREE.SphereGeometry(0.2, 6);
+                const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
+                const eyeL = new THREE.Mesh(eyeGeom, eyeMat);
+                eyeL.position.set(-0.4, 3.4, 2.0);
+                group.add(eyeL);
+                const eyeR = eyeL.clone();
+                eyeR.position.set(0.4, 3.4, 2.0);
+                group.add(eyeR);
+
+                // Крылья (составные)
                 const wingMat = new THREE.MeshStandardMaterial({ color: 0x993322 });
-                const wingL = new THREE.Mesh(wingGeom, wingMat);
-                wingL.position.set(-1.2, 1.8, 0);
-                wingL.rotation.z = 0.3;
-                wingL.rotation.y = -0.2;
-                group.add(wingL);
-                const wingR = wingL.clone();
-                wingR.position.set(1.2, 1.8, 0);
-                wingR.rotation.z = -0.3;
-                wingR.rotation.y = 0.2;
-                group.add(wingR);
-                // Хвост
-                const tailGeom = new THREE.ConeGeometry(0.5, 1.5, 4);
-                const tail = new THREE.Mesh(tailGeom, bodyMat);
-                tail.position.set(0, 0.5, -1.5);
-                tail.rotation.x = 0.5;
-                group.add(tail);
-            } else if (bossId === 'lich_castle') {
-                // Тело
-                const bodyGeom = new THREE.CylinderGeometry(0.8, 1.0, 3, 6);
+                function createWing(side) {
+                    const wingGroup = new THREE.Group();
+                    const wingMain = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.5, 1.0), wingMat);
+                    wingMain.position.set(0, 0.8, 0);
+                    wingMain.rotation.x = 0.3;
+                    wingGroup.add(wingMain);
+                    for (let k = 0; k < 2; k++) {
+                        const membrane = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.6), new THREE.MeshStandardMaterial({ color: 0xaa4422 }));
+                        membrane.position.set(0, 0.4 + k*0.4, 0.4);
+                        membrane.rotation.x = 0.2;
+                        wingGroup.add(membrane);
+                    }
+                    wingGroup.position.set(side * 1.5, 2.2, 0.2);
+                    wingGroup.rotation.y = side * 0.3;
+                    wingGroup.rotation.z = side * 0.2;
+                    return wingGroup;
+                }
+                group.add(createWing(-1));
+                group.add(createWing(1));
+
+                // Шипы на спине
+                const spikeMat = new THREE.MeshStandardMaterial({ color: 0x884422 });
+                for (let i = 0; i < 5; i++) {
+                    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 4), spikeMat);
+                    spike.position.set(0, 2.0 + i*0.3, 0.2);
+                    spike.rotation.x = 0.1;
+                    group.add(spike);
+                }
+
+                // Хвост (несколько сегментов)
+                const tailMat = new THREE.MeshStandardMaterial({ color: 0xaa4422 });
+                const tailSegments = [];
+                for (let i = 0; i < 3; i++) {
+                    const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.5 - i*0.1, 0.4 - i*0.1, 1.0), tailMat);
+                    seg.position.set(0, 0.5 - i*0.2, -1.2 - i*0.8);
+                    seg.rotation.x = 0.2 * i;
+                    group.add(seg);
+                    tailSegments.push(seg);
+                }
+
+                // Сохраняем анимируемые части
+                group.userData = {
+                    wings: [group.children.find(c => c.position.x < 0 && c.children.length > 0), group.children.find(c => c.position.x > 0 && c.children.length > 0)],
+                    head: head,
+                    tail: tailSegments
+                };
+            }
+
+            else if (bossId === 'lich_castle') {
+                // --- Мантия (конус) ---
+                const mantleGeom = new THREE.ConeGeometry(1.2, 2.5, 8);
+                const canvas = document.createElement('canvas');
+                canvas.width = 64;
+                canvas.height = 64;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#2a2a3a';
+                ctx.fillRect(0, 0, 64, 64);
+                ctx.strokeStyle = '#8844aa';
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 8; i++) {
+                    ctx.beginPath();
+                    ctx.arc(Math.random()*64, Math.random()*64, 10, 0, 2*Math.PI);
+                    ctx.stroke();
+                }
+                const mantleTex = new THREE.CanvasTexture(canvas);
+                const mantleMat = new THREE.MeshStandardMaterial({ map: mantleTex, emissive: 0x110022 });
+                const mantle = new THREE.Mesh(mantleGeom, mantleMat);
+                mantle.position.y = 1.0;
+                mantle.rotation.x = 0.1;
+                group.add(mantle);
+
+                // --- Тело (под мантией) ---
+                const bodyGeom = new THREE.CylinderGeometry(0.8, 1.0, 2.5, 6);
                 const bodyMat = new THREE.MeshStandardMaterial({ color: 0x557799, emissive: 0x113344 });
                 const body = new THREE.Mesh(bodyGeom, bodyMat);
                 body.position.y = 1.5;
                 group.add(body);
-                // Голова
+
+                // --- Голова ---
                 const headGeom = new THREE.SphereGeometry(0.7, 6);
                 const headMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
                 const head = new THREE.Mesh(headGeom, headMat);
                 head.position.y = 3.0;
                 group.add(head);
-                // Глазницы
+
+                // --- Глазницы (тёмные) ---
                 const socketGeom = new THREE.SphereGeometry(0.2);
                 const socketMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
                 const socketL = new THREE.Mesh(socketGeom, socketMat);
@@ -330,7 +480,8 @@
                 const socketR = socketL.clone();
                 socketR.position.set(0.3, 3.1, 0.6);
                 group.add(socketR);
-                // Светящиеся глаза
+
+                // --- Светящиеся глаза ---
                 const glowGeom = new THREE.SphereGeometry(0.1);
                 const glowMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x004444 });
                 const glowL = new THREE.Mesh(glowGeom, glowMat);
@@ -339,19 +490,40 @@
                 const glowR = glowL.clone();
                 glowR.position.set(0.3, 3.1, 0.8);
                 group.add(glowR);
-                // Посох
-                const staffGeom = new THREE.CylinderGeometry(0.1, 0.1, 3);
+
+                // --- Посох (улучшенный) ---
+                const staffGroup = new THREE.Group();
+                const staffGeom = new THREE.CylinderGeometry(0.1, 0.1, 3.5);
                 const staffMat = new THREE.MeshStandardMaterial({ color: 0x886644 });
                 const staff = new THREE.Mesh(staffGeom, staffMat);
-                staff.position.set(1.2, 2.0, 0.5);
-                staff.rotation.z = 0.2;
-                group.add(staff);
-                const staffTopGeom = new THREE.SphereGeometry(0.3);
-                const staffTopMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
-                const staffTop = new THREE.Mesh(staffTopGeom, staffTopMat);
-                staffTop.position.set(1.2, 3.5, 0.5);
-                group.add(staffTop);
+                staff.position.y = 1.8;
+                staffGroup.add(staff);
+                const crystalGeom = new THREE.OctahedronGeometry(0.3);
+                const crystalMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
+                const crystal = new THREE.Mesh(crystalGeom, crystalMat);
+                crystal.position.y = 3.5;
+                staffGroup.add(crystal);
+                for (let i = 0; i < 4; i++) {
+                    const rune = new THREE.Mesh(new THREE.SphereGeometry(0.1), new THREE.MeshStandardMaterial({ color: 0xaa88ff, emissive: 0x331166 }));
+                    rune.position.set(0.2 * Math.sin(i*Math.PI/2), 2.0 + i*0.5, 0.2 * Math.cos(i*Math.PI/2));
+                    staffGroup.add(rune);
+                }
+                staffGroup.position.set(1.2, 1.0, 0.5);
+                staffGroup.rotation.z = 0.2;
+                staffGroup.rotation.y = 0.3;
+                group.add(staffGroup);
+
+                // --- Парящие частицы (души) вокруг тела (создадим пустой контейнер) ---
+                const soulContainer = new THREE.Group();
+                group.add(soulContainer);
+
+                group.userData = {
+                    staff: staffGroup,
+                    mantle: mantle,
+                    soulContainer: soulContainer
+                };
             }
+
             group.scale.set(0.8, 0.8, 0.8);
             group.position.y = 1.5;
             return group;
@@ -387,10 +559,8 @@
                         canvas.width = 512;
                         canvas.height = 512;
                         const ctx = canvas.getContext('2d');
-                        // Базовый цвет камня
                         ctx.fillStyle = '#555555';
                         ctx.fillRect(0, 0, 512, 512);
-                        // Шум (зернистость)
                         const imageData = ctx.getImageData(0, 0, 512, 512);
                         const data = imageData.data;
                         for (let i = 0; i < data.length; i += 4) {
@@ -400,7 +570,6 @@
                             data[i+2] = Math.min(255, Math.max(0, data[i+2] + noise));
                         }
                         ctx.putImageData(imageData, 0, 0);
-                        // Трещины (более реалистичные)
                         ctx.strokeStyle = '#222222';
                         ctx.lineWidth = 4;
                         for (let j = 0; j < 20; j++) {
@@ -409,14 +578,12 @@
                             ctx.lineTo(Math.random()*512, Math.random()*512);
                             ctx.stroke();
                         }
-                        // Выбоины (тёмные пятна)
                         ctx.fillStyle = '#333333';
                         for (let j = 0; j < 30; j++) {
                             ctx.beginPath();
                             ctx.arc(Math.random()*512, Math.random()*512, Math.random()*10+5, 0, 2*Math.PI);
                             ctx.fill();
                         }
-                        // Лужи (полупрозрачные голубоватые пятна)
                         ctx.fillStyle = 'rgba(100,150,200,0.2)';
                         for (let j = 0; j < 10; j++) {
                             ctx.beginPath();
@@ -432,7 +599,7 @@
                     scene.add(floorPlane);
                     environmentObjects.push(floorPlane);
 
-                    // Мелкие камни на полу (без изменений)
+                    // Мелкие камни
                     const smallRockMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
                     for (let i = 0; i < 15; i++) {
                         const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.1 + Math.random()*0.15), smallRockMat);
@@ -478,7 +645,7 @@
                         torchLights.push({ light, baseIntensity: 1, flame });
                     }
 
-                    // Сталактиты (без изменений)
+                    // Сталактиты
                     const stalactiteMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
                     for (let i = 0; i < 12; i++) {
                         const stal = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1.0, 5), stalactiteMat);
@@ -490,8 +657,7 @@
                         environmentObjects.push(stal);
                     }
 
-                    // --- ПРЕДМЕТЫ НА ПОЛУ ---
-                    // Деревянные ящики (без изменений)
+                    // --- ПРЕДМЕТЫ НА ПОЛУ (без изменений) ---
                     const boxMaterial = new THREE.MeshStandardMaterial({ color: 0x8B5A2B });
                     for (let i = 0; i < 3; i++) {
                         const box = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), boxMaterial);
@@ -501,7 +667,6 @@
                         environmentObjects.push(box);
                     }
 
-                    // Бочки (без изменений)
                     const barrelMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
                     for (let i = 0; i < 2; i++) {
                         const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.8, 8), barrelMaterial);
@@ -511,7 +676,6 @@
                         environmentObjects.push(barrel);
                     }
 
-                    // Кирки (лежащие на земле) (без изменений)
                     const pickaxeMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
                     for (let i = 0; i < 2; i++) {
                         const pickaxe = new THREE.Group();
@@ -519,12 +683,10 @@
                         handle.position.y = 0.4;
                         handle.rotation.z = Math.PI / 2;
                         pickaxe.add(handle);
-                        
                         const head = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.3, 4), pickaxeMaterial);
                         head.position.set(0.4, 0.4, 0);
                         head.rotation.z = -0.2;
                         pickaxe.add(head);
-                        
                         pickaxe.position.set(Math.random()*5-2.5, 0.05, Math.random()*5-2.5);
                         pickaxe.rotation.y = Math.random() * Math.PI;
                         pickaxe.rotation.x = Math.random() * 0.3;
@@ -532,7 +694,6 @@
                         environmentObjects.push(pickaxe);
                     }
 
-                    // Кусочки угля (без изменений)
                     const coalMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
                     for (let i = 0; i < 5; i++) {
                         const coal = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), coalMaterial);
@@ -542,7 +703,6 @@
                         environmentObjects.push(coal);
                     }
 
-                    // Дым (без изменений)
                     const smokeGeom = new THREE.BufferGeometry();
                     const smokeCount = 40;
                     const smokePositions = new Float32Array(smokeCount * 3);
@@ -560,7 +720,6 @@
                     scene.add(smokeParticles);
                     environmentObjects.push(smokeParticles);
 
-                    // Кучки золота (без изменений)
                     const goldMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
                     for (let i = 0; i < 5; i++) {
                         const pile = new THREE.Group();
@@ -576,7 +735,6 @@
                         environmentObjects.push(pile);
                     }
 
-                    // Паутина (без изменений)
                     const webMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 });
                     for (let i = 0; i < 4; i++) {
                         const web = new THREE.Mesh(new THREE.TorusKnotGeometry(0.5, 0.05, 20, 5), webMat);
@@ -587,7 +745,6 @@
                         environmentObjects.push(web);
                     }
 
-                    // Капли воды (без изменений)
                     const dropGeom = new THREE.BufferGeometry();
                     const dropCount = 20;
                     const dropPositions = new Float32Array(dropCount * 3);
@@ -613,7 +770,6 @@
                     canvas.height = 256;
                     const ctx = canvas.getContext('2d');
                     lavaTexture = new THREE.CanvasTexture(canvas);
-
                     ctx.fillStyle = '#ff4400';
                     ctx.fillRect(0, 0, 256, 256);
                     lavaTexture.needsUpdate = true;
@@ -651,9 +807,7 @@
                             x = (Math.random() - 0.5) * 10;
                             z = (Math.random() - 0.5) * 10;
                             ok = true;
-                            // Не ближе 3.5 к центру (кубы)
                             if (Math.abs(x) < 3.5 && Math.abs(z) < 3.5) ok = false;
-                            // Не ближе 1.2 друг к другу
                             for (let pos of rockPositions) {
                                 if (Math.hypot(x - pos.x, z - pos.z) < 1.2) {
                                     ok = false;
@@ -760,7 +914,6 @@
                         const ctx = canvas.getContext('2d');
                         ctx.fillStyle = '#2a2a3a';
                         ctx.fillRect(0, 0, 512, 512);
-                        // Шум
                         const imageData = ctx.getImageData(0, 0, 512, 512);
                         const data = imageData.data;
                         for (let i = 0; i < data.length; i += 4) {
@@ -770,7 +923,6 @@
                             data[i+2] = Math.min(255, Math.max(0, data[i+2] + noise));
                         }
                         ctx.putImageData(imageData, 0, 0);
-                        // Руны (светящиеся узоры)
                         ctx.strokeStyle = '#aa88ff';
                         ctx.lineWidth = 3;
                         for (let j = 0; j < 20; j++) {
@@ -779,7 +931,6 @@
                             ctx.strokeStyle = `rgba(170,136,255,${0.4+Math.random()*0.4})`;
                             ctx.stroke();
                         }
-                        // Дополнительные линии
                         ctx.strokeStyle = '#8844aa';
                         ctx.lineWidth = 2;
                         for (let j = 0; j < 15; j++) {
@@ -798,7 +949,7 @@
                     scene.add(floorPlane);
                     environmentObjects.push(floorPlane);
 
-                    // Светильники над рунами (увеличено количество)
+                    // Светильники над рунами
                     for (let i = 0; i < 12; i++) {
                         const light = new THREE.PointLight(0xaa88ff, 0.5, 6);
                         light.position.set(Math.random()*7-3.5, 0.2, Math.random()*7-3.5);
@@ -818,12 +969,7 @@
                         scene.add(obelisk);
                         environmentObjects.push(obelisk);
                         
-                        const runeMat = new THREE.MeshStandardMaterial({ 
-                            color: 0xaa88ff, 
-                            emissive: 0x442288,
-                            transparent: true,
-                            opacity: 0.6
-                        });
+                        const runeMat = new THREE.MeshStandardMaterial({ color: 0xaa88ff, emissive: 0x442288, transparent: true, opacity: 0.6 });
                         const runeCylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 3.8, 8), runeMat);
                         runeCylinder.position.set(x, 2.1, z);
                         scene.add(runeCylinder);
@@ -850,7 +996,7 @@
                         }
                     }
 
-                    // Души (частицы) (без изменений)
+                    // Души (частицы)
                     const soulGeom = new THREE.BufferGeometry();
                     const soulCount = 30;
                     const soulPositions = new Float32Array(soulCount * 3);
@@ -865,7 +1011,7 @@
                     scene.add(soulParticles);
                     environmentObjects.push(soulParticles);
 
-                    // Парящие книги (без изменений)
+                    // Парящие книги
                     const bookMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
                     for (let j = 0; j < 4; j++) {
                         const angle = (j / 4) * Math.PI * 2;
@@ -886,7 +1032,7 @@
                         floatingBooks.push(bookGroup);
                     }
 
-                    // Фиолетовые огоньки у основания (без изменений)
+                    // Фиолетовые огоньки у основания
                     for (let i = 0; i < 6; i++) {
                         const angle = (i / 6) * Math.PI * 2;
                         const x = Math.sin(angle) * 5;
@@ -898,7 +1044,7 @@
                         torchLights.push({ light: flameLight, baseIntensity: 0.8 });
                     }
 
-                    // Летающие черепа (без изменений)
+                    // Летающие черепа
                     const skullMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, emissive: 0x112233 });
                     for (let i = 0; i < 5; i++) {
                         const skull = new THREE.Mesh(new THREE.SphereGeometry(0.25), skullMat);
@@ -1196,17 +1342,12 @@
                 const roughnessValues = [0.8, 0.5, 0.4, 0.3, 0.4];
 
                 positions.forEach((pos, i) => {
-                    // Создаём текстуру с прожилками и шумом
                     const canvas = document.createElement('canvas');
                     canvas.width = 128;
                     canvas.height = 128;
                     const ctx = canvas.getContext('2d');
-                    
-                    // Базовый цвет
                     ctx.fillStyle = '#' + baseColors[i].toString(16).padStart(6, '0');
                     ctx.fillRect(0, 0, 128, 128);
-                    
-                    // Шум (для неровности)
                     const imageData = ctx.getImageData(0, 0, 128, 128);
                     const data = imageData.data;
                     for (let j = 0; j < data.length; j += 4) {
@@ -1216,8 +1357,6 @@
                         data[j+2] = Math.min(255, Math.max(0, data[j+2] + noise));
                     }
                     ctx.putImageData(imageData, 0, 0);
-                    
-                    // Прожилки (белые линии)
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = 2;
                     for (let j = 0; j < 8; j++) {
@@ -1227,9 +1366,7 @@
                         ctx.strokeStyle = `rgba(255,255,255,${0.3+Math.random()*0.3})`;
                         ctx.stroke();
                     }
-                    
-                    // Дополнительные цветные прожилки для алмазов
-                    if (i === 3) { // diamond
+                    if (i === 3) {
                         ctx.strokeStyle = 'rgba(100,200,255,0.5)';
                         ctx.lineWidth = 1.5;
                         for (let j = 0; j < 5; j++) {
@@ -1239,9 +1376,7 @@
                             ctx.stroke();
                         }
                     }
-                    
-                    // Для золота - блёстки
-                    if (i === 2) { // gold
+                    if (i === 2) {
                         for (let j = 0; j < 20; j++) {
                             ctx.fillStyle = `rgba(255,215,0,${Math.random()*0.8})`;
                             ctx.beginPath();
@@ -1249,9 +1384,7 @@
                             ctx.fill();
                         }
                     }
-                    
                     const texture = new THREE.CanvasTexture(canvas);
-                    
                     const material = new THREE.MeshStandardMaterial({ 
                         map: texture,
                         color: baseColors[i],
@@ -1260,7 +1393,6 @@
                         metalness: metalnessValues[i],
                         emissiveIntensity: 0.2
                     });
-                    
                     const cube = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), material);
                     cube.position.set(pos[0], pos[1], pos[2]);
                     cube.userData = { type: 'resource', id: i, baseScale: 1 };
@@ -1338,7 +1470,6 @@
 
                     cubes.forEach((c, idx) => {
                         c.rotation.y += 0.01;
-                        // Пульсация масштаба
                         const scale = 1 + Math.sin(time * 5 + idx) * 0.02;
                         c.scale.set(scale, scale, scale);
                     });
@@ -1347,7 +1478,35 @@
                         bossGroup.rotation.y += 0.005;
                     }
 
-                    // Мерцание факелов и огоньков
+                    // Анимации боссов
+                    if (currentBossId === 'goblin_king' && bossGroup.userData && bossGroup.userData.axe) {
+                        const axe = bossGroup.userData.axe;
+                        axe.rotation.z = 0.2 + Math.sin(time * 5) * 0.1;
+                    }
+                    if (currentBossId === 'dragon_lair' && bossGroup.userData) {
+                        const { wings, head, tail } = bossGroup.userData;
+                        if (wings) {
+                            wings.forEach((wing, idx) => {
+                                if (wing) wing.rotation.z = (idx === 0 ? -0.2 : 0.2) + Math.sin(time * 3) * 0.1;
+                            });
+                        }
+                        if (head) {
+                            head.rotation.y = Math.sin(time * 2) * 0.1;
+                            head.rotation.x = 0.2 + Math.sin(time * 2.5) * 0.05;
+                        }
+                        if (tail) {
+                            tail.forEach((seg, i) => {
+                                seg.rotation.x = 0.2 * i + Math.sin(time * 2 + i) * 0.1;
+                            });
+                        }
+                    }
+                    if (currentBossId === 'lich_castle' && bossGroup.userData) {
+                        const { staff, mantle } = bossGroup.userData;
+                        if (staff) staff.rotation.y += 0.01;
+                        if (mantle) mantle.rotation.x = 0.1 + Math.sin(time * 1.5) * 0.02;
+                    }
+
+                    // Мерцание факелов
                     torchLights.forEach(item => {
                         if (item.light) {
                             const intensity = item.baseIntensity + Math.sin(time * 10 + item.light.position.x) * 0.2;
@@ -1359,15 +1518,13 @@
                         }
                     });
 
-                    // Анимация лавы (обновление текстуры)
+                    // Анимация лавы
                     if (lavaTexture && lavaPlane) {
                         const canvas = lavaTexture.image;
                         if (canvas) {
                             const ctx = canvas.getContext('2d');
                             ctx.fillStyle = '#ff4400';
                             ctx.fillRect(0, 0, 256, 256);
-                            
-                            // Прожилки
                             ctx.strokeStyle = 'rgba(255,170,0,0.2)';
                             ctx.lineWidth = 2;
                             for (let j = 0; j < 8; j++) {
@@ -1380,8 +1537,6 @@
                                 ctx.lineTo(x2, y2);
                                 ctx.stroke();
                             }
-                            
-                            // Пятна
                             ctx.fillStyle = 'rgba(255,200,100,0.03)';
                             for (let j = 0; j < 6; j++) {
                                 const x = (Math.sin(j * 5 + time * 0.0001) * 50 + 128) % 256;
@@ -1391,12 +1546,11 @@
                                 ctx.arc(x, y, r, 0, 2 * Math.PI);
                                 ctx.fill();
                             }
-                            
                             lavaTexture.needsUpdate = true;
                         }
                     }
 
-                    // Пузырьки (очень медленные)
+                    // Пузырьки
                     if (bubbleParticles) {
                         const positions = bubbleParticles.geometry.attributes.position.array;
                         for (let i = 1; i < positions.length; i += 3) {
@@ -1410,7 +1564,7 @@
                         bubbleParticles.geometry.attributes.position.needsUpdate = true;
                     }
 
-                    // Искры (подъём)
+                    // Искры
                     if (sparkParticles) {
                         const positions = sparkParticles.geometry.attributes.position.array;
                         for (let i = 1; i < positions.length; i += 3) {
@@ -1424,7 +1578,7 @@
                         sparkParticles.geometry.attributes.position.needsUpdate = true;
                     }
 
-                    // Пепел (падение)
+                    // Пепел
                     if (ashParticles) {
                         const positions = ashParticles.geometry.attributes.position.array;
                         for (let i = 1; i < positions.length; i += 3) {
@@ -1438,7 +1592,7 @@
                         ashParticles.geometry.attributes.position.needsUpdate = true;
                     }
 
-                    // Души (подъём)
+                    // Души
                     if (soulParticles) {
                         const positions = soulParticles.geometry.attributes.position.array;
                         for (let i = 1; i < positions.length; i += 3) {
@@ -1452,7 +1606,7 @@
                         soulParticles.geometry.attributes.position.needsUpdate = true;
                     }
 
-                    // Капли воды (падение)
+                    // Капли воды
                     if (waterDrops) {
                         const positions = waterDrops.geometry.attributes.position.array;
                         for (let i = 1; i < positions.length; i += 3) {
@@ -1466,13 +1620,13 @@
                         waterDrops.geometry.attributes.position.needsUpdate = true;
                     }
 
-                    // Вращение книг и покачивание
+                    // Книги
                     floatingBooks.forEach((book, idx) => {
                         book.rotation.y += 0.01;
                         book.position.y = 3.5 + Math.sin(time * 2 + idx) * 0.3;
                     });
 
-                    // Летающие черепа
+                    // Черепа
                     flyingSkulls.forEach((skull, idx) => {
                         skull.userData.angle += skull.userData.speed;
                         skull.position.x = Math.sin(skull.userData.angle) * skull.userData.radius;
@@ -1482,7 +1636,7 @@
                         skull.rotation.x = Math.sin(time + idx) * 0.2;
                     });
 
-                    // Мерцание рун
+                    // Рунные огоньки
                     runeLights.forEach((item, idx) => {
                         const intensity = item.baseIntensity + Math.sin(time * 3 + idx) * 0.2;
                         item.light.intensity = Math.max(0.2, intensity);
