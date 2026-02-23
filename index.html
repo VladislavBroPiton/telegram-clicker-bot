@@ -133,6 +133,8 @@
         let waterDrops = null;
         let heatDistortion = null;
         let flyingSkulls = [];
+        let bubbleParticles = null;     // для пузырьков в лаве
+        let runeLights = [];            // для мерцающих рун
 
         // Элементы DOM
         const hudLevel = document.getElementById('level');
@@ -365,6 +367,8 @@
             waterDrops = null;
             heatDistortion = null;
             flyingSkulls = [];
+            bubbleParticles = null;
+            runeLights = [];
             environmentObjects.forEach(obj => scene.remove(obj));
             environmentObjects = [];
             scene.fog = null;
@@ -395,10 +399,10 @@
                             data[i+2] = Math.min(255, Math.max(0, data[i+2] + noise));
                         }
                         ctx.putImageData(imageData, 0, 0);
-                        // Трещины
+                        // Трещины (более контрастные)
                         ctx.strokeStyle = '#222222';
-                        ctx.lineWidth = 2;
-                        for (let j = 0; j < 10; j++) {
+                        ctx.lineWidth = 3;
+                        for (let j = 0; j < 15; j++) {
                             ctx.beginPath();
                             ctx.moveTo(Math.random()*256, Math.random()*256);
                             ctx.lineTo(Math.random()*256, Math.random()*256);
@@ -412,6 +416,16 @@
                     floorPlane.position.y = -0.1;
                     scene.add(floorPlane);
                     environmentObjects.push(floorPlane);
+
+                    // Мелкие камни на полу
+                    const smallRockMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
+                    for (let i = 0; i < 15; i++) {
+                        const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.1 + Math.random()*0.15), smallRockMat);
+                        rock.position.set(Math.random()*6-3, 0.05, Math.random()*6-3);
+                        rock.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+                        scene.add(rock);
+                        environmentObjects.push(rock);
+                    }
 
                     // --- КОЛОННЫ (радиус 8, смещение 0.3) ---
                     const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x777777, roughness: 0.8 });
@@ -580,20 +594,28 @@
                 case 'dragon_lair': {
                     // Лава (пол)
                     const canvas = document.createElement('canvas');
-                    canvas.width = 64;
-                    canvas.height = 64;
+                    canvas.width = 128; // увеличим разрешение для большей детализации
+                    canvas.height = 128;
                     const ctx = canvas.getContext('2d');
                     lavaTexture = new THREE.CanvasTexture(canvas);
                     
                     function updateLavaTexture(time) {
                         ctx.fillStyle = '#ff4400';
-                        ctx.fillRect(0, 0, 64, 64);
-                        ctx.fillStyle = '#ffaa00';
-                        for (let i = 0; i < 100; i++) {
-                            const x = (Math.sin(i + time*0.01) * 10 + i*3) % 64;
-                            const y = (Math.cos(i*2 + time*0.02) * 10 + i*5) % 64;
+                        ctx.fillRect(0, 0, 128, 128);
+                        // Прожилки
+                        ctx.strokeStyle = '#ffaa00';
+                        ctx.lineWidth = 2;
+                        for (let j = 0; j < 10; j++) {
                             ctx.beginPath();
-                            ctx.arc(x, y, Math.random()*4+1, 0, 2*Math.PI);
+                            ctx.moveTo(Math.random()*128, Math.random()*128);
+                            ctx.lineTo(Math.random()*128, Math.random()*128);
+                            ctx.stroke();
+                        }
+                        // Яркие пятна
+                        ctx.fillStyle = '#ffaa00';
+                        for (let j = 0; j < 30; j++) {
+                            ctx.beginPath();
+                            ctx.arc(Math.random()*128, Math.random()*128, Math.random()*5+2, 0, 2*Math.PI);
                             ctx.fill();
                         }
                         lavaTexture.needsUpdate = true;
@@ -608,6 +630,21 @@
                     lavaPlane.position.y = -0.5;
                     scene.add(lavaPlane);
                     environmentObjects.push(lavaPlane);
+
+                    // Пузырьки (частицы, поднимающиеся из лавы)
+                    const bubbleGeom = new THREE.BufferGeometry();
+                    const bubbleCount = 30;
+                    const bubblePositions = new Float32Array(bubbleCount * 3);
+                    for (let i = 0; i < bubbleCount; i++) {
+                        bubblePositions[i*3] = (Math.random() - 0.5) * 12;
+                        bubblePositions[i*3+1] = -0.4 + Math.random() * 0.3;
+                        bubblePositions[i*3+2] = (Math.random() - 0.5) * 12;
+                    }
+                    bubbleGeom.setAttribute('position', new THREE.BufferAttribute(bubblePositions, 3));
+                    const bubbleMat = new THREE.PointsMaterial({ color: 0xffaa44, size: 0.1 });
+                    bubbleParticles = new THREE.Points(bubbleGeom, bubbleMat);
+                    scene.add(bubbleParticles);
+                    environmentObjects.push(bubbleParticles);
 
                     // Камни
                     const rockMat = new THREE.MeshStandardMaterial({ color: 0x442211, emissive: 0x221100 });
@@ -715,11 +752,11 @@
                         ctx.putImageData(imageData, 0, 0);
                         // Руны (слабо светящиеся)
                         ctx.strokeStyle = '#aa88ff';
-                        ctx.lineWidth = 1;
-                        for (let j = 0; j < 8; j++) {
+                        ctx.lineWidth = 2;
+                        for (let j = 0; j < 12; j++) {
                             ctx.beginPath();
-                            ctx.arc(Math.random()*256, Math.random()*256, 10 + Math.random()*20, 0, 2*Math.PI);
-                            ctx.strokeStyle = `rgba(170,136,255,${0.2+Math.random()*0.3})`;
+                            ctx.arc(Math.random()*256, Math.random()*256, 15 + Math.random()*25, 0, 2*Math.PI);
+                            ctx.strokeStyle = `rgba(170,136,255,${0.3+Math.random()*0.4})`;
                             ctx.stroke();
                         }
                         return new THREE.CanvasTexture(canvas);
@@ -730,6 +767,15 @@
                     floorPlane.position.y = -0.1;
                     scene.add(floorPlane);
                     environmentObjects.push(floorPlane);
+
+                    // Добавляем небольшие источники света над рунами (для мерцания)
+                    for (let i = 0; i < 8; i++) {
+                        const light = new THREE.PointLight(0xaa88ff, 0.5, 5);
+                        light.position.set(Math.random()*6-3, 0.2, Math.random()*6-3);
+                        scene.add(light);
+                        environmentObjects.push(light);
+                        runeLights.push({ light, baseIntensity: 0.5, speed: 0.5 + Math.random()*0.5 });
+                    }
 
                     // Обелиски
                     const darkMat = new THREE.MeshStandardMaterial({ color: 0x333344, emissive: 0x110022 });
@@ -1113,10 +1159,6 @@
                 light2.position.set(-5, 5, -5);
                 scene.add(light2);
 
-                // Сетка больше не нужна, пол будет создаваться отдельно для каждой локации
-                // const gridHelper = new THREE.GridHelper(20, 20, 0xaaaaaa, 0x444444);
-                // scene.add(gridHelper);
-
                 createStars();
 
                 // --- КУБЫ-РЕСУРСЫ (улучшенный внешний вид) ---
@@ -1291,23 +1333,42 @@
                         }
                     });
 
-                    // Анимация лавы
+                    // Анимация лавы и пузырьков
                     if (lavaTexture) {
                         const canvas = lavaTexture.image;
                         if (canvas) {
                             const ctx = canvas.getContext('2d');
                             ctx.fillStyle = '#ff4400';
-                            ctx.fillRect(0, 0, 64, 64);
-                            ctx.fillStyle = '#ffaa00';
-                            for (let i = 0; i < 100; i++) {
-                                const x = (Math.sin(i + time*10) * 10 + i*3) % 64;
-                                const y = (Math.cos(i*2 + time*8) * 10 + i*5) % 64;
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            ctx.strokeStyle = '#ffaa00';
+                            ctx.lineWidth = 2;
+                            for (let j = 0; j < 10; j++) {
                                 ctx.beginPath();
-                                ctx.arc(x, y, Math.random()*4+1, 0, 2*Math.PI);
+                                ctx.moveTo(Math.random()*canvas.width, Math.random()*canvas.height);
+                                ctx.lineTo(Math.random()*canvas.width, Math.random()*canvas.height);
+                                ctx.stroke();
+                            }
+                            ctx.fillStyle = '#ffaa00';
+                            for (let j = 0; j < 30; j++) {
+                                ctx.beginPath();
+                                ctx.arc(Math.random()*canvas.width, Math.random()*canvas.height, Math.random()*5+2, 0, 2*Math.PI);
                                 ctx.fill();
                             }
                             lavaTexture.needsUpdate = true;
                         }
+                    }
+
+                    if (bubbleParticles) {
+                        const positions = bubbleParticles.geometry.attributes.position.array;
+                        for (let i = 1; i < positions.length; i += 3) {
+                            positions[i] += 0.01; // подъём
+                            if (positions[i] > 0.5) {
+                                positions[i] = -0.4;
+                                positions[i-1] = (Math.random() - 0.5) * 12;
+                                positions[i+1] = (Math.random() - 0.5) * 12;
+                            }
+                        }
+                        bubbleParticles.geometry.attributes.position.needsUpdate = true;
                     }
 
                     // Искры (подъём)
@@ -1380,6 +1441,12 @@
                         skull.position.y = 3 + Math.sin(time * 2 + idx) * 1.5;
                         skull.rotation.y += 0.02;
                         skull.rotation.x = Math.sin(time + idx) * 0.2;
+                    });
+
+                    // Мерцание рун (изменение интенсивности света)
+                    runeLights.forEach((item, idx) => {
+                        const intensity = item.baseIntensity + Math.sin(time * 3 + idx) * 0.2;
+                        item.light.intensity = Math.max(0.2, intensity);
                     });
 
                     // Плотность тумана
