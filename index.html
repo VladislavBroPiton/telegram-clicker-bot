@@ -377,41 +377,41 @@
 
             switch (bossId) {
                 case 'goblin_king': {
-    // --- КОЛОННЫ (увеличен радиус до 8, смещение угла 0.3) ---
-    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x777777, roughness: 0.8 });
-    for (let i = 0; i < 4; i++) {
-        const angle = (i * Math.PI / 2) + 0.3;
-        const x = Math.sin(angle) * 8;
-        const z = Math.cos(angle) * 8;
-        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 5, 8), wallMaterial);
-        pillar.position.set(x, 2.5, z);
-        scene.add(pillar);
-        environmentObjects.push(pillar);
-    }
+                    // --- КОЛОННЫ (увеличен радиус до 8, смещение угла 0.3) ---
+                    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x777777, roughness: 0.8 });
+                    for (let i = 0; i < 4; i++) {
+                        const angle = (i * Math.PI / 2) + 0.3;
+                        const x = Math.sin(angle) * 8;
+                        const z = Math.cos(angle) * 8;
+                        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 5, 8), wallMaterial);
+                        pillar.position.set(x, 2.5, z);
+                        scene.add(pillar);
+                        environmentObjects.push(pillar);
+                    }
 
-    // --- ФАКЕЛЫ (увеличен радиус до 6.5, смещение угла 0.8) ---
-    const torchMaterial = new THREE.MeshStandardMaterial({ color: 0xcc6600 });
-    const flameMaterial = new THREE.MeshStandardMaterial({ color: 0xffaa22, emissive: 0x442200 });
-    for (let i = 0; i < 4; i++) {
-        const angle = (i * Math.PI / 2) + 0.8;
-        const x = Math.sin(angle) * 6.5;
-        const z = Math.cos(angle) * 6.5;
-        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 3), torchMaterial);
-        pole.position.set(x, 1.5, z);
-        scene.add(pole);
-        environmentObjects.push(pole);
-        
-        const flame = new THREE.Mesh(new THREE.SphereGeometry(0.4), flameMaterial);
-        flame.position.set(x, 3.0, z);
-        scene.add(flame);
-        environmentObjects.push(flame);
-        
-        const light = new THREE.PointLight(0xff6600, 1, 8);
-        light.position.set(x, 3.0, z);
-        scene.add(light);
-        environmentObjects.push(light);
-        torchLights.push({ light, baseIntensity: 1, flame });
-    }
+                    // --- ФАКЕЛЫ (увеличен радиус до 6.5, смещение угла 0.8) ---
+                    const torchMaterial = new THREE.MeshStandardMaterial({ color: 0xcc6600 });
+                    const flameMaterial = new THREE.MeshStandardMaterial({ color: 0xffaa22, emissive: 0x442200 });
+                    for (let i = 0; i < 4; i++) {
+                        const angle = (i * Math.PI / 2) + 0.8;
+                        const x = Math.sin(angle) * 6.5;
+                        const z = Math.cos(angle) * 6.5;
+                        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 3), torchMaterial);
+                        pole.position.set(x, 1.5, z);
+                        scene.add(pole);
+                        environmentObjects.push(pole);
+                        
+                        const flame = new THREE.Mesh(new THREE.SphereGeometry(0.4), flameMaterial);
+                        flame.position.set(x, 3.0, z);
+                        scene.add(flame);
+                        environmentObjects.push(flame);
+                        
+                        const light = new THREE.PointLight(0xff6600, 1, 8);
+                        light.position.set(x, 3.0, z);
+                        scene.add(light);
+                        environmentObjects.push(light);
+                        torchLights.push({ light, baseIntensity: 1, flame });
+                    }
 
                     // Сталактиты
                     const stalactiteMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
@@ -1038,12 +1038,40 @@
 
                 createStars();
 
-                // Кубы-ресурсы (расположены в центре)
+                // --- КУБЫ-РЕСУРСЫ (улучшенный внешний вид) ---
                 const positions = [[-3,1.5,-2], [3,1.5,-2], [0,1.5,2], [-2,1.5,3], [2,1.5,3]];
+                const colors = [0x333333, 0x8B5A2B, 0xFFD700, 0x88CCFF, 0xC0C0C0]; // уголь, железо, золото, алмаз, мифрил
+                const emissive = [0x111111, 0x331100, 0x442200, 0x112244, 0x222222];
                 positions.forEach((pos, i) => {
-                    const cube = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshStandardMaterial({ color: 0xaaaaaa }));
+                    // Создаём текстуру с прожилками
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 64;
+                    canvas.height = 64;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#' + colors[i].toString(16).padStart(6, '0');
+                    ctx.fillRect(0, 0, 64, 64);
+                    // Добавляем прожилки
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    for (let j = 0; j < 5; j++) {
+                        ctx.beginPath();
+                        ctx.moveTo(Math.random()*64, Math.random()*64);
+                        ctx.lineTo(Math.random()*64, Math.random()*64);
+                        ctx.strokeStyle = `rgba(255,255,255,${0.3+Math.random()*0.3})`;
+                        ctx.stroke();
+                    }
+                    const texture = new THREE.CanvasTexture(canvas);
+
+                    const material = new THREE.MeshStandardMaterial({ 
+                        map: texture,
+                        color: colors[i],
+                        emissive: emissive[i],
+                        roughness: 0.6,
+                        metalness: 0.1
+                    });
+                    const cube = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), material);
                     cube.position.set(pos[0], pos[1], pos[2]);
-                    cube.userData = { type: 'resource', id: i };
+                    cube.userData = { type: 'resource', id: i, baseScale: 1 };
                     scene.add(cube);
                     cubes.push(cube);
                 });
@@ -1116,7 +1144,12 @@
                 function animate() {
                     time += 0.01;
 
-                    cubes.forEach(c => c.rotation.y += 0.01);
+                    cubes.forEach((c, idx) => {
+                        c.rotation.y += 0.01;
+                        // Пульсация масштаба
+                        const scale = 1 + Math.sin(time * 5 + idx) * 0.02;
+                        c.scale.set(scale, scale, scale);
+                    });
 
                     if (bossGroup && bossGroup.children.length > 0) {
                         bossGroup.rotation.y += 0.005;
@@ -1254,4 +1287,3 @@
     </script>
 </body>
 </html>
-
