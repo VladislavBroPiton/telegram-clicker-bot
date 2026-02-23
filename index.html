@@ -381,16 +381,17 @@
 
             switch (bossId) {
                 case 'goblin_king': {
-                    // --- ПОЛ: каменная плита с трещинами ---
+                    // --- ПОЛ: каменная плита с трещинами, выбоинами и лужами ---
                     const floorTexture = (() => {
                         const canvas = document.createElement('canvas');
-                        canvas.width = 256;
-                        canvas.height = 256;
+                        canvas.width = 512;
+                        canvas.height = 512;
                         const ctx = canvas.getContext('2d');
+                        // Базовый цвет камня
                         ctx.fillStyle = '#555555';
-                        ctx.fillRect(0, 0, 256, 256);
-                        // Шум
-                        const imageData = ctx.getImageData(0, 0, 256, 256);
+                        ctx.fillRect(0, 0, 512, 512);
+                        // Шум (зернистость)
+                        const imageData = ctx.getImageData(0, 0, 512, 512);
                         const data = imageData.data;
                         for (let i = 0; i < data.length; i += 4) {
                             const noise = (Math.random() - 0.5) * 30;
@@ -399,14 +400,28 @@
                             data[i+2] = Math.min(255, Math.max(0, data[i+2] + noise));
                         }
                         ctx.putImageData(imageData, 0, 0);
-                        // Трещины
+                        // Трещины (более реалистичные)
                         ctx.strokeStyle = '#222222';
-                        ctx.lineWidth = 3;
-                        for (let j = 0; j < 15; j++) {
+                        ctx.lineWidth = 4;
+                        for (let j = 0; j < 20; j++) {
                             ctx.beginPath();
-                            ctx.moveTo(Math.random()*256, Math.random()*256);
-                            ctx.lineTo(Math.random()*256, Math.random()*256);
+                            ctx.moveTo(Math.random()*512, Math.random()*512);
+                            ctx.lineTo(Math.random()*512, Math.random()*512);
                             ctx.stroke();
+                        }
+                        // Выбоины (тёмные пятна)
+                        ctx.fillStyle = '#333333';
+                        for (let j = 0; j < 30; j++) {
+                            ctx.beginPath();
+                            ctx.arc(Math.random()*512, Math.random()*512, Math.random()*10+5, 0, 2*Math.PI);
+                            ctx.fill();
+                        }
+                        // Лужи (полупрозрачные голубоватые пятна)
+                        ctx.fillStyle = 'rgba(100,150,200,0.2)';
+                        for (let j = 0; j < 10; j++) {
+                            ctx.beginPath();
+                            ctx.arc(Math.random()*512, Math.random()*512, Math.random()*15+8, 0, 2*Math.PI);
+                            ctx.fill();
                         }
                         return new THREE.CanvasTexture(canvas);
                     })();
@@ -417,7 +432,7 @@
                     scene.add(floorPlane);
                     environmentObjects.push(floorPlane);
 
-                    // Мелкие камни на полу
+                    // Мелкие камни на полу (без изменений)
                     const smallRockMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
                     for (let i = 0; i < 15; i++) {
                         const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.1 + Math.random()*0.15), smallRockMat);
@@ -463,7 +478,7 @@
                         torchLights.push({ light, baseIntensity: 1, flame });
                     }
 
-                    // Сталактиты
+                    // Сталактиты (без изменений)
                     const stalactiteMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
                     for (let i = 0; i < 12; i++) {
                         const stal = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1.0, 5), stalactiteMat);
@@ -476,7 +491,7 @@
                     }
 
                     // --- ПРЕДМЕТЫ НА ПОЛУ ---
-                    // Деревянные ящики
+                    // Деревянные ящики (без изменений)
                     const boxMaterial = new THREE.MeshStandardMaterial({ color: 0x8B5A2B });
                     for (let i = 0; i < 3; i++) {
                         const box = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), boxMaterial);
@@ -486,7 +501,7 @@
                         environmentObjects.push(box);
                     }
 
-                    // Бочки
+                    // Бочки (без изменений)
                     const barrelMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
                     for (let i = 0; i < 2; i++) {
                         const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.8, 8), barrelMaterial);
@@ -496,7 +511,7 @@
                         environmentObjects.push(barrel);
                     }
 
-                    // Кирки (лежащие на земле)
+                    // Кирки (лежащие на земле) (без изменений)
                     const pickaxeMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
                     for (let i = 0; i < 2; i++) {
                         const pickaxe = new THREE.Group();
@@ -517,7 +532,7 @@
                         environmentObjects.push(pickaxe);
                     }
 
-                    // Кусочки угля
+                    // Кусочки угля (без изменений)
                     const coalMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
                     for (let i = 0; i < 5; i++) {
                         const coal = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), coalMaterial);
@@ -527,7 +542,7 @@
                         environmentObjects.push(coal);
                     }
 
-                    // Дым
+                    // Дым (без изменений)
                     const smokeGeom = new THREE.BufferGeometry();
                     const smokeCount = 40;
                     const smokePositions = new Float32Array(smokeCount * 3);
@@ -545,7 +560,7 @@
                     scene.add(smokeParticles);
                     environmentObjects.push(smokeParticles);
 
-                    // Кучки золота
+                    // Кучки золота (без изменений)
                     const goldMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
                     for (let i = 0; i < 5; i++) {
                         const pile = new THREE.Group();
@@ -561,7 +576,7 @@
                         environmentObjects.push(pile);
                     }
 
-                    // Паутина
+                    // Паутина (без изменений)
                     const webMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 });
                     for (let i = 0; i < 4; i++) {
                         const web = new THREE.Mesh(new THREE.TorusKnotGeometry(0.5, 0.05, 20, 5), webMat);
@@ -572,7 +587,7 @@
                         environmentObjects.push(web);
                     }
 
-                    // Капли воды
+                    // Капли воды (без изменений)
                     const dropGeom = new THREE.BufferGeometry();
                     const dropCount = 20;
                     const dropPositions = new Float32Array(dropCount * 3);
@@ -592,15 +607,15 @@
                 }
 
                 case 'dragon_lair': {
-                    // Лава (пол)
+                    // Лава (пол) с улучшенной анимацией
                     const canvas = document.createElement('canvas');
-                    canvas.width = 128;
-                    canvas.height = 128;
+                    canvas.width = 256;
+                    canvas.height = 256;
                     const ctx = canvas.getContext('2d');
                     lavaTexture = new THREE.CanvasTexture(canvas);
 
                     ctx.fillStyle = '#ff4400';
-                    ctx.fillRect(0, 0, 128, 128);
+                    ctx.fillRect(0, 0, 256, 256);
                     lavaTexture.needsUpdate = true;
 
                     lavaPlane = new THREE.Mesh(
@@ -653,7 +668,7 @@
                         environmentObjects.push(rock);
                     }
 
-                    // Светящиеся трещины (новые декорации)
+                    // Светящиеся трещины
                     const crackMat = new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0x442200 });
                     for (let i = 0; i < 4; i++) {
                         let x, z, ok;
@@ -669,7 +684,6 @@
                                 }
                             }
                         } while (!ok);
-                        // Небольшой цилиндр, имитирующий трещину
                         const crack = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.05, 6), crackMat);
                         crack.position.set(x, 0.03, z);
                         crack.rotation.x = Math.random() * Math.PI;
@@ -738,31 +752,41 @@
                 }
 
                 case 'lich_castle': {
-                    // --- ПОЛ: тёмный камень с рунами ---
+                    // --- ПОЛ: тёмный камень с рунами (улучшенный) ---
                     const floorTexture = (() => {
                         const canvas = document.createElement('canvas');
-                        canvas.width = 256;
-                        canvas.height = 256;
+                        canvas.width = 512;
+                        canvas.height = 512;
                         const ctx = canvas.getContext('2d');
                         ctx.fillStyle = '#2a2a3a';
-                        ctx.fillRect(0, 0, 256, 256);
+                        ctx.fillRect(0, 0, 512, 512);
                         // Шум
-                        const imageData = ctx.getImageData(0, 0, 256, 256);
+                        const imageData = ctx.getImageData(0, 0, 512, 512);
                         const data = imageData.data;
                         for (let i = 0; i < data.length; i += 4) {
-                            const noise = (Math.random() - 0.5) * 20;
+                            const noise = (Math.random() - 0.5) * 25;
                             data[i] = Math.min(255, Math.max(0, data[i] + noise));
                             data[i+1] = Math.min(255, Math.max(0, data[i+1] + noise));
                             data[i+2] = Math.min(255, Math.max(0, data[i+2] + noise));
                         }
                         ctx.putImageData(imageData, 0, 0);
-                        // Руны
+                        // Руны (светящиеся узоры)
                         ctx.strokeStyle = '#aa88ff';
-                        ctx.lineWidth = 2;
-                        for (let j = 0; j < 12; j++) {
+                        ctx.lineWidth = 3;
+                        for (let j = 0; j < 20; j++) {
                             ctx.beginPath();
-                            ctx.arc(Math.random()*256, Math.random()*256, 15 + Math.random()*25, 0, 2*Math.PI);
-                            ctx.strokeStyle = `rgba(170,136,255,${0.3+Math.random()*0.4})`;
+                            ctx.arc(Math.random()*512, Math.random()*512, 20 + Math.random()*30, 0, 2*Math.PI);
+                            ctx.strokeStyle = `rgba(170,136,255,${0.4+Math.random()*0.4})`;
+                            ctx.stroke();
+                        }
+                        // Дополнительные линии
+                        ctx.strokeStyle = '#8844aa';
+                        ctx.lineWidth = 2;
+                        for (let j = 0; j < 15; j++) {
+                            ctx.beginPath();
+                            ctx.moveTo(Math.random()*512, Math.random()*512);
+                            ctx.lineTo(Math.random()*512, Math.random()*512);
+                            ctx.strokeStyle = `rgba(136,68,170,${0.3+Math.random()*0.3})`;
                             ctx.stroke();
                         }
                         return new THREE.CanvasTexture(canvas);
@@ -774,16 +798,16 @@
                     scene.add(floorPlane);
                     environmentObjects.push(floorPlane);
 
-                    // Светильники над рунами
-                    for (let i = 0; i < 8; i++) {
-                        const light = new THREE.PointLight(0xaa88ff, 0.5, 5);
-                        light.position.set(Math.random()*6-3, 0.2, Math.random()*6-3);
+                    // Светильники над рунами (увеличено количество)
+                    for (let i = 0; i < 12; i++) {
+                        const light = new THREE.PointLight(0xaa88ff, 0.5, 6);
+                        light.position.set(Math.random()*7-3.5, 0.2, Math.random()*7-3.5);
                         scene.add(light);
                         environmentObjects.push(light);
                         runeLights.push({ light, baseIntensity: 0.5, speed: 0.5 + Math.random()*0.5 });
                     }
 
-                    // Обелиски
+                    // Обелиски (без изменений)
                     const darkMat = new THREE.MeshStandardMaterial({ color: 0x333344, emissive: 0x110022 });
                     for (let i = 0; i < 6; i++) {
                         const angle = (i / 6) * Math.PI * 2;
@@ -794,7 +818,6 @@
                         scene.add(obelisk);
                         environmentObjects.push(obelisk);
                         
-                        // Светящиеся руны на обелисках
                         const runeMat = new THREE.MeshStandardMaterial({ 
                             color: 0xaa88ff, 
                             emissive: 0x442288,
@@ -811,7 +834,6 @@
                         scene.add(glow);
                         environmentObjects.push(glow);
 
-                        // Магический круг под обелиском
                         const circleGeom = new THREE.TorusGeometry(1.2, 0.1, 16, 32);
                         const circleMat = new THREE.MeshStandardMaterial({ color: 0x8844ff, emissive: 0x220044 });
                         const circle = new THREE.Mesh(circleGeom, circleMat);
@@ -828,7 +850,7 @@
                         }
                     }
 
-                    // Души (частицы)
+                    // Души (частицы) (без изменений)
                     const soulGeom = new THREE.BufferGeometry();
                     const soulCount = 30;
                     const soulPositions = new Float32Array(soulCount * 3);
@@ -843,7 +865,7 @@
                     scene.add(soulParticles);
                     environmentObjects.push(soulParticles);
 
-                    // Парящие книги
+                    // Парящие книги (без изменений)
                     const bookMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
                     for (let j = 0; j < 4; j++) {
                         const angle = (j / 4) * Math.PI * 2;
@@ -864,7 +886,7 @@
                         floatingBooks.push(bookGroup);
                     }
 
-                    // Фиолетовые огоньки у основания
+                    // Фиолетовые огоньки у основания (без изменений)
                     for (let i = 0; i < 6; i++) {
                         const angle = (i / 6) * Math.PI * 2;
                         const x = Math.sin(angle) * 5;
@@ -876,11 +898,10 @@
                         torchLights.push({ light: flameLight, baseIntensity: 0.8 });
                     }
 
-                    // Летающие черепа
+                    // Летающие черепа (без изменений)
                     const skullMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, emissive: 0x112233 });
                     for (let i = 0; i < 5; i++) {
                         const skull = new THREE.Mesh(new THREE.SphereGeometry(0.25), skullMat);
-                        // глазницы
                         const eyeSocket = new THREE.Mesh(new THREE.SphereGeometry(0.08), new THREE.MeshStandardMaterial({ color: 0x000000 }));
                         eyeSocket.position.set(-0.1, 0.1, 0.2);
                         skull.add(eyeSocket);
@@ -1338,34 +1359,34 @@
                         }
                     });
 
-                    // Анимация лавы (очень медленно, почти незаметно)
+                    // Анимация лавы (обновление текстуры)
                     if (lavaTexture && lavaPlane) {
                         const canvas = lavaTexture.image;
                         if (canvas) {
                             const ctx = canvas.getContext('2d');
                             ctx.fillStyle = '#ff4400';
-                            ctx.fillRect(0, 0, 128, 128);
+                            ctx.fillRect(0, 0, 256, 256);
                             
-                            // Прожилки (очень бледные)
-                            ctx.strokeStyle = 'rgba(255,170,0,0.15)';
+                            // Прожилки
+                            ctx.strokeStyle = 'rgba(255,170,0,0.2)';
                             ctx.lineWidth = 2;
-                            for (let j = 0; j < 4; j++) {
-                                const x1 = (Math.sin(j * 2 + time * 0.0001) * 20 + 64) % 128;
-                                const y1 = (Math.cos(j * 3 + time * 0.00015) * 20 + 64) % 128;
-                                const x2 = (Math.sin(j * 2 + 1 + time * 0.0001) * 20 + 64) % 128;
-                                const y2 = (Math.cos(j * 3 + 1 + time * 0.00015) * 20 + 64) % 128;
+                            for (let j = 0; j < 8; j++) {
+                                const x1 = (Math.sin(j * 2 + time * 0.0002) * 40 + 128) % 256;
+                                const y1 = (Math.cos(j * 3 + time * 0.0003) * 40 + 128) % 256;
+                                const x2 = (Math.sin(j * 2 + 1 + time * 0.0002) * 40 + 128) % 256;
+                                const y2 = (Math.cos(j * 3 + 1 + time * 0.0003) * 40 + 128) % 256;
                                 ctx.beginPath();
                                 ctx.moveTo(x1, y1);
                                 ctx.lineTo(x2, y2);
                                 ctx.stroke();
                             }
                             
-                            // Пятна (едва заметные)
-                            ctx.fillStyle = 'rgba(255,200,100,0.02)';
-                            for (let j = 0; j < 3; j++) {
-                                const x = (Math.sin(j * 5 + time * 0.00005) * 25 + 64) % 128;
-                                const y = (Math.cos(j * 7 + time * 0.00008) * 25 + 64) % 128;
-                                const r = Math.random() * 6 + 3;
+                            // Пятна
+                            ctx.fillStyle = 'rgba(255,200,100,0.03)';
+                            for (let j = 0; j < 6; j++) {
+                                const x = (Math.sin(j * 5 + time * 0.0001) * 50 + 128) % 256;
+                                const y = (Math.cos(j * 7 + time * 0.00015) * 50 + 128) % 256;
+                                const r = Math.random() * 10 + 5;
                                 ctx.beginPath();
                                 ctx.arc(x, y, r, 0, 2 * Math.PI);
                                 ctx.fill();
@@ -1379,7 +1400,7 @@
                     if (bubbleParticles) {
                         const positions = bubbleParticles.geometry.attributes.position.array;
                         for (let i = 1; i < positions.length; i += 3) {
-                            positions[i] += 0.0003;
+                            positions[i] += 0.0002;
                             if (positions[i] > 0.5) {
                                 positions[i] = -0.4;
                                 positions[i-1] = (Math.random() - 0.5) * 12;
