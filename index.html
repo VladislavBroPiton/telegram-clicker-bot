@@ -377,7 +377,7 @@
 
             switch (bossId) {
                 case 'goblin_king': {
-                    // --- КОЛОННЫ (увеличен радиус до 8, смещение угла 0.3) ---
+                    // --- КОЛОННЫ (радиус 8, смещение 0.3) ---
                     const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x777777, roughness: 0.8 });
                     for (let i = 0; i < 4; i++) {
                         const angle = (i * Math.PI / 2) + 0.3;
@@ -389,7 +389,7 @@
                         environmentObjects.push(pillar);
                     }
 
-                    // --- ФАКЕЛЫ (увеличен радиус до 6.5, смещение угла 0.8) ---
+                    // --- ФАКЕЛЫ (радиус 6.5, смещение 0.8) ---
                     const torchMaterial = new THREE.MeshStandardMaterial({ color: 0xcc6600 });
                     const flameMaterial = new THREE.MeshStandardMaterial({ color: 0xffaa22, emissive: 0x442200 });
                     for (let i = 0; i < 4; i++) {
@@ -1040,35 +1040,78 @@
 
                 // --- КУБЫ-РЕСУРСЫ (улучшенный внешний вид) ---
                 const positions = [[-3,1.5,-2], [3,1.5,-2], [0,1.5,2], [-2,1.5,3], [2,1.5,3]];
-                const colors = [0x333333, 0x8B5A2B, 0xFFD700, 0x88CCFF, 0xC0C0C0]; // уголь, железо, золото, алмаз, мифрил
-                const emissive = [0x111111, 0x331100, 0x442200, 0x112244, 0x222222];
+                const resourceTypes = ['coal', 'iron', 'gold', 'diamond', 'mithril'];
+                const baseColors = [0x333333, 0x8B5A2B, 0xFFD700, 0x88CCFF, 0xC0C0C0];
+                const emissiveColors = [0x111111, 0x331100, 0x442200, 0x112244, 0x222222];
+                const metalnessValues = [0.1, 0.8, 0.9, 0.3, 0.7];
+                const roughnessValues = [0.8, 0.5, 0.4, 0.3, 0.4];
+
                 positions.forEach((pos, i) => {
-                    // Создаём текстуру с прожилками
+                    // Создаём текстуру с прожилками и шумом
                     const canvas = document.createElement('canvas');
-                    canvas.width = 64;
-                    canvas.height = 64;
+                    canvas.width = 128;
+                    canvas.height = 128;
                     const ctx = canvas.getContext('2d');
-                    ctx.fillStyle = '#' + colors[i].toString(16).padStart(6, '0');
-                    ctx.fillRect(0, 0, 64, 64);
-                    // Добавляем прожилки
+                    
+                    // Базовый цвет
+                    ctx.fillStyle = '#' + baseColors[i].toString(16).padStart(6, '0');
+                    ctx.fillRect(0, 0, 128, 128);
+                    
+                    // Шум (для неровности)
+                    const imageData = ctx.getImageData(0, 0, 128, 128);
+                    const data = imageData.data;
+                    for (let j = 0; j < data.length; j += 4) {
+                        const noise = (Math.random() - 0.5) * 40;
+                        data[j] = Math.min(255, Math.max(0, data[j] + noise));
+                        data[j+1] = Math.min(255, Math.max(0, data[j+1] + noise));
+                        data[j+2] = Math.min(255, Math.max(0, data[j+2] + noise));
+                    }
+                    ctx.putImageData(imageData, 0, 0);
+                    
+                    // Прожилки (белые линии)
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = 2;
-                    for (let j = 0; j < 5; j++) {
+                    for (let j = 0; j < 8; j++) {
                         ctx.beginPath();
-                        ctx.moveTo(Math.random()*64, Math.random()*64);
-                        ctx.lineTo(Math.random()*64, Math.random()*64);
+                        ctx.moveTo(Math.random()*128, Math.random()*128);
+                        ctx.lineTo(Math.random()*128, Math.random()*128);
                         ctx.strokeStyle = `rgba(255,255,255,${0.3+Math.random()*0.3})`;
                         ctx.stroke();
                     }
+                    
+                    // Дополнительные цветные прожилки для алмазов
+                    if (i === 3) { // diamond
+                        ctx.strokeStyle = 'rgba(100,200,255,0.5)';
+                        ctx.lineWidth = 1.5;
+                        for (let j = 0; j < 5; j++) {
+                            ctx.beginPath();
+                            ctx.moveTo(Math.random()*128, Math.random()*128);
+                            ctx.lineTo(Math.random()*128, Math.random()*128);
+                            ctx.stroke();
+                        }
+                    }
+                    
+                    // Для золота - блёстки
+                    if (i === 2) { // gold
+                        for (let j = 0; j < 20; j++) {
+                            ctx.fillStyle = `rgba(255,215,0,${Math.random()*0.8})`;
+                            ctx.beginPath();
+                            ctx.arc(Math.random()*128, Math.random()*128, Math.random()*3+1, 0, 2*Math.PI);
+                            ctx.fill();
+                        }
+                    }
+                    
                     const texture = new THREE.CanvasTexture(canvas);
-
+                    
                     const material = new THREE.MeshStandardMaterial({ 
                         map: texture,
-                        color: colors[i],
-                        emissive: emissive[i],
-                        roughness: 0.6,
-                        metalness: 0.1
+                        color: baseColors[i],
+                        emissive: emissiveColors[i],
+                        roughness: roughnessValues[i],
+                        metalness: metalnessValues[i],
+                        emissiveIntensity: 0.2
                     });
+                    
                     const cube = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), material);
                     cube.position.set(pos[0], pos[1], pos[2]);
                     cube.userData = { type: 'resource', id: i, baseScale: 1 };
