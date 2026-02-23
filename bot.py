@@ -1,7 +1,7 @@
 """
 Telegram кликер бот "Шахтёрская глубина"
 Финальная версия с улучшенной безопасностью, транзакциями и защитой от гонок.
-Добавлено автоматическое восстановление здоровья боссов каждые 6 часов.
+Добавлено: автоматическое повышение уровня, сброс боссов каждые 6 часов.
 """
 
 import logging
@@ -71,7 +71,6 @@ RESOURCES = {
     'gold': {'name': 'Золотая руда', 'base_price': 30},
     'diamond': {'name': 'Алмаз', 'base_price': 100},
     'mithril': {'name': 'Мифрил', 'base_price': 300},
-    # Новые ресурсы с боссов
     'soul_shard': {'name': 'Осколок души', 'base_price': 500},
     'dragon_scale': {'name': 'Чешуя дракона', 'base_price': 1000},
     'magic_essence': {'name': 'Эссенция магии', 'base_price': 2000}
@@ -361,7 +360,7 @@ async def reply_or_edit(update_or_query, text: str, reply_markup=None, parse_mod
             if "Message is not modified" not in str(e):
                 raise
 
-# ==================== ФУНКЦИИ БАЗЫ ДАННЫХ (с поддержкой переданного соединения) ====================
+# ==================== ФУНКЦИИ БАЗЫ ДАННЫХ ====================
 
 async def init_db():
     async with db_pool.acquire() as conn:
@@ -448,7 +447,6 @@ async def init_db():
                 PRIMARY KEY (user_id, tool_id)
             )
         ''')
-        # Таблица для прогресса боссов
         await conn.execute('''
             CREATE TABLE IF NOT EXISTS boss_progress (
                 user_id BIGINT,
@@ -459,14 +457,13 @@ async def init_db():
                 PRIMARY KEY (user_id, boss_id)
             )
         ''')
-        # Таблица для хранения времени последнего глобального сброса боссов
+        # Таблица для глобального состояния (сброс боссов)
         await conn.execute('''
             CREATE TABLE IF NOT EXISTS global_state (
                 id INTEGER PRIMARY KEY DEFAULT 1,
                 last_boss_reset TIMESTAMP
             )
         ''')
-        # Инициализация, если записи нет
         await conn.execute('''
             INSERT INTO global_state (id, last_boss_reset)
             SELECT 1, NOW() WHERE NOT EXISTS (SELECT 1 FROM global_state WHERE id = 1)
@@ -663,6 +660,7 @@ async def update_daily_task_progress(uid: int, task_type: str, delta: int, conn:
                     "UPDATE players SET gold = gold + $1, exp = exp + $2 WHERE user_id = $3",
                     rg, re, uid
                 )
+                await level_up_if_needed(uid, conn)
 
     if conn is None:
         async with db_pool.acquire() as conn:
@@ -744,6 +742,7 @@ async def update_weekly_task_progress(uid: int, task_type: str, delta: int, conn
                     "UPDATE players SET gold = gold + $1, exp = exp + $2 WHERE user_id = $3",
                     rg, re, uid
                 )
+                await level_up_if_needed(uid, conn)
 
     if conn is None:
         async with db_pool.acquire() as conn:
@@ -963,10 +962,8 @@ async def update_boss_health(uid: int, boss_id: str, damage: int, conn: asyncpg.
             async with conn.transaction():
                 return await _update(conn)
     else:
-        # Предполагаем, что транзакция уже открыта
         return await _update(conn)
 
-# ---------- Автоматическое восстановление боссов ----------
 async def check_and_reset_bosses(conn: asyncpg.Connection):
     """Проверяет, не прошло ли 6 часов с последнего сброса боссов. Если да – обнуляет всех."""
     row = await conn.fetchrow("SELECT last_boss_reset FROM global_state WHERE id = 1")
@@ -976,9 +973,7 @@ async def check_and_reset_bosses(conn: asyncpg.Connection):
         return
     last_reset = row['last_boss_reset']
     now = datetime.datetime.now()
-    # Если прошло 6 часов или last_reset не установлено
     if last_reset is None or (now - last_reset) > datetime.timedelta(hours=6):
-        # Для каждого босса из BOSS_LOCATIONS
         for boss_id, bloc in BOSS_LOCATIONS.items():
             max_hp = bloc['boss']['health']
             await conn.execute("""
@@ -986,7 +981,6 @@ async def check_and_reset_bosses(conn: asyncpg.Connection):
                 SET current_health = $1, defeated = false
                 WHERE boss_id = $2
             """, max_hp, boss_id)
-        # Обновляем время последнего сброса
         await conn.execute("UPDATE global_state SET last_boss_reset = $1 WHERE id = 1", now)
         logger.info(f"Bosses reset at {now}")
 
@@ -1016,6 +1010,7 @@ async def unlock_achievement(uid: int, ach_id: str, gold: int, exp: int, progres
             "UPDATE players SET gold = gold + $1, exp = exp + $2 WHERE user_id = $3",
             gold, exp, uid
         )
+        await level_up_if_needed(uid, conn)
 
     if conn is None:
         async with db_pool.acquire() as conn:
@@ -1157,15 +1152,17 @@ async def process_click(uid: int, conn: asyncpg.Connection = None) -> dict:
             await update_daily_task_progress(uid, 'Везунчик', 1, conn)
         if found:
             await update_daily_task_progress(uid, 'Рудокоп', amt, conn)
-        if found:
             await update_daily_task_progress(uid, 'Горняк', amt, conn)
 
-            await update_weekly_task_progress(uid, 'Шахтёр', 1, conn)
-            await update_weekly_task_progress(uid, 'Золотая лихорадка', gold, conn)
+        await update_weekly_task_progress(uid, 'Шахтёр', 1, conn)
+        await update_weekly_task_progress(uid, 'Золотая лихорадка', gold, conn)
         if is_crit:
             await update_weekly_task_progress(uid, 'Критический удар', 1, conn)
         if found:
             await update_weekly_task_progress(uid, 'Коллекционер', amt, conn)
+
+        # Повышение уровня
+        await level_up_if_needed(uid, conn)
 
         # Проверка достижений
         await check_achievements(uid, conn=conn)
@@ -1190,7 +1187,6 @@ async def process_click(uid: int, conn: asyncpg.Connection = None) -> dict:
             async with conn.transaction():
                 return await _execute(conn)
     else:
-        # Если соединение передано, предполагаем, что транзакция уже открыта
         return await _execute(conn)
 
 # ==================== ОБРАБОТЧИКИ КОМАНД ====================
@@ -1300,7 +1296,6 @@ async def show_main_menu(update_or_query, ctx):
          InlineKeyboardButton("📋 Задания", callback_data='tasks'),
          InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')]
     ]
-    # Добавляем кнопку для Mini App, если игрок достиг 5 уровня (как в вашем коде)
     if stats['level'] >= 5:
         kb.append([InlineKeyboardButton("⚔️ Босс-арена (3D)", web_app=WebAppInfo(url="https://vladislavbropiton.github.io/telegram-clicker-bot/"))])
     rm = InlineKeyboardMarkup(kb)
@@ -1362,7 +1357,6 @@ async def show_locations(update_or_query, ctx):
         if avail and not is_cur:
             kb.append([InlineKeyboardButton(f"Перейти в {loc['name']}", callback_data=f'goto_{lid}')])
     
-    # Добавим босс-локации в конец (информационно)
     txt += "\n⚔️ **Босс-локации (5+ уровень)**\n\n"
     for bid, bloc in BOSS_LOCATIONS.items():
         level_ok = lvl >= bloc['min_level']
@@ -2098,11 +2092,9 @@ def verify_telegram_data(bot_token: str, init_data: str) -> dict | None:
             logger.warning("No hash in init data")
             return None
 
-        # Сортируем ключи
         items = sorted(data.items())
         data_check_string = '\n'.join(f"{k}={v}" for k, v in items)
 
-        # Секретный ключ: HMAC-SHA256 от токена бота с ключом "WebAppData"
         secret_key = hmac.new(b"WebAppData", bot_token.encode(), hashlib.sha256).digest()
         computed_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
 
@@ -2131,16 +2123,12 @@ async def api_user(request):
         return JSONResponse({'error': 'Invalid init data'}, status_code=403)
 
     uid = user['id']
-
     async with db_pool.acquire() as conn:
-        # Проверяем сброс боссов
         await check_and_reset_bosses(conn)
-
         stats = await get_player_stats(uid, conn)
         inv = await get_inventory(uid, conn)
         current_location = await get_player_current_location(uid, conn)
 
-        # Получаем активный инструмент
         active_tool_id = await get_active_tool(uid, conn)
         active_tool_name = TOOLS.get(active_tool_id, {}).get('name', active_tool_id)
 
@@ -2183,11 +2171,8 @@ async def api_boss_attack(request):
     bloc = BOSS_LOCATIONS[boss_id]
 
     async with db_pool.acquire() as conn:
-        # Проверяем сброс боссов
         await check_and_reset_bosses(conn)
-
         async with conn.transaction():
-            # Проверяем уровень и инструмент
             stats = await get_player_stats(uid, conn)
             if stats['level'] < bloc['min_level']:
                 return JSONResponse({'error': 'Level too low'}, status_code=403)
@@ -2195,13 +2180,11 @@ async def api_boss_attack(request):
             if tool_level < bloc['min_tool_level']:
                 return JSONResponse({'error': 'Tool level too low'}, status_code=403)
 
-            # Получаем прогресс босса с блокировкой
             prog_row = await conn.fetchrow(
                 "SELECT current_health, defeated FROM boss_progress WHERE user_id = $1 AND boss_id = $2 FOR UPDATE",
                 uid, boss_id
             )
             if not prog_row:
-                # Создаём запись, если её нет
                 await conn.execute(
                     "INSERT INTO boss_progress (user_id, boss_id, current_health) VALUES ($1, $2, $3)",
                     uid, boss_id, bloc['boss']['health']
@@ -2217,13 +2200,11 @@ async def api_boss_attack(request):
             if current_health <= 0:
                 return JSONResponse({'error': 'Boss already dead'}, status_code=400)
 
-            # Рассчитываем урон
             gold_damage, exp, is_crit = get_click_reward(stats)
             damage = gold_damage
             if is_crit:
                 damage *= 2
 
-            # Обновляем здоровье с проверкой, что оно было >0
             update_result = await conn.execute("""
                 UPDATE boss_progress
                 SET current_health = current_health - $1
@@ -2231,10 +2212,8 @@ async def api_boss_attack(request):
             """, damage, uid, boss_id)
 
             if update_result == "UPDATE 0":
-                # Значит, босс уже мёртв (другой запрос успел добить)
                 return JSONResponse({'error': 'Boss already defeated by another attack'}, status_code=409)
 
-            # Проверяем, не умер ли босс после этого обновления
             new_health_row = await conn.fetchrow(
                 "SELECT current_health FROM boss_progress WHERE user_id = $1 AND boss_id = $2",
                 uid, boss_id
@@ -2244,7 +2223,6 @@ async def api_boss_attack(request):
 
             loot_items = []
             if defeated_now:
-                # Помечаем босса побеждённым
                 await conn.execute(
                     "UPDATE boss_progress SET defeated = TRUE WHERE user_id = $1 AND boss_id = $2",
                     uid, boss_id
@@ -2257,20 +2235,18 @@ async def api_boss_attack(request):
                 loot_items.append(f"{gold_reward}💰")
                 loot_items.append(f"{exp_reward}✨")
 
-                # Начисляем золото и опыт
                 await conn.execute(
                     "UPDATE players SET gold = gold + $1, exp = exp + $2 WHERE user_id = $3",
                     gold_reward, exp_reward, uid
                 )
+                await level_up_if_needed(uid, conn)
 
-                # Начисляем ресурсы
                 for res, (min_amt, max_amt) in boss['reward_resources'].items():
                     amt = random.randint(min_amt, max_amt)
                     await add_resource(uid, res, amt, conn)
                     res_name = RESOURCES.get(res, {}).get('name', res)
                     loot_items.append(f"{res_name} x{amt}")
 
-            # Получаем обновлённую статистику игрока и инвентарь
             new_stats = await get_player_stats(uid, conn)
             new_inv = await get_inventory(uid, conn)
 
@@ -2297,11 +2273,9 @@ async def api_boss_info(request):
     boss_id = request.path_params.get('boss_id')
     if not boss_id or boss_id not in BOSS_LOCATIONS:
         return JSONResponse({'error': 'Invalid boss_id'}, status_code=400)
-
     async with db_pool.acquire() as conn:
         await check_and_reset_bosses(conn)
         prog = await get_boss_progress(uid, boss_id, conn)
-
     return JSONResponse({
         'current_health': prog['current_health'],
         'defeated': prog['defeated'],
@@ -2381,7 +2355,6 @@ app = Starlette(
     on_shutdown=[shutdown_event]
 )
 
-# Добавляем маршруты API
 app.router.routes.extend([
     Route('/api/user', api_user, methods=['GET']),
     Route('/api/click', api_click, methods=['POST']),
@@ -2389,10 +2362,9 @@ app.router.routes.extend([
     Route('/api/boss/{boss_id}', api_boss_info, methods=['GET']),
 ])
 
-# Добавляем CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Временно разрешаем все домены (для теста)
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
