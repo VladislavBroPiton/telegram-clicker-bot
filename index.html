@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Шахтёрская глубина 3D — рабочий коллайдер</title>
+    <title>Шахтёрская глубина 3D</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; }
@@ -27,22 +27,9 @@
         .boss-nav-btn { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 20px; width: 40px; height: 40px; border-radius: 20px; cursor: pointer; }
         .boss-nav-btn:active { background: rgba(255,255,255,0.4); }
         .boss-nav-btn.disabled { opacity: 0.3; pointer-events: none; }
+        /* Отладочное окно скрыто */
         #debug-info {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.9);
-            color: #0f0;
-            padding: 10px;
-            border-radius: 8px;
-            z-index: 1000;
-            font-size: 12px;
-            max-height: 200px;
-            overflow: auto;
-            pointer-events: none;
-            border: 2px solid #0f0;
-            display: block;
+            display: none;
         }
         #test-button {
             position: absolute;
@@ -114,7 +101,7 @@
         let threeReady = false;
         let THREE;
         let stars = [];
-        let bossCollider = null; // невидимый коллайдер
+        let bossCollider = null;
 
         // Элементы DOM
         const hudLevel = document.getElementById('level');
@@ -131,10 +118,8 @@
         const bossIndexSpan = document.getElementById('boss-index');
         const debugInfo = document.getElementById('debug-info');
 
-        // Отладка (включена)
+        // Отладка (только в консоль)
         function debugLog(msg) {
-            const time = new Date().toLocaleTimeString('ru-RU', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            debugInfo.innerHTML += `${time}: ${msg}<br>`;
             console.log(msg);
         }
 
@@ -205,7 +190,7 @@
             stars.push(starsMesh);
         }
 
-        // --- МОДЕЛЬ БОССА (только визуал, без userData) ---
+        // --- ВИЗУАЛЬНАЯ МОДЕЛЬ БОССА ---
         function createVisualBossModel(bossId) {
             const group = new THREE.Group();
             if (bossId === 'goblin_king') {
@@ -396,7 +381,7 @@
                     bossGroup.add(newVisual);
                     // Добавляем невидимый коллайдер
                     const colliderGeom = new THREE.SphereGeometry(2.5, 8);
-                    const colliderMat = new THREE.MeshBasicMaterial({ visible: false, wireframe: false });
+                    const colliderMat = new THREE.MeshBasicMaterial({ visible: false });
                     const collider = new THREE.Mesh(colliderGeom, colliderMat);
                     collider.position.set(0, 1.5, 0);
                     collider.userData.isBossPart = true;
@@ -609,11 +594,11 @@
                 const visualBoss = createVisualBossModel(currentBossId);
                 bossGroup.add(visualBoss);
 
-                // Невидимый коллайдер (сфера, которая будет ловить клики)
+                // Невидимый коллайдер (сфера)
                 const colliderGeom = new THREE.SphereGeometry(2.5, 8);
-                const colliderMat = new THREE.MeshBasicMaterial({ visible: false }); // невидимый
+                const colliderMat = new THREE.MeshBasicMaterial({ visible: false });
                 const collider = new THREE.Mesh(colliderGeom, colliderMat);
-                collider.position.set(0, 1.5, 0); // центр группы
+                collider.position.set(0, 1.5, 0);
                 collider.userData.isBossPart = true;
                 bossGroup.add(collider);
                 bossCollider = collider;
@@ -636,7 +621,6 @@
                     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
                     raycaster.setFromCamera(mouse, camera);
-                    // Проверяем пересечения с ресурсными кубами и со всеми детьми группы босса (включая коллайдер)
                     const intersects = raycaster.intersectObjects([...cubes, ...bossGroup.children]);
 
                     if (intersects.length > 0) {
