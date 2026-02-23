@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Шахтёрская глубина 3D — рабочий коллайдер</title>
+    <title>Шахтёрская глубина 3D — финал</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; }
@@ -27,22 +27,9 @@
         .boss-nav-btn { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 20px; width: 40px; height: 40px; border-radius: 20px; cursor: pointer; }
         .boss-nav-btn:active { background: rgba(255,255,255,0.4); }
         .boss-nav-btn.disabled { opacity: 0.3; pointer-events: none; }
+        /* Отладочное окно скрыто */
         #debug-info {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.9);
-            color: #0f0;
-            padding: 10px;
-            border-radius: 8px;
-            z-index: 1000;
-            font-size: 12px;
-            max-height: 200px;
-            overflow: auto;
-            pointer-events: none;
-            border: 2px solid #0f0;
-            display: block;
+            display: none;
         }
         #test-button {
             position: absolute;
@@ -114,7 +101,6 @@
         let threeReady = false;
         let THREE;
         let stars = [];
-        let bossCollider = null; // невидимый коллайдер
 
         // Элементы DOM
         const hudLevel = document.getElementById('level');
@@ -131,11 +117,15 @@
         const bossIndexSpan = document.getElementById('boss-index');
         const debugInfo = document.getElementById('debug-info');
 
-        // Отладка (включена)
+        // Отладка: false - только в консоль, true - и на экран (скрыто)
+        const DEBUG = false;
+
         function debugLog(msg) {
-            const time = new Date().toLocaleTimeString('ru-RU', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            debugInfo.innerHTML += `${time}: ${msg}<br>`;
             console.log(msg);
+            if (DEBUG) {
+                const time = new Date().toLocaleTimeString('ru-RU', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                debugInfo.innerHTML += `${time}: ${msg}<br>`;
+            }
         }
 
         // --- ТЕЛЕГРАМ ---
@@ -205,131 +195,189 @@
             stars.push(starsMesh);
         }
 
-        // --- МОДЕЛЬ БОССА (только визуал, без userData) ---
-        function createVisualBossModel(bossId) {
-            const group = new THREE.Group();
-            if (bossId === 'goblin_king') {
-                // Тело
-                const bodyGeom = new THREE.CylinderGeometry(1.2, 1.5, 2, 8);
-                const bodyMat = new THREE.MeshStandardMaterial({ color: 0x44aa88, emissive: 0x112233 });
-                const body = new THREE.Mesh(bodyGeom, bodyMat);
-                body.position.y = 1;
-                group.add(body);
-                // Голова
-                const headGeom = new THREE.SphereGeometry(0.8, 8);
-                const headMat = new THREE.MeshStandardMaterial({ color: 0x88ccaa });
-                const head = new THREE.Mesh(headGeom, headMat);
-                head.position.y = 2.2;
-                group.add(head);
-                // Корона
-                const crownGeom = new THREE.ConeGeometry(0.6, 0.5, 4);
-                const crownMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
-                const crown = new THREE.Mesh(crownGeom, crownMat);
-                crown.position.y = 2.8;
-                crown.rotation.y = Math.PI/4;
-                group.add(crown);
-                // Глаза
-                const eyeGeom = new THREE.SphereGeometry(0.15);
-                const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-                const pupilMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
-                const eyeL = new THREE.Mesh(eyeGeom, eyeMat);
-                eyeL.position.set(-0.3, 2.3, 0.7);
-                group.add(eyeL);
-                const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.07), pupilMat);
-                pupilL.position.set(-0.3, 2.3, 0.85);
-                group.add(pupilL);
-                const eyeR = new THREE.Mesh(eyeGeom, eyeMat);
-                eyeR.position.set(0.3, 2.3, 0.7);
-                group.add(eyeR);
-                const pupilR = new THREE.Mesh(new THREE.SphereGeometry(0.07), pupilMat);
-                pupilR.position.set(0.3, 2.3, 0.85);
-                group.add(pupilR);
-            } else if (bossId === 'dragon_lair') {
-                // Тело
-                const bodyGeom = new THREE.CylinderGeometry(1.2, 1.2, 2.5, 8);
-                const bodyMat = new THREE.MeshStandardMaterial({ color: 0xaa4422, emissive: 0x331100 });
-                const body = new THREE.Mesh(bodyGeom, bodyMat);
-                body.position.y = 1.2;
-                group.add(body);
-                // Шея
-                const neckGeom = new THREE.CylinderGeometry(0.6, 0.8, 1.5);
-                const neck = new THREE.Mesh(neckGeom, bodyMat);
-                neck.position.set(0, 2.2, 0.5);
-                neck.rotation.x = 0.3;
-                group.add(neck);
-                // Голова
-                const headGeom = new THREE.ConeGeometry(0.7, 1, 6);
-                const headMat = new THREE.MeshStandardMaterial({ color: 0xcc5533 });
-                const head = new THREE.Mesh(headGeom, headMat);
-                head.position.set(0, 3.2, 1.2);
-                head.rotation.x = -0.2;
-                group.add(head);
-                // Крылья
-                const wingGeom = new THREE.ConeGeometry(1.2, 0.2, 4);
-                const wingMat = new THREE.MeshStandardMaterial({ color: 0x993322 });
-                const wingL = new THREE.Mesh(wingGeom, wingMat);
-                wingL.position.set(-1.2, 1.8, 0);
-                wingL.rotation.z = 0.3;
-                wingL.rotation.y = -0.2;
-                group.add(wingL);
-                const wingR = wingL.clone();
-                wingR.position.set(1.2, 1.8, 0);
-                wingR.rotation.z = -0.3;
-                wingR.rotation.y = 0.2;
-                group.add(wingR);
-                // Хвост
-                const tailGeom = new THREE.ConeGeometry(0.5, 1.5, 4);
-                const tail = new THREE.Mesh(tailGeom, bodyMat);
-                tail.position.set(0, 0.5, -1.5);
-                tail.rotation.x = 0.5;
-                group.add(tail);
-            } else if (bossId === 'lich_castle') {
-                // Тело
-                const bodyGeom = new THREE.CylinderGeometry(0.8, 1.0, 3, 6);
-                const bodyMat = new THREE.MeshStandardMaterial({ color: 0x557799, emissive: 0x113344 });
-                const body = new THREE.Mesh(bodyGeom, bodyMat);
-                body.position.y = 1.5;
-                group.add(body);
-                // Голова
-                const headGeom = new THREE.SphereGeometry(0.7, 6);
-                const headMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
-                const head = new THREE.Mesh(headGeom, headMat);
-                head.position.y = 3.0;
-                group.add(head);
-                // Глазницы
-                const socketGeom = new THREE.SphereGeometry(0.2);
-                const socketMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
-                const socketL = new THREE.Mesh(socketGeom, socketMat);
-                socketL.position.set(-0.3, 3.1, 0.6);
-                group.add(socketL);
-                const socketR = socketL.clone();
-                socketR.position.set(0.3, 3.1, 0.6);
-                group.add(socketR);
-                // Светящиеся глаза
-                const glowGeom = new THREE.SphereGeometry(0.1);
-                const glowMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x004444 });
-                const glowL = new THREE.Mesh(glowGeom, glowMat);
-                glowL.position.set(-0.3, 3.1, 0.8);
-                group.add(glowL);
-                const glowR = glowL.clone();
-                glowR.position.set(0.3, 3.1, 0.8);
-                group.add(glowR);
-                // Посох
-                const staffGeom = new THREE.CylinderGeometry(0.1, 0.1, 3);
-                const staffMat = new THREE.MeshStandardMaterial({ color: 0x886644 });
-                const staff = new THREE.Mesh(staffGeom, staffMat);
-                staff.position.set(1.2, 2.0, 0.5);
-                staff.rotation.z = 0.2;
-                group.add(staff);
-                const staffTopGeom = new THREE.SphereGeometry(0.3);
-                const staffTopMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
-                const staffTop = new THREE.Mesh(staffTopGeom, staffTopMat);
-                staffTop.position.set(1.2, 3.5, 0.5);
-                group.add(staffTop);
+        // --- МОДЕЛЬ БОССА (детализированная, с невидимым коллайдером) ---
+        function createBossModel(bossId) {
+            debugLog(`createBossModel for ${bossId}`);
+            if (!THREE) {
+                debugLog('THREE не определён!');
+                return new THREE.Group();
             }
-            group.scale.set(0.8, 0.8, 0.8);
-            group.position.y = 1.5;
-            return group;
+            try {
+                const group = new THREE.Group();
+
+                // Невидимый коллайдер (большая сфера)
+                const colliderGeom = new THREE.SphereGeometry(2.0, 8);
+                const colliderMat = new THREE.MeshBasicMaterial({ visible: false }); // невидимый
+                const collider = new THREE.Mesh(colliderGeom, colliderMat);
+                collider.position.y = 1.5;
+                collider.userData.isBossPart = true;
+                group.add(collider);
+                debugLog('⚡ Невидимый коллайдер добавлен');
+
+                // Видимая детализированная модель (все части помечены isBossPart)
+                if (bossId === 'goblin_king') {
+                    // Тело
+                    const bodyGeom = new THREE.CylinderGeometry(1.2, 1.5, 2, 8);
+                    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x44aa88, emissive: 0x112233 });
+                    const body = new THREE.Mesh(bodyGeom, bodyMat);
+                    body.position.y = 1;
+                    body.userData.isBossPart = true;
+                    group.add(body);
+
+                    // Голова
+                    const headGeom = new THREE.SphereGeometry(0.8, 8);
+                    const headMat = new THREE.MeshStandardMaterial({ color: 0x88ccaa });
+                    const head = new THREE.Mesh(headGeom, headMat);
+                    head.position.y = 2.2;
+                    head.userData.isBossPart = true;
+                    group.add(head);
+
+                    // Корона
+                    const crownGeom = new THREE.ConeGeometry(0.6, 0.5, 4);
+                    const crownMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
+                    const crown = new THREE.Mesh(crownGeom, crownMat);
+                    crown.position.y = 2.8;
+                    crown.rotation.y = Math.PI/4;
+                    crown.userData.isBossPart = true;
+                    group.add(crown);
+
+                    // Глаза
+                    const eyeGeom = new THREE.SphereGeometry(0.15);
+                    const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+                    const pupilMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+
+                    const eyeL = new THREE.Mesh(eyeGeom, eyeMat);
+                    eyeL.position.set(-0.3, 2.3, 0.7);
+                    eyeL.userData.isBossPart = true;
+                    group.add(eyeL);
+                    const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.07), pupilMat);
+                    pupilL.position.set(-0.3, 2.3, 0.85);
+                    pupilL.userData.isBossPart = true;
+                    group.add(pupilL);
+
+                    const eyeR = new THREE.Mesh(eyeGeom, eyeMat);
+                    eyeR.position.set(0.3, 2.3, 0.7);
+                    eyeR.userData.isBossPart = true;
+                    group.add(eyeR);
+                    const pupilR = new THREE.Mesh(new THREE.SphereGeometry(0.07), pupilMat);
+                    pupilR.position.set(0.3, 2.3, 0.85);
+                    pupilR.userData.isBossPart = true;
+                    group.add(pupilR);
+                }
+                else if (bossId === 'dragon_lair') {
+                    // Тело
+                    const bodyGeom = new THREE.CylinderGeometry(1.2, 1.2, 2.5, 8);
+                    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xaa4422, emissive: 0x331100 });
+                    const body = new THREE.Mesh(bodyGeom, bodyMat);
+                    body.position.y = 1.2;
+                    body.userData.isBossPart = true;
+                    group.add(body);
+
+                    // Шея
+                    const neckGeom = new THREE.CylinderGeometry(0.6, 0.8, 1.5);
+                    const neck = new THREE.Mesh(neckGeom, bodyMat);
+                    neck.position.set(0, 2.2, 0.5);
+                    neck.rotation.x = 0.3;
+                    neck.userData.isBossPart = true;
+                    group.add(neck);
+
+                    // Голова
+                    const headGeom = new THREE.ConeGeometry(0.7, 1, 6);
+                    const headMat = new THREE.MeshStandardMaterial({ color: 0xcc5533 });
+                    const head = new THREE.Mesh(headGeom, headMat);
+                    head.position.set(0, 3.2, 1.2);
+                    head.rotation.x = -0.2;
+                    head.userData.isBossPart = true;
+                    group.add(head);
+
+                    // Крылья
+                    const wingGeom = new THREE.ConeGeometry(1.2, 0.2, 4);
+                    const wingMat = new THREE.MeshStandardMaterial({ color: 0x993322 });
+                    const wingL = new THREE.Mesh(wingGeom, wingMat);
+                    wingL.position.set(-1.2, 1.8, 0);
+                    wingL.rotation.z = 0.3;
+                    wingL.rotation.y = -0.2;
+                    wingL.userData.isBossPart = true;
+                    group.add(wingL);
+                    const wingR = wingL.clone();
+                    wingR.position.set(1.2, 1.8, 0);
+                    wingR.rotation.z = -0.3;
+                    wingR.rotation.y = 0.2;
+                    wingR.userData.isBossPart = true;
+                    group.add(wingR);
+
+                    // Хвост
+                    const tailGeom = new THREE.ConeGeometry(0.5, 1.5, 4);
+                    const tail = new THREE.Mesh(tailGeom, bodyMat);
+                    tail.position.set(0, 0.5, -1.5);
+                    tail.rotation.x = 0.5;
+                    tail.userData.isBossPart = true;
+                    group.add(tail);
+                }
+                else if (bossId === 'lich_castle') {
+                    // Тело
+                    const bodyGeom = new THREE.CylinderGeometry(0.8, 1.0, 3, 6);
+                    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x557799, emissive: 0x113344 });
+                    const body = new THREE.Mesh(bodyGeom, bodyMat);
+                    body.position.y = 1.5;
+                    body.userData.isBossPart = true;
+                    group.add(body);
+
+                    // Голова
+                    const headGeom = new THREE.SphereGeometry(0.7, 6);
+                    const headMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+                    const head = new THREE.Mesh(headGeom, headMat);
+                    head.position.y = 3.0;
+                    head.userData.isBossPart = true;
+                    group.add(head);
+
+                    // Глазницы
+                    const socketGeom = new THREE.SphereGeometry(0.2);
+                    const socketMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+                    const socketL = new THREE.Mesh(socketGeom, socketMat);
+                    socketL.position.set(-0.3, 3.1, 0.6);
+                    socketL.userData.isBossPart = true;
+                    group.add(socketL);
+                    const socketR = socketL.clone();
+                    socketR.position.set(0.3, 3.1, 0.6);
+                    socketR.userData.isBossPart = true;
+                    group.add(socketR);
+
+                    // Светящиеся глаза
+                    const glowGeom = new THREE.SphereGeometry(0.1);
+                    const glowMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x004444 });
+                    const glowL = new THREE.Mesh(glowGeom, glowMat);
+                    glowL.position.set(-0.3, 3.1, 0.8);
+                    glowL.userData.isBossPart = true;
+                    group.add(glowL);
+                    const glowR = glowL.clone();
+                    glowR.position.set(0.3, 3.1, 0.8);
+                    glowR.userData.isBossPart = true;
+                    group.add(glowR);
+
+                    // Посох
+                    const staffGeom = new THREE.CylinderGeometry(0.1, 0.1, 3);
+                    const staffMat = new THREE.MeshStandardMaterial({ color: 0x886644 });
+                    const staff = new THREE.Mesh(staffGeom, staffMat);
+                    staff.position.set(1.2, 2.0, 0.5);
+                    staff.rotation.z = 0.2;
+                    staff.userData.isBossPart = true;
+                    group.add(staff);
+                    const staffTopGeom = new THREE.SphereGeometry(0.3);
+                    const staffTopMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
+                    const staffTop = new THREE.Mesh(staffTopGeom, staffTopMat);
+                    staffTop.position.set(1.2, 3.5, 0.5);
+                    staffTop.userData.isBossPart = true;
+                    group.add(staffTop);
+                }
+
+                group.scale.set(0.8, 0.8, 0.8);
+                group.position.y = 1.5;
+                return group;
+            } catch (e) {
+                debugLog(`❌ Ошибка в createBossModel: ${e.message}`);
+                return new THREE.Group();
+            }
         }
 
         // --- ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ ---
@@ -389,20 +437,9 @@
                 currentBossId = BOSS_IDS[currentBossIndex];
                 loadBossInfo(currentBossId);
                 if (bossGroup) {
-                    // Очищаем группу
                     while(bossGroup.children.length > 0) bossGroup.remove(bossGroup.children[0]);
-                    // Добавляем новую визуальную модель
-                    const newVisual = createVisualBossModel(currentBossId);
-                    bossGroup.add(newVisual);
-                    // Добавляем невидимый коллайдер
-                    const colliderGeom = new THREE.SphereGeometry(2.5, 8);
-                    const colliderMat = new THREE.MeshBasicMaterial({ visible: false, wireframe: false });
-                    const collider = new THREE.Mesh(colliderGeom, colliderMat);
-                    collider.position.set(0, 1.5, 0);
-                    collider.userData.isBossPart = true;
-                    bossGroup.add(collider);
-                    bossCollider = collider;
-                    debugLog('⚡ Невидимый коллайдер обновлён');
+                    const newBoss = createBossModel(currentBossId);
+                    bossGroup.add(newBoss);
                 }
             }
         });
@@ -413,16 +450,8 @@
                 loadBossInfo(currentBossId);
                 if (bossGroup) {
                     while(bossGroup.children.length > 0) bossGroup.remove(bossGroup.children[0]);
-                    const newVisual = createVisualBossModel(currentBossId);
-                    bossGroup.add(newVisual);
-                    const colliderGeom = new THREE.SphereGeometry(2.5, 8);
-                    const colliderMat = new THREE.MeshBasicMaterial({ visible: false });
-                    const collider = new THREE.Mesh(colliderGeom, colliderMat);
-                    collider.position.set(0, 1.5, 0);
-                    collider.userData.isBossPart = true;
-                    bossGroup.add(collider);
-                    bossCollider = collider;
-                    debugLog('⚡ Невидимый коллайдер обновлён');
+                    const newBoss = createBossModel(currentBossId);
+                    bossGroup.add(newBoss);
                 }
             }
         });
@@ -576,7 +605,6 @@
                 controls.target.set(0, 2, 0);
                 controls.update();
 
-                // Освещение
                 const ambient = new THREE.AmbientLight(0x404060);
                 scene.add(ambient);
                 const light1 = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -605,20 +633,8 @@
                 bossGroup = new THREE.Group();
                 scene.add(bossGroup);
 
-                // Визуальная модель
-                const visualBoss = createVisualBossModel(currentBossId);
-                bossGroup.add(visualBoss);
-
-                // Невидимый коллайдер (сфера, которая будет ловить клики)
-                const colliderGeom = new THREE.SphereGeometry(2.5, 8);
-                const colliderMat = new THREE.MeshBasicMaterial({ visible: false }); // невидимый
-                const collider = new THREE.Mesh(colliderGeom, colliderMat);
-                collider.position.set(0, 1.5, 0); // центр группы
-                collider.userData.isBossPart = true;
-                bossGroup.add(collider);
-                bossCollider = collider;
-                debugLog('⚡ Невидимый коллайдер добавлен');
-
+                const initialBoss = createBossModel(currentBossId);
+                bossGroup.add(initialBoss);
                 debugLog(`Модель добавлена, детей: ${bossGroup.children.length}`);
 
                 bossGroup.position.set(0, 2, 0);
@@ -636,7 +652,6 @@
                     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
                     raycaster.setFromCamera(mouse, camera);
-                    // Проверяем пересечения с ресурсными кубами и со всеми детьми группы босса (включая коллайдер)
                     const intersects = raycaster.intersectObjects([...cubes, ...bossGroup.children]);
 
                     if (intersects.length > 0) {
