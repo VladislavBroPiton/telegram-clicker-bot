@@ -425,32 +425,56 @@
                         environmentObjects.push(stal);
                     }
 
-                    // Кости и черепа
-                    const boneMat = new THREE.MeshStandardMaterial({ color: 0xeeddcc });
-                    for (let i = 0; i < 10; i++) {
-                        const bone = new THREE.Group();
-                        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.6), boneMat);
-                        shaft.position.y = 0.3;
-                        bone.add(shaft);
-                        const end1 = new THREE.Mesh(new THREE.SphereGeometry(0.15), boneMat);
-                        end1.position.y = 0.6;
-                        bone.add(end1);
-                        const end2 = new THREE.Mesh(new THREE.SphereGeometry(0.15), boneMat);
-                        end2.position.y = 0.0;
-                        bone.add(end2);
-                        bone.position.set(Math.random()*6-3, 0.1, Math.random()*6-3);
-                        bone.rotation.y = Math.random() * Math.PI;
-                        bone.rotation.x = Math.random() * 0.5;
-                        scene.add(bone);
-                        environmentObjects.push(bone);
+                    // --- ВМЕСТО КОСТЕЙ: ЯЩИКИ, БОЧКИ, ИНСТРУМЕНТЫ, УГОЛЬ ---
+                    // Деревянные ящики
+                    const boxMaterial = new THREE.MeshStandardMaterial({ color: 0x8B5A2B });
+                    for (let i = 0; i < 3; i++) {
+                        const box = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), boxMaterial);
+                        box.position.set(Math.random()*5-2.5, 0.3, Math.random()*5-2.5);
+                        box.rotation.y = Math.random() * Math.PI;
+                        scene.add(box);
+                        environmentObjects.push(box);
                     }
+
+                    // Бочки
+                    const barrelMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+                    for (let i = 0; i < 2; i++) {
+                        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.8, 8), barrelMaterial);
+                        barrel.position.set(Math.random()*5-2.5, 0.4, Math.random()*5-2.5);
+                        barrel.rotation.y = Math.random() * Math.PI;
+                        scene.add(barrel);
+                        environmentObjects.push(barrel);
+                    }
+
+                    // Кирки (лежащие на земле)
+                    const pickaxeMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
+                    for (let i = 0; i < 2; i++) {
+                        const pickaxe = new THREE.Group();
+                        const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.8), pickaxeMaterial);
+                        handle.position.y = 0.4;
+                        handle.rotation.z = Math.PI / 2;
+                        pickaxe.add(handle);
+                        
+                        const head = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.3, 4), pickaxeMaterial);
+                        head.position.set(0.4, 0.4, 0);
+                        head.rotation.z = -0.2;
+                        pickaxe.add(head);
+                        
+                        pickaxe.position.set(Math.random()*5-2.5, 0.05, Math.random()*5-2.5);
+                        pickaxe.rotation.y = Math.random() * Math.PI;
+                        pickaxe.rotation.x = Math.random() * 0.3;
+                        scene.add(pickaxe);
+                        environmentObjects.push(pickaxe);
+                    }
+
+                    // Кусочки угля
+                    const coalMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
                     for (let i = 0; i < 5; i++) {
-                        const skull = new THREE.Mesh(new THREE.SphereGeometry(0.25), boneMat);
-                        skull.position.set(Math.random()*6-3, 0.2, Math.random()*6-3);
-                        skull.rotation.y = Math.random() * Math.PI;
-                        skull.rotation.x = Math.random() * 0.3;
-                        scene.add(skull);
-                        environmentObjects.push(skull);
+                        const coal = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), coalMaterial);
+                        coal.position.set(Math.random()*4-2, 0.1, Math.random()*4-2);
+                        coal.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+                        scene.add(coal);
+                        environmentObjects.push(coal);
                     }
 
                     // Дым
@@ -470,25 +494,6 @@
                     const smokeParticles = new THREE.Points(smokeGeom, smokeMat);
                     scene.add(smokeParticles);
                     environmentObjects.push(smokeParticles);
-
-                    // --- ВМЕСТО ГРИБОВ: КАМЕННЫЕ ОБЛОМКИ ---
-                    const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.7, metalness: 0.1 });
-                    for (let i = 0; i < 12; i++) {
-                        let geom;
-                        const r = Math.random();
-                        if (r < 0.5) {
-                            geom = new THREE.BoxGeometry(0.3 + Math.random()*0.3, 0.2 + Math.random()*0.3, 0.3 + Math.random()*0.3);
-                        } else if (r < 0.8) {
-                            geom = new THREE.DodecahedronGeometry(0.2 + Math.random()*0.2);
-                        } else {
-                            geom = new THREE.SphereGeometry(0.2 + Math.random()*0.2, 5);
-                        }
-                        const rock = new THREE.Mesh(geom, rockMaterial);
-                        rock.position.set(Math.random()*6-3, 0.1, Math.random()*6-3);
-                        rock.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
-                        scene.add(rock);
-                        environmentObjects.push(rock);
-                    }
 
                     // Кучки золота
                     const goldMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
