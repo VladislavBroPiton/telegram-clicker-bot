@@ -471,20 +471,23 @@
                     scene.add(smokeParticles);
                     environmentObjects.push(smokeParticles);
 
-                    // Светящиеся грибы
-                    const mushroomMat = new THREE.MeshStandardMaterial({ color: 0x88aa44, emissive: 0x224422 });
-                    for (let i = 0; i < 8; i++) {
-                        const mushroom = new THREE.Group();
-                        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 0.5), mushroomMat);
-                        stem.position.y = 0.25;
-                        mushroom.add(stem);
-                        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.2, 6), mushroomMat);
-                        cap.position.y = 0.6;
-                        mushroom.add(cap);
-                        mushroom.position.set(Math.random()*6-3, 0.0, Math.random()*6-3);
-                        mushroom.rotation.y = Math.random() * Math.PI;
-                        scene.add(mushroom);
-                        environmentObjects.push(mushroom);
+                    // --- ВМЕСТО ГРИБОВ: КАМЕННЫЕ ОБЛОМКИ ---
+                    const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.7, metalness: 0.1 });
+                    for (let i = 0; i < 12; i++) {
+                        let geom;
+                        const r = Math.random();
+                        if (r < 0.5) {
+                            geom = new THREE.BoxGeometry(0.3 + Math.random()*0.3, 0.2 + Math.random()*0.3, 0.3 + Math.random()*0.3);
+                        } else if (r < 0.8) {
+                            geom = new THREE.DodecahedronGeometry(0.2 + Math.random()*0.2);
+                        } else {
+                            geom = new THREE.SphereGeometry(0.2 + Math.random()*0.2, 5);
+                        }
+                        const rock = new THREE.Mesh(geom, rockMaterial);
+                        rock.position.set(Math.random()*6-3, 0.1, Math.random()*6-3);
+                        rock.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+                        scene.add(rock);
+                        environmentObjects.push(rock);
                     }
 
                     // Кучки золота
