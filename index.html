@@ -377,6 +377,42 @@
 
             switch (bossId) {
                 case 'goblin_king': {
+                    // --- ПОЛ: каменная плита с трещинами ---
+                    const floorTexture = (() => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 256;
+                        canvas.height = 256;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#555555';
+                        ctx.fillRect(0, 0, 256, 256);
+                        // Шум
+                        const imageData = ctx.getImageData(0, 0, 256, 256);
+                        const data = imageData.data;
+                        for (let i = 0; i < data.length; i += 4) {
+                            const noise = (Math.random() - 0.5) * 30;
+                            data[i] = Math.min(255, Math.max(0, data[i] + noise));
+                            data[i+1] = Math.min(255, Math.max(0, data[i+1] + noise));
+                            data[i+2] = Math.min(255, Math.max(0, data[i+2] + noise));
+                        }
+                        ctx.putImageData(imageData, 0, 0);
+                        // Трещины
+                        ctx.strokeStyle = '#222222';
+                        ctx.lineWidth = 2;
+                        for (let j = 0; j < 10; j++) {
+                            ctx.beginPath();
+                            ctx.moveTo(Math.random()*256, Math.random()*256);
+                            ctx.lineTo(Math.random()*256, Math.random()*256);
+                            ctx.stroke();
+                        }
+                        return new THREE.CanvasTexture(canvas);
+                    })();
+                    const floorMaterial = new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.8, metalness: 0.1 });
+                    const floorPlane = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), floorMaterial);
+                    floorPlane.rotation.x = -Math.PI / 2;
+                    floorPlane.position.y = -0.1;
+                    scene.add(floorPlane);
+                    environmentObjects.push(floorPlane);
+
                     // --- КОЛОННЫ (радиус 8, смещение 0.3) ---
                     const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x777777, roughness: 0.8 });
                     for (let i = 0; i < 4; i++) {
@@ -425,7 +461,7 @@
                         environmentObjects.push(stal);
                     }
 
-                    // --- ВМЕСТО КОСТЕЙ: ЯЩИКИ, БОЧКИ, ИНСТРУМЕНТЫ, УГОЛЬ ---
+                    // --- ПРЕДМЕТЫ НА ПОЛУ ---
                     // Деревянные ящики
                     const boxMaterial = new THREE.MeshStandardMaterial({ color: 0x8B5A2B });
                     for (let i = 0; i < 3; i++) {
@@ -542,7 +578,7 @@
                 }
 
                 case 'dragon_lair': {
-                    // Лава
+                    // Лава (пол)
                     const canvas = document.createElement('canvas');
                     canvas.width = 64;
                     canvas.height = 64;
@@ -659,6 +695,42 @@
                 }
 
                 case 'lich_castle': {
+                    // --- ПОЛ: тёмный камень с рунами ---
+                    const floorTexture = (() => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 256;
+                        canvas.height = 256;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#2a2a3a';
+                        ctx.fillRect(0, 0, 256, 256);
+                        // Шум
+                        const imageData = ctx.getImageData(0, 0, 256, 256);
+                        const data = imageData.data;
+                        for (let i = 0; i < data.length; i += 4) {
+                            const noise = (Math.random() - 0.5) * 20;
+                            data[i] = Math.min(255, Math.max(0, data[i] + noise));
+                            data[i+1] = Math.min(255, Math.max(0, data[i+1] + noise));
+                            data[i+2] = Math.min(255, Math.max(0, data[i+2] + noise));
+                        }
+                        ctx.putImageData(imageData, 0, 0);
+                        // Руны (слабо светящиеся)
+                        ctx.strokeStyle = '#aa88ff';
+                        ctx.lineWidth = 1;
+                        for (let j = 0; j < 8; j++) {
+                            ctx.beginPath();
+                            ctx.arc(Math.random()*256, Math.random()*256, 10 + Math.random()*20, 0, 2*Math.PI);
+                            ctx.strokeStyle = `rgba(170,136,255,${0.2+Math.random()*0.3})`;
+                            ctx.stroke();
+                        }
+                        return new THREE.CanvasTexture(canvas);
+                    })();
+                    const floorMaterial = new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.7, emissive: 0x110022 });
+                    const floorPlane = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), floorMaterial);
+                    floorPlane.rotation.x = -Math.PI / 2;
+                    floorPlane.position.y = -0.1;
+                    scene.add(floorPlane);
+                    environmentObjects.push(floorPlane);
+
                     // Обелиски
                     const darkMat = new THREE.MeshStandardMaterial({ color: 0x333344, emissive: 0x110022 });
                     for (let i = 0; i < 6; i++) {
@@ -1041,8 +1113,9 @@
                 light2.position.set(-5, 5, -5);
                 scene.add(light2);
 
-                const gridHelper = new THREE.GridHelper(20, 20, 0xaaaaaa, 0x444444);
-                scene.add(gridHelper);
+                // Сетка больше не нужна, пол будет создаваться отдельно для каждой локации
+                // const gridHelper = new THREE.GridHelper(20, 20, 0xaaaaaa, 0x444444);
+                // scene.add(gridHelper);
 
                 createStars();
 
