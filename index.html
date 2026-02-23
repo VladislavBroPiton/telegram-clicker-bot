@@ -31,20 +31,6 @@
         #debug-info {
             display: none;
         }
-        #test-button {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            z-index: 2000;
-            background: #ff4444;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-            pointer-events: auto;
-        }
         #tool-display { margin-top: 8px; font-size: 13px; color: #ffaa66; border-top: 1px solid #444; padding-top: 6px; }
     </style>
     <script type="importmap">
@@ -78,7 +64,6 @@
         </div>
     </div>
     <div id="debug-info"></div>
-    <button id="test-button">ТЕСТ</button>
 
     <script type="module">
         // --- КОНФИГУРАЦИЯ ---
@@ -679,9 +664,6 @@
 
         // --- СТАРТ ---
         init3D();
-        document.getElementById('test-button').addEventListener('click', () => {
-            apiCall('click', 'POST', { resourceId: 0 }).then(loadUser);
-        });
     </script>
 </body>
 </html>
