@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Босс-тест (увеличенный шар)</title>
+    <title>Босс-тест (метка)</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
@@ -181,7 +181,7 @@
             bossHealthFill.style.width = (max ? (current / max) * 100 : 0) + '%';
         }
 
-        // --- МОДЕЛЬ БОССА (огромный яркий шар) ---
+        // --- МОДЕЛЬ БОССА (простая, с меткой) ---
         function createBossModel(bossId) {
             debugLog(`createBossModel for ${bossId}`);
             if (!THREE) {
@@ -191,26 +191,27 @@
             try {
                 const group = new THREE.Group();
 
-                // Огромный ярко-розовый шар
-                const sphereGeom = new THREE.SphereGeometry(2.5, 32); // увеличен до 2.5
+                // Основной шар – ярко-розовый, крупный
+                const sphereGeom = new THREE.SphereGeometry(1.5, 32);
                 const sphereMat = new THREE.MeshStandardMaterial({ color: 0xff69b4, emissive: 0x331122 });
                 const sphere = new THREE.Mesh(sphereGeom, sphereMat);
                 sphere.position.y = 1.5;
-                sphere.userData.isBossPart = true;
+                sphere.userData.isBossPart = true; // метка
                 group.add(sphere);
 
-                // Дополнительный глаз для красоты (тоже помечен)
-                const eyeGeom = new THREE.SphereGeometry(0.6);
+                // Глаз
+                const eyeGeom = new THREE.SphereGeometry(0.4);
                 const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
                 const eye = new THREE.Mesh(eyeGeom, eyeMat);
-                eye.position.set(0.8, 2.5, 2.2);
+                eye.position.set(0.5, 2.2, 1.5);
                 eye.userData.isBossPart = true;
                 group.add(eye);
 
-                const pupilGeom = new THREE.SphereGeometry(0.25);
+                // Зрачок
+                const pupilGeom = new THREE.SphereGeometry(0.15);
                 const pupilMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
                 const pupil = new THREE.Mesh(pupilGeom, pupilMat);
-                pupil.position.set(0.8, 2.5, 2.5);
+                pupil.position.set(0.5, 2.2, 1.8);
                 pupil.userData.isBossPart = true;
                 group.add(pupil);
 
@@ -367,6 +368,7 @@
                 controls.target.set(0, 2, 0);
                 controls.update();
 
+                // Освещение
                 const ambient = new THREE.AmbientLight(0x404060);
                 scene.add(ambient);
                 const light1 = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -379,7 +381,7 @@
                 const gridHelper = new THREE.GridHelper(20, 20, 0xaaaaaa, 0x444444);
                 scene.add(gridHelper);
 
-                // Кубы-ресурсы (можно оставить для контекста)
+                // Кубы-ресурсы
                 const positions = [[-3,1.5,-2], [3,1.5,-2], [0,1.5,2], [-2,1.5,3], [2,1.5,3]];
                 positions.forEach((pos, i) => {
                     const cube = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshStandardMaterial({ color: 0xaaaaaa }));
@@ -397,17 +399,18 @@
                 bossGroup.add(initialBoss);
                 debugLog(`Модель добавлена, детей: ${bossGroup.children.length}`);
 
-                // Помещаем босса в центр сцены (0,2,0) – стандартное место
+                // Помещаем босса в центр (высота 2)
                 bossGroup.position.set(0, 2, 0);
                 debugLog(`bossGroup позиция: (${bossGroup.position.x}, ${bossGroup.position.y}, ${bossGroup.position.z})`);
 
-                // Добавляем маленькую яркую сферу-маяк в ту же точку, чтобы видеть центр
-                const markerGeom = new THREE.SphereGeometry(0.3);
-                const markerMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-                const marker = new THREE.Mesh(markerGeom, markerMat);
-                marker.position.set(0, 2, 0);
-                scene.add(marker);
-                debugLog('🟦 Голубая сфера-маяк в (0,2,0)');
+                // Добавляем голубую сферу-маяк прямо в группу для визуального подтверждения
+                const beaconGeom = new THREE.SphereGeometry(0.3, 16);
+                const beaconMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x004444 });
+                const beacon = new THREE.Mesh(beaconGeom, beaconMat);
+                beacon.position.set(0, 0, 0); // центр группы
+                beacon.userData.isBossPart = true; // тоже часть босса
+                bossGroup.add(beacon);
+                debugLog('🟦 Голубая сфера-маяк добавлена в группу босса');
 
                 threeReady = true;
                 debugLog('Three.js готов, bossGroup создана');
@@ -425,7 +428,7 @@
 
                     if (intersects.length > 0) {
                         const hit = intersects[0].object;
-                        debugLog(`Hit object: ${hit.type}, userData: ${JSON.stringify(hit.userData)}`);
+                        debugLog(`Hit object: userData: ${JSON.stringify(hit.userData)}`);
                         if (hit.userData.type === 'resource') {
                             apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
                                 if (data) {
@@ -439,7 +442,7 @@
                             debugLog('✅ Это часть босса!');
                             attackBoss();
                         } else {
-                            debugLog('Неизвестный объект (возможно, маяк)');
+                            debugLog('Неизвестный объект (нет метки)');
                         }
                     } else {
                         debugLog('No intersection');
