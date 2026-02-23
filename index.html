@@ -87,6 +87,8 @@
         let THREE;
         let stars = [];
         let bossCollider = null;
+        // Для декораций локаций
+        let environmentObjects = [];
 
         // Элементы DOM
         const hudLevel = document.getElementById('level');
@@ -302,6 +304,135 @@
             return group;
         }
 
+        // --- ДЕКОРАЦИИ ДЛЯ ЛОКАЦИЙ БОССОВ ---
+        function clearEnvironment() {
+            environmentObjects.forEach(obj => scene.remove(obj));
+            environmentObjects = [];
+            // Сброс тумана и фона (опционально)
+            scene.fog = null;
+            scene.background = new THREE.Color(0x0a0a20);
+        }
+
+        function createEnvironmentForBoss(bossId) {
+            if (!scene || !THREE) return;
+
+            switch (bossId) {
+                case 'goblin_king':
+                    // Каменные стены (колонны)
+                    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x777777, roughness: 0.8 });
+                    for (let i = 0; i < 4; i++) {
+                        const angle = (i * Math.PI / 2);
+                        const x = Math.sin(angle) * 5;
+                        const z = Math.cos(angle) * 5;
+                        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 5, 8), wallMaterial);
+                        pillar.position.set(x, 2.5, z);
+                        scene.add(pillar);
+                        environmentObjects.push(pillar);
+                    }
+                    // Факелы
+                    const torchMaterial = new THREE.MeshStandardMaterial({ color: 0xcc6600 });
+                    const flameMaterial = new THREE.MeshStandardMaterial({ color: 0xffaa22, emissive: 0x442200 });
+                    for (let i = 0; i < 4; i++) {
+                        const angle = (i * Math.PI / 2) + 0.5;
+                        const x = Math.sin(angle) * 4;
+                        const z = Math.cos(angle) * 4;
+                        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 3), torchMaterial);
+                        pole.position.set(x, 1.5, z);
+                        scene.add(pole);
+                        environmentObjects.push(pole);
+                        const flame = new THREE.Mesh(new THREE.SphereGeometry(0.4), flameMaterial);
+                        flame.position.set(x, 3.0, z);
+                        scene.add(flame);
+                        environmentObjects.push(flame);
+                        // Точечный свет
+                        const light = new THREE.PointLight(0xff6600, 1, 8);
+                        light.position.set(x, 3.0, z);
+                        scene.add(light);
+                        environmentObjects.push(light);
+                    }
+                    // Туман
+                    scene.fog = new THREE.FogExp2(0x111122, 0.05);
+                    break;
+
+                case 'dragon_lair':
+                    // Лава под ногами
+                    const lavaTexture = (() => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 64;
+                        canvas.height = 64;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#ff4400';
+                        ctx.fillRect(0, 0, 64, 64);
+                        for (let i = 0; i < 100; i++) {
+                            ctx.fillStyle = '#ffaa00';
+                            ctx.beginPath();
+                            ctx.arc(Math.random()*64, Math.random()*64, Math.random()*4+1, 0, 2*Math.PI);
+                            ctx.fill();
+                        }
+                        return new THREE.CanvasTexture(canvas);
+                    })();
+                    const lavaPlane = new THREE.Mesh(
+                        new THREE.PlaneGeometry(15, 15),
+                        new THREE.MeshStandardMaterial({ map: lavaTexture, emissive: 0xff4400 })
+                    );
+                    lavaPlane.rotation.x = -Math.PI / 2;
+                    lavaPlane.position.y = -0.5;
+                    scene.add(lavaPlane);
+                    environmentObjects.push(lavaPlane);
+
+                    // Красный туман
+                    scene.fog = new THREE.FogExp2(0x330000, 0.08);
+
+                    // Камни
+                    const rockMat = new THREE.MeshStandardMaterial({ color: 0x442211, emissive: 0x221100 });
+                    for (let i = 0; i < 8; i++) {
+                        const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6 + Math.random()*0.5), rockMat);
+                        rock.position.set(Math.random()*8-4, 0.2, Math.random()*8-4);
+                        scene.add(rock);
+                        environmentObjects.push(rock);
+                    }
+                    break;
+
+                case 'lich_castle':
+                    // Обелиски
+                    const darkMat = new THREE.MeshStandardMaterial({ color: 0x333344, emissive: 0x110022 });
+                    for (let i = 0; i < 6; i++) {
+                        const angle = (i / 6) * Math.PI * 2;
+                        const x = Math.sin(angle) * 5;
+                        const z = Math.cos(angle) * 5;
+                        const obelisk = new THREE.Mesh(new THREE.ConeGeometry(0.8, 4, 8), darkMat);
+                        obelisk.position.set(x, 2, z);
+                        scene.add(obelisk);
+                        environmentObjects.push(obelisk);
+                        // Светящийся шар
+                        const glow = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshStandardMaterial({ color: 0x8844ff, emissive: 0x220044 }));
+                        glow.position.set(x, 4.2, z);
+                        scene.add(glow);
+                        environmentObjects.push(glow);
+                    }
+                    // Туман
+                    scene.fog = new THREE.FogExp2(0x111122, 0.1);
+                    // Парящие частицы (души)
+                    const particleCount = 30;
+                    const particleGeom = new THREE.BufferGeometry();
+                    const particlePositions = new Float32Array(particleCount * 3);
+                    for (let i = 0; i < particleCount; i++) {
+                        particlePositions[i*3] = (Math.random() - 0.5) * 12;
+                        particlePositions[i*3+1] = Math.random() * 6;
+                        particlePositions[i*3+2] = (Math.random() - 0.5) * 12;
+                    }
+                    particleGeom.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+                    const particleMat = new THREE.PointsMaterial({ color: 0x88aaff, size: 0.1, transparent: true, opacity: 0.6 });
+                    const particles = new THREE.Points(particleGeom, particleMat);
+                    scene.add(particles);
+                    environmentObjects.push(particles);
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
         // --- ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ ---
         async function loadUser() {
             const data = await apiCall('user');
@@ -359,7 +490,7 @@
                 currentBossId = BOSS_IDS[currentBossIndex];
                 loadBossInfo(currentBossId);
                 if (bossGroup) {
-                    // Очищаем группу
+                    // Очищаем группу босса
                     while(bossGroup.children.length > 0) bossGroup.remove(bossGroup.children[0]);
                     // Добавляем новую визуальную модель
                     const newVisual = createVisualBossModel(currentBossId);
@@ -372,10 +503,14 @@
                     collider.userData.isBossPart = true;
                     bossGroup.add(collider);
                     bossCollider = collider;
-                    debugLog('⚡ Невидимый коллайдер обновлён');
+
+                    // Обновляем окружение
+                    clearEnvironment();
+                    createEnvironmentForBoss(currentBossId);
                 }
             }
         });
+
         document.getElementById('next-boss').addEventListener('click', () => {
             if (currentBossIndex < BOSS_IDS.length-1) {
                 currentBossIndex++;
@@ -392,7 +527,9 @@
                     collider.userData.isBossPart = true;
                     bossGroup.add(collider);
                     bossCollider = collider;
-                    debugLog('⚡ Невидимый коллайдер обновлён');
+
+                    clearEnvironment();
+                    createEnvironmentForBoss(currentBossId);
                 }
             }
         });
@@ -589,10 +726,11 @@
                 bossCollider = collider;
                 debugLog('⚡ Невидимый коллайдер добавлен');
 
-                debugLog(`Модель добавлена, детей: ${bossGroup.children.length}`);
-
                 bossGroup.position.set(0, 2, 0);
                 debugLog(`bossGroup позиция: (${bossGroup.position.x}, ${bossGroup.position.y}, ${bossGroup.position.z})`);
+
+                // Создаём окружение для текущего босса
+                createEnvironmentForBoss(currentBossId);
 
                 threeReady = true;
                 debugLog('Three.js готов, bossGroup создана');
