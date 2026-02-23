@@ -599,7 +599,6 @@
                     const ctx = canvas.getContext('2d');
                     lavaTexture = new THREE.CanvasTexture(canvas);
 
-                    // Начальная заливка
                     ctx.fillStyle = '#ff4400';
                     ctx.fillRect(0, 0, 128, 128);
                     lavaTexture.needsUpdate = true;
@@ -613,9 +612,9 @@
                     scene.add(lavaPlane);
                     environmentObjects.push(lavaPlane);
 
-                    // Пузырьки (частицы) – замедлим их подъём
+                    // Пузырьки (частицы) – очень медленно
                     const bubbleGeom = new THREE.BufferGeometry();
-                    const bubbleCount = 20;
+                    const bubbleCount = 15;
                     const bubblePositions = new Float32Array(bubbleCount * 3);
                     for (let i = 0; i < bubbleCount; i++) {
                         bubblePositions[i*3] = (Math.random() - 0.5) * 12;
@@ -628,11 +627,28 @@
                     scene.add(bubbleParticles);
                     environmentObjects.push(bubbleParticles);
 
-                    // Камни
+                    // Камни – 5 штук, размещены по краям, не мешают кубам
                     const rockMat = new THREE.MeshStandardMaterial({ color: 0x442211, emissive: 0x221100 });
-                    for (let i = 0; i < 8; i++) {
+                    const rockPositions = [];
+                    for (let i = 0; i < 5; i++) {
+                        let x, z, ok;
+                        do {
+                            x = (Math.random() - 0.5) * 10;
+                            z = (Math.random() - 0.5) * 10;
+                            ok = true;
+                            // Не ближе 3.5 к центру (кубы)
+                            if (Math.abs(x) < 3.5 && Math.abs(z) < 3.5) ok = false;
+                            // Не ближе 1.2 друг к другу
+                            for (let pos of rockPositions) {
+                                if (Math.hypot(x - pos.x, z - pos.z) < 1.2) {
+                                    ok = false;
+                                    break;
+                                }
+                            }
+                        } while (!ok);
+                        rockPositions.push({x, z});
                         const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6 + Math.random()*0.5), rockMat);
-                        rock.position.set(Math.random()*8-4, 0.2, Math.random()*8-4);
+                        rock.position.set(x, 0.2, z);
                         scene.add(rock);
                         environmentObjects.push(rock);
                     }
@@ -691,8 +707,6 @@
                     heatDistortion.position.set(0, 2.5, 0);
                     scene.add(heatDistortion);
                     environmentObjects.push(heatDistortion);
-
-                    // Обгоревшие кости УДАЛЕНЫ
 
                     scene.fog = new THREE.FogExp2(0x330000, 0.03);
                     break;
@@ -1299,7 +1313,7 @@
                         }
                     });
 
-                    // Анимация лавы (плавное движение, уменьшенная яркость)
+                    // Анимация лавы (плавное движение, очень медленное)
                     if (lavaTexture && lavaPlane) {
                         const canvas = lavaTexture.image;
                         if (canvas) {
@@ -1311,21 +1325,21 @@
                             ctx.strokeStyle = 'rgba(255,170,0,0.3)';
                             ctx.lineWidth = 2;
                             for (let j = 0; j < 5; j++) {
-                                const x1 = (Math.sin(j * 2 + time * 0.0005) * 20 + 64) % 128;
-                                const y1 = (Math.cos(j * 3 + time * 0.001) * 20 + 64) % 128;
-                                const x2 = (Math.sin(j * 2 + 1 + time * 0.0005) * 20 + 64) % 128;
-                                const y2 = (Math.cos(j * 3 + 1 + time * 0.001) * 20 + 64) % 128;
+                                const x1 = (Math.sin(j * 2 + time * 0.0002) * 20 + 64) % 128;
+                                const y1 = (Math.cos(j * 3 + time * 0.0003) * 20 + 64) % 128;
+                                const x2 = (Math.sin(j * 2 + 1 + time * 0.0002) * 20 + 64) % 128;
+                                const y2 = (Math.cos(j * 3 + 1 + time * 0.0003) * 20 + 64) % 128;
                                 ctx.beginPath();
                                 ctx.moveTo(x1, y1);
                                 ctx.lineTo(x2, y2);
                                 ctx.stroke();
                             }
                             
-                            // Пятна (очень прозрачные, едва заметные)
-                            ctx.fillStyle = 'rgba(255,200,100,0.15)';
+                            // Пятна (очень прозрачные, почти статичные)
+                            ctx.fillStyle = 'rgba(255,200,100,0.1)';
                             for (let j = 0; j < 4; j++) {
-                                const x = (Math.sin(j * 5 + time * 0.0003) * 25 + 64) % 128;
-                                const y = (Math.cos(j * 7 + time * 0.0004) * 25 + 64) % 128;
+                                const x = (Math.sin(j * 5 + time * 0.0001) * 25 + 64) % 128;
+                                const y = (Math.cos(j * 7 + time * 0.00015) * 25 + 64) % 128;
                                 const r = Math.random() * 6 + 3;
                                 ctx.beginPath();
                                 ctx.arc(x, y, r, 0, 2 * Math.PI);
@@ -1336,11 +1350,11 @@
                         }
                     }
 
-                    // Пузырьки (замедленный подъём)
+                    // Пузырьки (очень медленно)
                     if (bubbleParticles) {
                         const positions = bubbleParticles.geometry.attributes.position.array;
                         for (let i = 1; i < positions.length; i += 3) {
-                            positions[i] += 0.001; // ещё медленнее
+                            positions[i] += 0.0005;
                             if (positions[i] > 0.5) {
                                 positions[i] = -0.4;
                                 positions[i-1] = (Math.random() - 0.5) * 12;
