@@ -377,41 +377,41 @@
 
             switch (bossId) {
                 case 'goblin_king': {
-                    // --- КОЛОННЫ (исправлено: увеличен радиус и добавлено смещение) ---
-                    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x777777, roughness: 0.8 });
-                    for (let i = 0; i < 4; i++) {
-                        const angle = (i * Math.PI / 2) + 0.2; // смещение
-                        const x = Math.sin(angle) * 7; // радиус 7
-                        const z = Math.cos(angle) * 7;
-                        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 5, 8), wallMaterial);
-                        pillar.position.set(x, 2.5, z);
-                        scene.add(pillar);
-                        environmentObjects.push(pillar);
-                    }
+    // --- КОЛОННЫ (увеличен радиус до 8, смещение угла 0.3) ---
+    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x777777, roughness: 0.8 });
+    for (let i = 0; i < 4; i++) {
+        const angle = (i * Math.PI / 2) + 0.3;
+        const x = Math.sin(angle) * 8;
+        const z = Math.cos(angle) * 8;
+        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 5, 8), wallMaterial);
+        pillar.position.set(x, 2.5, z);
+        scene.add(pillar);
+        environmentObjects.push(pillar);
+    }
 
-                    // Факелы (оставляем на прежних местах, они не мешают кубам)
-                    const torchMaterial = new THREE.MeshStandardMaterial({ color: 0xcc6600 });
-                    const flameMaterial = new THREE.MeshStandardMaterial({ color: 0xffaa22, emissive: 0x442200 });
-                    for (let i = 0; i < 4; i++) {
-                        const angle = (i * Math.PI / 2) + 0.5;
-                        const x = Math.sin(angle) * 4;
-                        const z = Math.cos(angle) * 4;
-                        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 3), torchMaterial);
-                        pole.position.set(x, 1.5, z);
-                        scene.add(pole);
-                        environmentObjects.push(pole);
-                        
-                        const flame = new THREE.Mesh(new THREE.SphereGeometry(0.4), flameMaterial);
-                        flame.position.set(x, 3.0, z);
-                        scene.add(flame);
-                        environmentObjects.push(flame);
-                        
-                        const light = new THREE.PointLight(0xff6600, 1, 8);
-                        light.position.set(x, 3.0, z);
-                        scene.add(light);
-                        environmentObjects.push(light);
-                        torchLights.push({ light, baseIntensity: 1, flame });
-                    }
+    // --- ФАКЕЛЫ (увеличен радиус до 6.5, смещение угла 0.8) ---
+    const torchMaterial = new THREE.MeshStandardMaterial({ color: 0xcc6600 });
+    const flameMaterial = new THREE.MeshStandardMaterial({ color: 0xffaa22, emissive: 0x442200 });
+    for (let i = 0; i < 4; i++) {
+        const angle = (i * Math.PI / 2) + 0.8;
+        const x = Math.sin(angle) * 6.5;
+        const z = Math.cos(angle) * 6.5;
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 3), torchMaterial);
+        pole.position.set(x, 1.5, z);
+        scene.add(pole);
+        environmentObjects.push(pole);
+        
+        const flame = new THREE.Mesh(new THREE.SphereGeometry(0.4), flameMaterial);
+        flame.position.set(x, 3.0, z);
+        scene.add(flame);
+        environmentObjects.push(flame);
+        
+        const light = new THREE.PointLight(0xff6600, 1, 8);
+        light.position.set(x, 3.0, z);
+        scene.add(light);
+        environmentObjects.push(light);
+        torchLights.push({ light, baseIntensity: 1, flame });
+    }
 
                     // Сталактиты
                     const stalactiteMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
@@ -1254,3 +1254,4 @@
     </script>
 </body>
 </html>
+
