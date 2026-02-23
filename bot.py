@@ -1,6 +1,7 @@
 """
 Telegram кликер бот "Шахтёрская глубина"
 Финальная версия с улучшенной безопасностью, транзакциями и защитой от гонок.
+Добавлено автоматическое восстановление здоровья боссов каждые 6 часов.
 """
 
 import logging
@@ -457,6 +458,18 @@ async def init_db():
                 last_attempt TIMESTAMP,
                 PRIMARY KEY (user_id, boss_id)
             )
+        ''')
+        # Таблица для хранения времени последнего глобального сброса боссов
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS global_state (
+                id INTEGER PRIMARY KEY DEFAULT 1,
+                last_boss_reset TIMESTAMP
+            )
+        ''')
+        # Инициализация, если записи нет
+        await conn.execute('''
+            INSERT INTO global_state (id, last_boss_reset)
+            SELECT 1, NOW() WHERE NOT EXISTS (SELECT 1 FROM global_state WHERE id = 1)
         ''')
         logger.info("Database tables initialized (if not existed)")
 
@@ -952,6 +965,30 @@ async def update_boss_health(uid: int, boss_id: str, damage: int, conn: asyncpg.
     else:
         # Предполагаем, что транзакция уже открыта
         return await _update(conn)
+
+# ---------- Автоматическое восстановление боссов ----------
+async def check_and_reset_bosses(conn: asyncpg.Connection):
+    """Проверяет, не прошло ли 6 часов с последнего сброса боссов. Если да – обнуляет всех."""
+    row = await conn.fetchrow("SELECT last_boss_reset FROM global_state WHERE id = 1")
+    if not row:
+        # На всякий случай создаём запись
+        await conn.execute("INSERT INTO global_state (id, last_boss_reset) VALUES (1, NOW())")
+        return
+    last_reset = row['last_boss_reset']
+    now = datetime.datetime.now()
+    # Если прошло 6 часов или last_reset не установлено
+    if last_reset is None or (now - last_reset) > datetime.timedelta(hours=6):
+        # Для каждого босса из BOSS_LOCATIONS
+        for boss_id, bloc in BOSS_LOCATIONS.items():
+            max_hp = bloc['boss']['health']
+            await conn.execute("""
+                UPDATE boss_progress
+                SET current_health = $1, defeated = false
+                WHERE boss_id = $2
+            """, max_hp, boss_id)
+        # Обновляем время последнего сброса
+        await conn.execute("UPDATE global_state SET last_boss_reset = $1 WHERE id = 1", now)
+        logger.info(f"Bosses reset at {now}")
 
 # ---------- Достижения ----------
 async def get_achievements_data(uid: int, conn: asyncpg.Connection = None) -> Tuple[set, int, int]:
@@ -2095,16 +2132,19 @@ async def api_user(request):
 
     uid = user['id']
 
-    stats = await get_player_stats(uid)
-    inv = await get_inventory(uid)
-    current_location = await get_player_current_location(uid)
-
-    # Получаем активный инструмент
-    active_tool_id = await get_active_tool(uid)
-    active_tool_name = TOOLS.get(active_tool_id, {}).get('name', active_tool_id)
-
-    boss_progress = {}
     async with db_pool.acquire() as conn:
+        # Проверяем сброс боссов
+        await check_and_reset_bosses(conn)
+
+        stats = await get_player_stats(uid, conn)
+        inv = await get_inventory(uid, conn)
+        current_location = await get_player_current_location(uid, conn)
+
+        # Получаем активный инструмент
+        active_tool_id = await get_active_tool(uid, conn)
+        active_tool_name = TOOLS.get(active_tool_id, {}).get('name', active_tool_id)
+
+        boss_progress = {}
         rows = await conn.fetch("SELECT boss_id, current_health, defeated FROM boss_progress WHERE user_id = $1", uid)
         for row in rows:
             boss_progress[row['boss_id']] = {
@@ -2143,6 +2183,9 @@ async def api_boss_attack(request):
     bloc = BOSS_LOCATIONS[boss_id]
 
     async with db_pool.acquire() as conn:
+        # Проверяем сброс боссов
+        await check_and_reset_bosses(conn)
+
         async with conn.transaction():
             # Проверяем уровень и инструмент
             stats = await get_player_stats(uid, conn)
@@ -2254,7 +2297,11 @@ async def api_boss_info(request):
     boss_id = request.path_params.get('boss_id')
     if not boss_id or boss_id not in BOSS_LOCATIONS:
         return JSONResponse({'error': 'Invalid boss_id'}, status_code=400)
-    prog = await get_boss_progress(uid, boss_id)
+
+    async with db_pool.acquire() as conn:
+        await check_and_reset_bosses(conn)
+        prog = await get_boss_progress(uid, boss_id, conn)
+
     return JSONResponse({
         'current_health': prog['current_health'],
         'defeated': prog['defeated'],
@@ -2356,6 +2403,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
