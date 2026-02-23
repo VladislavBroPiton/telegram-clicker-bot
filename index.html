@@ -599,39 +599,10 @@
                     const ctx = canvas.getContext('2d');
                     lavaTexture = new THREE.CanvasTexture(canvas);
 
-                    // Функция обновления текстуры с использованием времени для плавного движения
-                    function updateLavaTexture(time) {
-                        ctx.fillStyle = '#ff4400';
-                        ctx.fillRect(0, 0, 128, 128);
-                        
-                        // Рисуем прожилки, которые медленно движутся
-                        ctx.strokeStyle = '#ffaa00';
-                        ctx.lineWidth = 2;
-                        for (let j = 0; j < 10; j++) {
-                            const x1 = (Math.sin(j * 2 + time * 0.002) * 20 + 64) % 128;
-                            const y1 = (Math.cos(j * 3 + time * 0.005) * 20 + 64) % 128;
-                            const x2 = (Math.sin(j * 2 + 1 + time * 0.002) * 20 + 64) % 128;
-                            const y2 = (Math.cos(j * 3 + 1 + time * 0.005) * 20 + 64) % 128;
-                            ctx.beginPath();
-                            ctx.moveTo(x1, y1);
-                            ctx.lineTo(x2, y2);
-                            ctx.stroke();
-                        }
-                        
-                        // Рисуем пузырьки/пятна, которые тоже двигаются
-                        ctx.fillStyle = '#ffaa00';
-                        for (let j = 0; j < 30; j++) {
-                            const x = (Math.sin(j * 5 + time * 0.003) * 30 + 64) % 128;
-                            const y = (Math.cos(j * 7 + time * 0.004) * 30 + 64) % 128;
-                            const r = Math.random() * 5 + 2;
-                            ctx.beginPath();
-                            ctx.arc(x, y, r, 0, 2 * Math.PI);
-                            ctx.fill();
-                        }
-                        
-                        lavaTexture.needsUpdate = true;
-                    }
-                    updateLavaTexture(0);
+                    // Начальная заливка
+                    ctx.fillStyle = '#ff4400';
+                    ctx.fillRect(0, 0, 128, 128);
+                    lavaTexture.needsUpdate = true;
 
                     lavaPlane = new THREE.Mesh(
                         new THREE.PlaneGeometry(15, 15),
@@ -644,7 +615,7 @@
 
                     // Пузырьки (частицы) – замедлим их подъём
                     const bubbleGeom = new THREE.BufferGeometry();
-                    const bubbleCount = 30;
+                    const bubbleCount = 20;
                     const bubblePositions = new Float32Array(bubbleCount * 3);
                     for (let i = 0; i < bubbleCount; i++) {
                         bubblePositions[i*3] = (Math.random() - 0.5) * 12;
@@ -721,22 +692,7 @@
                     scene.add(heatDistortion);
                     environmentObjects.push(heatDistortion);
 
-                    // Обгоревшие кости
-                    const burntBoneMat = new THREE.MeshStandardMaterial({ color: 0x332211 });
-                    for (let i = 0; i < 5; i++) {
-                        const boneGroup = new THREE.Group();
-                        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1.0), burntBoneMat);
-                        shaft.position.y = 0.5;
-                        boneGroup.add(shaft);
-                        const end = new THREE.Mesh(new THREE.SphereGeometry(0.2), burntBoneMat);
-                        end.position.y = 1.0;
-                        boneGroup.add(end);
-                        boneGroup.position.set(Math.random()*6-3, 0.1, Math.random()*6-3);
-                        boneGroup.rotation.y = Math.random() * Math.PI;
-                        boneGroup.rotation.x = Math.random() * 0.5;
-                        scene.add(boneGroup);
-                        environmentObjects.push(boneGroup);
-                    }
+                    // Обгоревшие кости УДАЛЕНЫ
 
                     scene.fog = new THREE.FogExp2(0x330000, 0.03);
                     break;
@@ -1343,41 +1299,39 @@
                         }
                     });
 
-                    // Анимация лавы (обновляем текстуру с текущим временем)
+                    // Анимация лавы (плавное движение, уменьшенная яркость)
                     if (lavaTexture && lavaPlane) {
-                        // Используем сохранённую функцию обновления, если она есть
-                        // В данном случае мы не имеем прямого доступа к updateLavaTexture, но можем пересоздать логику здесь
-                        // Однако проще: мы уже сохранили функцию в замыкании при создании? Нет, она не сохраняется глобально.
-                        // Поэтому нужно либо сохранить ссылку на неё, либо повторить код.
-                        // Для простоты повторим код обновления здесь, используя время.
                         const canvas = lavaTexture.image;
                         if (canvas) {
                             const ctx = canvas.getContext('2d');
                             ctx.fillStyle = '#ff4400';
                             ctx.fillRect(0, 0, 128, 128);
                             
-                            ctx.strokeStyle = '#ffaa00';
+                            // Прожилки (полупрозрачные, очень медленно)
+                            ctx.strokeStyle = 'rgba(255,170,0,0.3)';
                             ctx.lineWidth = 2;
-                            for (let j = 0; j < 10; j++) {
-                                const x1 = (Math.sin(j * 2 + time * 0.002) * 20 + 64) % 128;
-                                const y1 = (Math.cos(j * 3 + time * 0.005) * 20 + 64) % 128;
-                                const x2 = (Math.sin(j * 2 + 1 + time * 0.002) * 20 + 64) % 128;
-                                const y2 = (Math.cos(j * 3 + 1 + time * 0.005) * 20 + 64) % 128;
+                            for (let j = 0; j < 5; j++) {
+                                const x1 = (Math.sin(j * 2 + time * 0.0005) * 20 + 64) % 128;
+                                const y1 = (Math.cos(j * 3 + time * 0.001) * 20 + 64) % 128;
+                                const x2 = (Math.sin(j * 2 + 1 + time * 0.0005) * 20 + 64) % 128;
+                                const y2 = (Math.cos(j * 3 + 1 + time * 0.001) * 20 + 64) % 128;
                                 ctx.beginPath();
                                 ctx.moveTo(x1, y1);
                                 ctx.lineTo(x2, y2);
                                 ctx.stroke();
                             }
                             
-                            ctx.fillStyle = '#ffaa00';
-                            for (let j = 0; j < 30; j++) {
-                                const x = (Math.sin(j * 5 + time * 0.003) * 30 + 64) % 128;
-                                const y = (Math.cos(j * 7 + time * 0.004) * 30 + 64) % 128;
-                                const r = Math.random() * 5 + 2;
+                            // Пятна (очень прозрачные, едва заметные)
+                            ctx.fillStyle = 'rgba(255,200,100,0.15)';
+                            for (let j = 0; j < 4; j++) {
+                                const x = (Math.sin(j * 5 + time * 0.0003) * 25 + 64) % 128;
+                                const y = (Math.cos(j * 7 + time * 0.0004) * 25 + 64) % 128;
+                                const r = Math.random() * 6 + 3;
                                 ctx.beginPath();
                                 ctx.arc(x, y, r, 0, 2 * Math.PI);
                                 ctx.fill();
                             }
+                            
                             lavaTexture.needsUpdate = true;
                         }
                     }
@@ -1386,7 +1340,7 @@
                     if (bubbleParticles) {
                         const positions = bubbleParticles.geometry.attributes.position.array;
                         for (let i = 1; i < positions.length; i += 3) {
-                            positions[i] += 0.005; // было 0.01
+                            positions[i] += 0.001; // ещё медленнее
                             if (positions[i] > 0.5) {
                                 positions[i] = -0.4;
                                 positions[i-1] = (Math.random() - 0.5) * 12;
