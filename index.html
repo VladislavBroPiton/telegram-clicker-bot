@@ -592,7 +592,7 @@
                 }
 
                 case 'dragon_lair': {
-                    // Лава (пол) с плавной анимацией
+                    // Лава (пол)
                     const canvas = document.createElement('canvas');
                     canvas.width = 128;
                     canvas.height = 128;
@@ -612,9 +612,9 @@
                     scene.add(lavaPlane);
                     environmentObjects.push(lavaPlane);
 
-                    // Пузырьки (частицы) – очень медленно
+                    // Пузырьки (очень медленные)
                     const bubbleGeom = new THREE.BufferGeometry();
-                    const bubbleCount = 15;
+                    const bubbleCount = 10;
                     const bubblePositions = new Float32Array(bubbleCount * 3);
                     for (let i = 0; i < bubbleCount; i++) {
                         bubblePositions[i*3] = (Math.random() - 0.5) * 12;
@@ -627,7 +627,7 @@
                     scene.add(bubbleParticles);
                     environmentObjects.push(bubbleParticles);
 
-                    // Камни – 5 штук, размещены по краям, не мешают кубам
+                    // Камни – размещены по краям, не задевают кубы
                     const rockMat = new THREE.MeshStandardMaterial({ color: 0x442211, emissive: 0x221100 });
                     const rockPositions = [];
                     for (let i = 0; i < 5; i++) {
@@ -651,6 +651,31 @@
                         rock.position.set(x, 0.2, z);
                         scene.add(rock);
                         environmentObjects.push(rock);
+                    }
+
+                    // Светящиеся трещины (новые декорации)
+                    const crackMat = new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0x442200 });
+                    for (let i = 0; i < 4; i++) {
+                        let x, z, ok;
+                        do {
+                            x = (Math.random() - 0.5) * 9;
+                            z = (Math.random() - 0.5) * 9;
+                            ok = true;
+                            if (Math.abs(x) < 3.5 && Math.abs(z) < 3.5) ok = false;
+                            for (let pos of rockPositions) {
+                                if (Math.hypot(x - pos.x, z - pos.z) < 1.0) {
+                                    ok = false;
+                                    break;
+                                }
+                            }
+                        } while (!ok);
+                        // Небольшой цилиндр, имитирующий трещину
+                        const crack = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.05, 6), crackMat);
+                        crack.position.set(x, 0.03, z);
+                        crack.rotation.x = Math.random() * Math.PI;
+                        crack.rotation.z = Math.random() * Math.PI;
+                        scene.add(crack);
+                        environmentObjects.push(crack);
                     }
 
                     // Искры
@@ -1313,7 +1338,7 @@
                         }
                     });
 
-                    // Анимация лавы (плавное движение, очень медленное)
+                    // Анимация лавы (очень медленно, почти незаметно)
                     if (lavaTexture && lavaPlane) {
                         const canvas = lavaTexture.image;
                         if (canvas) {
@@ -1321,25 +1346,25 @@
                             ctx.fillStyle = '#ff4400';
                             ctx.fillRect(0, 0, 128, 128);
                             
-                            // Прожилки (полупрозрачные, очень медленно)
-                            ctx.strokeStyle = 'rgba(255,170,0,0.3)';
+                            // Прожилки (очень бледные)
+                            ctx.strokeStyle = 'rgba(255,170,0,0.15)';
                             ctx.lineWidth = 2;
-                            for (let j = 0; j < 5; j++) {
-                                const x1 = (Math.sin(j * 2 + time * 0.0002) * 20 + 64) % 128;
-                                const y1 = (Math.cos(j * 3 + time * 0.0003) * 20 + 64) % 128;
-                                const x2 = (Math.sin(j * 2 + 1 + time * 0.0002) * 20 + 64) % 128;
-                                const y2 = (Math.cos(j * 3 + 1 + time * 0.0003) * 20 + 64) % 128;
+                            for (let j = 0; j < 4; j++) {
+                                const x1 = (Math.sin(j * 2 + time * 0.0001) * 20 + 64) % 128;
+                                const y1 = (Math.cos(j * 3 + time * 0.00015) * 20 + 64) % 128;
+                                const x2 = (Math.sin(j * 2 + 1 + time * 0.0001) * 20 + 64) % 128;
+                                const y2 = (Math.cos(j * 3 + 1 + time * 0.00015) * 20 + 64) % 128;
                                 ctx.beginPath();
                                 ctx.moveTo(x1, y1);
                                 ctx.lineTo(x2, y2);
                                 ctx.stroke();
                             }
                             
-                            // Пятна (очень прозрачные, почти статичные)
-                            ctx.fillStyle = 'rgba(255,200,100,0.1)';
-                            for (let j = 0; j < 4; j++) {
-                                const x = (Math.sin(j * 5 + time * 0.0001) * 25 + 64) % 128;
-                                const y = (Math.cos(j * 7 + time * 0.00015) * 25 + 64) % 128;
+                            // Пятна (едва заметные)
+                            ctx.fillStyle = 'rgba(255,200,100,0.02)';
+                            for (let j = 0; j < 3; j++) {
+                                const x = (Math.sin(j * 5 + time * 0.00005) * 25 + 64) % 128;
+                                const y = (Math.cos(j * 7 + time * 0.00008) * 25 + 64) % 128;
                                 const r = Math.random() * 6 + 3;
                                 ctx.beginPath();
                                 ctx.arc(x, y, r, 0, 2 * Math.PI);
@@ -1350,11 +1375,11 @@
                         }
                     }
 
-                    // Пузырьки (очень медленно)
+                    // Пузырьки (очень медленные)
                     if (bubbleParticles) {
                         const positions = bubbleParticles.geometry.attributes.position.array;
                         for (let i = 1; i < positions.length; i += 3) {
-                            positions[i] += 0.0005;
+                            positions[i] += 0.0003;
                             if (positions[i] > 0.5) {
                                 positions[i] = -0.4;
                                 positions[i-1] = (Math.random() - 0.5) * 12;
