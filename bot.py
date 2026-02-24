@@ -1494,7 +1494,12 @@ async def show_profile(update_or_query, ctx):
         await reply_or_edit(update_or_query, "Профиль не найден.")
         return
     username = escape_markdown(update_or_query.from_user.username or 'Аноним', version=1) if hasattr(update_or_query, 'from_user') else 'Аноним'
-    txt = (f"👤 **Профиль игрока**\n\n📊 **Статистика**\n• Уровень: **{stats['level']}**\n• Опыт: **{stats['exp']}** / {stats['exp_next']}\n• Золото: **{stats['gold']}**💰\n• Всего кликов: **{stats['clicks']}**\n• Всего добыто золота: **{stats['total_gold']}**💰\n• Критические удары: **{stats['total_crits']}**\n• Макс. серия критов: **{stats['max_crit_streak']}**\n\n⚡ **Улучшения**\n• Сила клика: ур.**{stats['upgrades']['click_power']}**\n• Шанс крита: ур.**{stats['upgrades']['crit_chance']}**\n")
+    txt = (f"👤 **Профиль игрока**\n\n📊 **Статистика**\n• Уровень: **{stats['level']}**\n"
+           f"• Общий опыт: **{stats['total_exp']}**\n"   # ← изменено
+           f"• Золото: **{stats['gold']}**💰\n• Всего кликов: **{stats['clicks']}**\n"
+           f"• Всего добыто золота: **{stats['total_gold']}**💰\n• Критические удары: **{stats['total_crits']}**\n"
+           f"• Макс. серия критов: **{stats['max_crit_streak']}**\n\n⚡ **Улучшения**\n"
+           f"• Сила клика: ур.**{stats['upgrades']['click_power']}**\n• Шанс крита: ур.**{stats['upgrades']['crit_chance']}**\n")
     async with db_pool.acquire() as conn:
         recent = await conn.fetch("SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id = $1 ORDER BY unlocked_at DESC LIMIT 5", uid)
     if recent:
@@ -2384,4 +2389,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
