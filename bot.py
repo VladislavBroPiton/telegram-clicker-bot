@@ -465,6 +465,15 @@ async def init_db():
             )
         ''')
         await conn.execute('''
+            CREATE TABLE IF NOT EXISTS player_items (
+                user_id BIGINT,
+                item_id TEXT,
+                quantity INTEGER DEFAULT 1,
+                expires_at TIMESTAMP,
+                PRIMARY KEY (user_id, item_id)
+            )
+        ''')
+        await conn.execute('''
             INSERT INTO global_state (id, last_boss_reset)
             SELECT 1, NOW() WHERE NOT EXISTS (SELECT 1 FROM global_state WHERE id = 1)
         ''')
@@ -2374,6 +2383,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
