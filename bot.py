@@ -1591,6 +1591,7 @@ async def show_leaderboard_resources_menu(update_or_query, ctx):
 
 async def show_leaderboard_level(update_or_query, ctx):
     async with db_pool.acquire() as conn:
+        # Получаем данные и сразу вычисляем общий опыт
         rows = await conn.fetch("SELECT username, level, exp FROM players ORDER BY level DESC, exp DESC LIMIT 10")
     txt = "📊 **Топ по уровню**\n\n"
     if not rows:
@@ -1598,7 +1599,8 @@ async def show_leaderboard_level(update_or_query, ctx):
     else:
         for i, row in enumerate(rows, 1):
             name = escape_markdown(row['username'] or 'Аноним', version=1)
-            txt += f"{i}. {name} — уровень {row['level']} (опыт {row['exp']})\n"
+            total_exp = (row['level'] - 1) * EXP_PER_LEVEL + row['exp']
+            txt += f"{i}. {name} — уровень {row['level']} (общий опыт {total_exp})\n"   # ← изменено
     kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
     await reply_or_edit(update_or_query, txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
 
@@ -2389,5 +2391,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
