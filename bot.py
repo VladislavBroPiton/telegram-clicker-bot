@@ -519,11 +519,20 @@ async def get_player_stats(uid: int, conn: asyncpg.Connection = None) -> dict:
         for up_id in UPGRADES:
             level = await conn.fetchval("SELECT level FROM upgrades WHERE user_id = $1 AND upgrade_id = $2", uid, up_id)
             ups[up_id] = level if level is not None else 0
+        # Вычисляем общий опыт
+        total_exp = (lvl - 1) * EXP_PER_LEVEL + exp
         return {
-            'level': lvl, 'exp': exp, 'exp_next': EXP_PER_LEVEL,
-            'gold': gold, 'clicks': clicks, 'total_gold': tg,
-            'total_crits': crits, 'current_crit_streak': cstreak,
-            'max_crit_streak': mstreak, 'upgrades': ups
+            'level': lvl, 
+            'exp': exp, 
+            'total_exp': total_exp,      # добавлено
+            'exp_next': EXP_PER_LEVEL,
+            'gold': gold, 
+            'clicks': clicks, 
+            'total_gold': tg,
+            'total_crits': crits, 
+            'current_crit_streak': cstreak,
+            'max_crit_streak': mstreak, 
+            'upgrades': ups
         }
 
     if conn is None:
@@ -2375,3 +2384,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
