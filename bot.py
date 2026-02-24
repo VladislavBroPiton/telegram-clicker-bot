@@ -1321,21 +1321,11 @@ async def show_locations(update_or_query, ctx):
     lvl = stats['level']
     tool_level = await get_active_tool_level(uid)
     sl = sorted(LOCATIONS.items(), key=lambda x: x[1]['min_level'])
-    cur_idx = None
-    for i, (lid, _) in enumerate(sl):
-        if lid == cur:
-            cur_idx = i
-            break
-    if cur_idx is None:
-        cur_idx = 0
-    idxs = [cur_idx]
-    if cur_idx + 1 < len(sl):
-        idxs.append(cur_idx + 1)
     
-    txt = "🗺 **Локации**\n\n"
+    txt = "🗺 **Обычные локации**\n\n"
     kb = []
-    for i in idxs:
-        lid, loc = sl[i]
+    
+    for lid, loc in sl:
         level_ok = lvl >= loc['min_level']
         tool_ok = tool_level >= loc.get('min_tool_level', 0) if loc.get('min_tool_level', 0) > 0 else True
         avail = level_ok and tool_ok
@@ -1353,20 +1343,12 @@ async def show_locations(update_or_query, ctx):
             line += f" (доступна)"
         txt += line + "\n   " + loc['description'] + "\n"
         
-        if not level_ok:
-            progress = lvl
-            req = loc['min_level']
-            percent = int(progress / req * 100) if req > 0 else 0
-            bar = "█" * (percent // 10) + "░" * (10 - (percent // 10))
-            txt += f"   Прогресс уровня: {bar} {lvl}/{req}\n"
-        elif not tool_ok:
-            txt += f"   Текущий инструмент: {tool_level} ур., требуется {loc['min_tool_level']} ур.\n"
-        txt += "\n"
-        
+        # Добавляем кнопку перехода, если локация доступна и не текущая
         if avail and not is_cur:
             kb.append([InlineKeyboardButton(f"Перейти в {loc['name']}", callback_data=f'goto_{lid}')])
     
-    txt += "\n⚔️ **Босс-локации (5+ уровень)**\n\n"
+    # Босс-локации (информационно, без кнопок перехода)
+    txt += "\n⚔️ **Босс-локации**\n\n"
     for bid, bloc in BOSS_LOCATIONS.items():
         level_ok = lvl >= bloc['min_level']
         tool_ok = tool_level >= bloc['min_tool_level']
@@ -1970,8 +1952,9 @@ async def goto_location(update_or_query, ctx):
             await update_or_query.answer(f"❌ Требуется инструмент {loc['min_tool_level']} уровня", show_alert=True)
             return
     await set_player_location(uid, lid)
-    await update_or_query.answer(f"Ты переместился в {loc['name']}")
-    await show_main_menu_from_query(update_or_query)
+    await update_or_query.answer(f"✅ Ты переместился в {loc['name']}")
+    # После перехода обновляем список локаций
+    await show_locations(update_or_query, ctx)
 
 async def fight_boss(update_or_query, ctx):
     q = update_or_query
@@ -2391,6 +2374,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
