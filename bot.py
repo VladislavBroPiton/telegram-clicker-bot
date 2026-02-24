@@ -1,7 +1,7 @@
 """
 Telegram кликер бот "Шахтёрская глубина"
 Финальная версия с улучшенной безопасностью, транзакциями и защитой от гонок.
-Добавлено: автоматическое повышение уровня, сброс боссов каждые 6 часов.
+Добавлены: крафт, выбор локаций, автосброс боссов, общий опыт в профиле.
 """
 
 import logging
@@ -58,7 +58,7 @@ class Achievement:
         self.reward_gold = reward_gold
         self.reward_exp = reward_exp
 
-# Улучшения (auto_clicker удалён)
+# Улучшения
 UPGRADES = {
     'click_power': {'name': '⚡ Сила клика', 'description': '+2 золота за клик', 'base_price': 50, 'price_mult': 2.0, 'effect': {'click_gold': 2}},
     'crit_chance': {'name': '🍀 Шанс крита', 'description': '+2% шанс двойной добычи', 'base_price': 100, 'price_mult': 1.5, 'effect': {'crit_chance': 2}}
@@ -138,7 +138,7 @@ LOCATIONS = {
 BOSS_LOCATIONS = {
     'goblin_king': {
         'name': 'Логово короля гоблинов',
-        'description': 'Старый король гоблинов, накопивший горы золота. Бой с ним требует смелости.',
+        'description': 'Старый король гоблинов, накопивший горы золота.',
         'min_level': 5,
         'min_tool_level': 1,
         'boss': {
@@ -151,7 +151,7 @@ BOSS_LOCATIONS = {
     },
     'dragon_lair': {
         'name': 'Логово дракона',
-        'description': 'Древний дракон, стерегущий несметные сокровища. Будь осторожен!',
+        'description': 'Древний дракон, стерегущий несметные сокровища.',
         'min_level': 5,
         'min_tool_level': 1,
         'boss': {
@@ -164,7 +164,7 @@ BOSS_LOCATIONS = {
     },
     'lich_castle': {
         'name': 'Цитадель лича',
-        'description': 'Могущественный лич, собирающий души для своего ритуала.',
+        'description': 'Могущественный лич, собирающий души.',
         'min_level': 1,
         'min_tool_level': 1,
         'boss': {
@@ -220,14 +220,14 @@ WEEKLY_TASK_TEMPLATES = [
 
 FAQ = [
     {"question": "🪨 Как добывать ресурсы?", "answer": "Нажимай кнопку «⛏ Добыть» в главном меню. Каждый клик приносит золото, опыт и случайные ресурсы в зависимости от текущей локации."},
-    {"question": "🗺 Как открыть новые локации?", "answer": "Повышай уровень, кликая. Каждая новая локация требует определённый уровень. Начиная с Золотой жилы, также требуется минимальный уровень активного инструмента (кирки). Список доступных локаций можно посмотреть по команде /locations. Там же отображается следующая локация, требования и прогресс её открытия."},
-    {"question": "🧰 Зачем нужны инструменты?", "answer": "Инструменты (кирки) увеличивают количество добываемых ресурсов. Их можно купить в магазине за золото, а затем улучшать за ресурсы. Чем выше уровень инструмента, тем больше ресурсов ты добываешь за клик. Кроме того, для доступа к некоторым локациям (Золотая жила, Алмазная пещера, Мифриловые копи) требуется определённый уровень активного инструмента."},
-    {"question": "📋 Что такое ежедневные и еженедельные задания?", "answer": "Каждый день появляются 3 случайных задания, а каждую неделю – 2 более сложных. Выполняй их, чтобы получать дополнительное золото и опыт. Задания обновляются автоматически при входе в раздел."},
+    {"question": "🗺 Как открыть новые локации?", "answer": "Повышай уровень, кликая. Каждая новая локация требует определённый уровень. Начиная с Золотой жилы, также требуется минимальный уровень активного инструмента. Список доступных локаций можно посмотреть по команде /locations."},
+    {"question": "🧰 Зачем нужны инструменты?", "answer": "Инструменты (кирки) увеличивают количество добываемых ресурсов. Их можно купить в магазине за золото, а затем улучшать за ресурсы. Чем выше уровень инструмента, тем больше ресурсов ты добываешь за клик."},
+    {"question": "📋 Что такое ежедневные и еженедельные задания?", "answer": "Каждый день появляются 3 случайных задания, а каждую неделю – 2 более сложных. Выполняй их, чтобы получать дополнительное золото и опыт."},
     {"question": "💰 Как продать ресурсы?", "answer": "Зайди в раздел «💰 Рынок» (команда /market). Ты увидишь список своих ресурсов и текущие цены. Можно продать 1 единицу или всё количество сразу."},
-    {"question": "🏆 Что такое достижения?", "answer": "Достижения – это особые цели, за выполнение которых даются награды (золото и опыт). Посмотреть список своих достижений можно по команде /achievements или нажав кнопку «🏆 Достижения» в профиле."},
+    {"question": "🏆 Что такое достижения?", "answer": "Достижения – это особые цели, за выполнение которых даются награды (золото и опыт). Посмотреть список своих достижений можно по команде /achievements."},
     {"question": "⚡ Как увеличить доход за клик?", "answer": "Покупай улучшения в магазине (категория «⚡ Улучшения»). «Сила клика» прямо увеличивает золото за клик, а «Шанс крита» даёт шанс удвоить добычу."},
     {"question": "🔄 Как сменить активный инструмент?", "answer": "В магазине в категории «🧰 Инструменты» нажми кнопку «🔨 Сделать активным» рядом с нужным инструментом. Активный инструмент используется при добыче."},
-    {"question": "📊 Как отслеживать прогресс открытия локаций?", "answer": "В разделе /locations для недоступных локаций отображается прогресс-бар, показывающий, сколько уровней осталось до открытия, а также текущий уровень инструмента, если требуется его улучшение."},
+    {"question": "🔨 Что такое крафт?", "answer": "В разделе «Крафт» ты можешь создавать полезные предметы из ресурсов: зелья, ключи для повторного боя с боссами, модификаторы для инструментов и конвертировать ресурсы."},
 ]
 
 # ==================== УСЛОВИЯ ДОСТИЖЕНИЙ ====================
@@ -288,7 +288,6 @@ def condition_explorer(uid, data):
     max_loc_level = max(loc['min_level'] for loc in LOCATIONS.values())
     return stats['level'] >= max_loc_level, stats['level'], max_loc_level
 
-# Список всех достижений
 ACHIEVEMENTS = [
     Achievement('first_click', 'Первые шаги', 'Сделать первый клик', cond_first_click, 10, 5),
     Achievement('clicks_100', 'Начинающий шахтёр', 'Сделать 100 кликов', cond_clicks_100, 50, 20),
@@ -360,7 +359,7 @@ async def reply_or_edit(update_or_query, text: str, reply_markup=None, parse_mod
             if "Message is not modified" not in str(e):
                 raise
 
-# ==================== ФУНКЦИИ БАЗЫ ДАННЫХ ====================
+# ==================== ФУНКЦИИ БАЗЫ ДАННЫХ (с поддержкой переданного соединения) ====================
 
 async def init_db():
     async with db_pool.acquire() as conn:
@@ -457,13 +456,7 @@ async def init_db():
                 PRIMARY KEY (user_id, boss_id)
             )
         ''')
-        # Таблица для глобального состояния (сброс боссов)
-        await conn.execute('''
-            CREATE TABLE IF NOT EXISTS global_state (
-                id INTEGER PRIMARY KEY DEFAULT 1,
-                last_boss_reset TIMESTAMP
-            )
-        ''')
+        # Таблица для предметов крафта
         await conn.execute('''
             CREATE TABLE IF NOT EXISTS player_items (
                 user_id BIGINT,
@@ -473,6 +466,14 @@ async def init_db():
                 PRIMARY KEY (user_id, item_id)
             )
         ''')
+        # Таблица для глобального состояния (автосброс боссов)
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS global_state (
+                id INTEGER PRIMARY KEY DEFAULT 1,
+                last_boss_reset TIMESTAMP
+            )
+        ''')
+        # Инициализация global_state, если нет записи
         await conn.execute('''
             INSERT INTO global_state (id, last_boss_reset)
             SELECT 1, NOW() WHERE NOT EXISTS (SELECT 1 FROM global_state WHERE id = 1)
@@ -528,12 +529,11 @@ async def get_player_stats(uid: int, conn: asyncpg.Connection = None) -> dict:
         for up_id in UPGRADES:
             level = await conn.fetchval("SELECT level FROM upgrades WHERE user_id = $1 AND upgrade_id = $2", uid, up_id)
             ups[up_id] = level if level is not None else 0
-        # Вычисляем общий опыт
         total_exp = (lvl - 1) * EXP_PER_LEVEL + exp
         return {
             'level': lvl, 
             'exp': exp, 
-            'total_exp': total_exp,      # добавлено
+            'total_exp': total_exp,
             'exp_next': EXP_PER_LEVEL,
             'gold': gold, 
             'clicks': clicks, 
@@ -966,7 +966,6 @@ async def get_boss_progress(uid: int, boss_id: str, conn: asyncpg.Connection = N
 
 async def update_boss_health(uid: int, boss_id: str, damage: int, conn: asyncpg.Connection = None) -> bool:
     async def _update(conn):
-        # Используем FOR UPDATE для блокировки строки
         await conn.execute("SELECT current_health FROM boss_progress WHERE user_id=$1 AND boss_id=$2 FOR UPDATE", uid, boss_id)
         await conn.execute("UPDATE boss_progress SET current_health = current_health - $1 WHERE user_id=$2 AND boss_id=$3 AND current_health > 0", damage, uid, boss_id)
         row = await conn.fetchrow("SELECT current_health FROM boss_progress WHERE user_id=$1 AND boss_id=$2", uid, boss_id)
@@ -983,10 +982,8 @@ async def update_boss_health(uid: int, boss_id: str, damage: int, conn: asyncpg.
         return await _update(conn)
 
 async def check_and_reset_bosses(conn: asyncpg.Connection):
-    """Проверяет, не прошло ли 6 часов с последнего сброса боссов. Если да – обнуляет всех."""
     row = await conn.fetchrow("SELECT last_boss_reset FROM global_state WHERE id = 1")
     if not row:
-        # На всякий случай создаём запись
         await conn.execute("INSERT INTO global_state (id, last_boss_reset) VALUES (1, NOW())")
         return
     last_reset = row['last_boss_reset']
@@ -1107,6 +1104,202 @@ async def send_achievements(uid: int, ctx: ContextTypes.DEFAULT_TYPE):
             text += "\n"
     await ctx.bot.send_message(chat_id=uid, text=text, parse_mode='Markdown')
 
+# ==================== КРАФТ (РЕЦЕПТЫ) ====================
+
+CRAFT_RECIPES = {
+    # Категория: зелья
+    'speed_potion': {
+        'name': '⚗️ Зелье скорости',
+        'description': '➕50% к опыту на 30 минут',
+        'category': 'potions',
+        'resources': {'coal': 5, 'iron': 2, 'magic_essence': 1},
+        'result_item_id': 'speed_potion',
+        'result_type': 'consumable',
+        'effect': {'exp_multiplier': 1.5},
+        'duration': 1800  # в секундах
+    },
+    'luck_elixir': {
+        'name': '🍀 Эликсир удачи',
+        'description': '➕10% к шансу крита на 1 час',
+        'category': 'potions',
+        'resources': {'gold': 3, 'diamond': 2, 'dragon_scale': 1},
+        'result_item_id': 'luck_elixir',
+        'result_type': 'consumable',
+        'effect': {'crit_chance_bonus': 10},
+        'duration': 3600
+    },
+    # Категория: ключи
+    'goblin_key': {
+        'name': '🔑 Ключ от логова гоблинов',
+        'description': 'Позволяет сразиться с Королём гоблинов ещё раз',
+        'category': 'keys',
+        'resources': {'coal': 50, 'iron': 20, 'gold': 5},
+        'result_item_id': 'goblin_key',
+        'result_type': 'key',
+        'effect': {'boss_id': 'goblin_king'}
+    },
+    'dragon_key': {
+        'name': '🔑 Ключ от логова дракона',
+        'description': 'Позволяет сразиться с Огненным драконом ещё раз',
+        'category': 'keys',
+        'resources': {'diamond': 30, 'soul_shard': 10, 'dragon_scale': 3},
+        'result_item_id': 'dragon_key',
+        'result_type': 'key',
+        'effect': {'boss_id': 'dragon_lair'}
+    },
+    'lich_key': {
+        'name': '🔑 Ключ от цитадели лича',
+        'description': 'Позволяет сразиться с Архиличем ещё раз',
+        'category': 'keys',
+        'resources': {'mithril': 20, 'magic_essence': 15, 'dragon_scale': 5},
+        'result_item_id': 'lich_key',
+        'result_type': 'key',
+        'effect': {'boss_id': 'lich_castle'}
+    },
+    # Категория: модификаторы для инструментов (постоянные)
+    'sharp_teeth': {
+        'name': '⚔️ Острые зубья',
+        'description': '➕2 к силе активного инструмента (постоянно)',
+        'category': 'mods',
+        'resources': {'iron': 20, 'gold': 10, 'diamond': 5},
+        'result_item_id': 'sharp_teeth',
+        'result_type': 'permanent',
+        'effect': {'tool_power_bonus': 2}
+    },
+    'magic_rune': {
+        'name': '🔮 Магическая руна',
+        'description': '➕5% к шансу двойной добычи (постоянно)',
+        'category': 'mods',
+        'resources': {'mithril': 10, 'soul_shard': 3, 'dragon_scale': 2},
+        'result_item_id': 'magic_rune',
+        'result_type': 'permanent',
+        'effect': {'crit_chance_bonus_permanent': 5}
+    },
+    # Категория: конвертация
+    'gold_ore_craft': {
+        'name': '🪙 Синтез золотой руды',
+        'description': 'Преобразовать 10 угля + 5 железа в 1 золотую руду',
+        'category': 'conversion',
+        'resources': {'coal': 10, 'iron': 5},
+        'result_item_id': 'gold',
+        'result_type': 'resource',
+        'effect': {'resource_id': 'gold', 'amount': 1}
+    },
+    'diamond_craft': {
+        'name': '💎 Синтез алмаза',
+        'description': 'Преобразовать 20 золота + 10 железа в 1 алмаз',
+        'category': 'conversion',
+        'resources': {'gold': 20, 'iron': 10},
+        'result_item_id': 'diamond',
+        'result_type': 'resource',
+        'effect': {'resource_id': 'diamond', 'amount': 1}
+    },
+    'mithril_craft': {
+        'name': '🔮 Синтез мифрила',
+        'description': 'Преобразовать 30 алмазов + 15 золота в 1 мифрил',
+        'category': 'conversion',
+        'resources': {'diamond': 30, 'gold': 15},
+        'result_item_id': 'mithril',
+        'result_type': 'resource',
+        'effect': {'resource_id': 'mithril', 'amount': 1}
+    },
+}
+
+category_map = {
+    'potions': '⚗️ Зелья',
+    'keys': '🔑 Ключи',
+    'mods': '⚔️ Модификаторы',
+    'conversion': '🔄 Конвертация ресурсов'
+}
+
+# ---------- Предметы (крафт) ----------
+async def get_player_items(uid: int, conn: asyncpg.Connection = None) -> dict:
+    async def _get(conn):
+        rows = await conn.fetch("SELECT item_id, quantity FROM player_items WHERE user_id = $1", uid)
+        return {row['item_id']: row['quantity'] for row in rows}
+    if conn:
+        return await _get(conn)
+    else:
+        async with db_pool.acquire() as conn:
+            return await _get(conn)
+
+async def add_item(uid: int, item_id: str, quantity: int = 1, expires_at: datetime.datetime = None, conn: asyncpg.Connection = None):
+    async def _add(conn):
+        if expires_at:
+            await conn.execute("""
+                INSERT INTO player_items (user_id, item_id, quantity, expires_at)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (user_id, item_id) DO UPDATE
+                SET quantity = player_items.quantity + EXCLUDED.quantity
+            """, uid, item_id, quantity, expires_at)
+        else:
+            await conn.execute("""
+                INSERT INTO player_items (user_id, item_id, quantity)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (user_id, item_id) DO UPDATE
+                SET quantity = player_items.quantity + EXCLUDED.quantity
+            """, uid, item_id, quantity)
+    if conn:
+        await _add(conn)
+    else:
+        async with db_pool.acquire() as conn:
+            async with conn.transaction():
+                await _add(conn)
+
+async def remove_item(uid: int, item_id: str, quantity: int = 1, conn: asyncpg.Connection = None) -> bool:
+    async def _remove(conn):
+        cur = await conn.fetchval("SELECT quantity FROM player_items WHERE user_id = $1 AND item_id = $2", uid, item_id)
+        if not cur or cur < quantity:
+            return False
+        new_qty = cur - quantity
+        if new_qty == 0:
+            await conn.execute("DELETE FROM player_items WHERE user_id = $1 AND item_id = $2", uid, item_id)
+        else:
+            await conn.execute("UPDATE player_items SET quantity = $1 WHERE user_id = $2 AND item_id = $3", new_qty, uid, item_id)
+        return True
+    if conn:
+        return await _remove(conn)
+    else:
+        async with db_pool.acquire() as conn:
+            async with conn.transaction():
+                return await _remove(conn)
+
+async def craft_item(uid: int, recipe_id: str, conn: asyncpg.Connection = None) -> Tuple[bool, str]:
+    recipe = CRAFT_RECIPES.get(recipe_id)
+    if not recipe:
+        return False, "Рецепт не найден"
+    
+    async def _craft(conn):
+        inv = await get_inventory(uid, conn)
+        for res, need in recipe['resources'].items():
+            if inv.get(res, 0) < need:
+                return False, f"Недостаточно {RESOURCES[res]['name']}"
+        
+        for res, need in recipe['resources'].items():
+            await remove_resource(uid, res, need, conn)
+        
+        result_type = recipe.get('result_type')
+        if result_type == 'resource':
+            await add_resource(uid, recipe['effect']['resource_id'], recipe['effect']['amount'], conn)
+            return True, f"✅ Создано: {recipe['effect']['amount']} {RESOURCES[recipe['effect']['resource_id']]['name']}"
+        elif result_type in ('consumable', 'key', 'permanent'):
+            if recipe.get('duration'):
+                expires_at = datetime.datetime.now() + datetime.timedelta(seconds=recipe['duration'])
+            else:
+                expires_at = None
+            await add_item(uid, recipe['result_item_id'], 1, expires_at, conn)
+            return True, f"✅ Создано: {recipe['name']}"
+        else:
+            return False, "Неизвестный тип результата"
+    
+    if conn:
+        async with conn.transaction():
+            return await _craft(conn)
+    else:
+        async with db_pool.acquire() as conn:
+            async with conn.transaction():
+                return await _craft(conn)
+
 # ==================== ОБЩАЯ ЛОГИКА КЛИКА ====================
 
 async def process_click(uid: int, conn: asyncpg.Connection = None) -> dict:
@@ -1170,6 +1363,7 @@ async def process_click(uid: int, conn: asyncpg.Connection = None) -> dict:
             await update_daily_task_progress(uid, 'Везунчик', 1, conn)
         if found:
             await update_daily_task_progress(uid, 'Рудокоп', amt, conn)
+        if found:
             await update_daily_task_progress(uid, 'Горняк', amt, conn)
 
         await update_weekly_task_progress(uid, 'Шахтёр', 1, conn)
@@ -1179,11 +1373,11 @@ async def process_click(uid: int, conn: asyncpg.Connection = None) -> dict:
         if found:
             await update_weekly_task_progress(uid, 'Коллекционер', amt, conn)
 
-        # Повышение уровня
-        await level_up_if_needed(uid, conn)
-
         # Проверка достижений
         await check_achievements(uid, conn=conn)
+
+        # Повышаем уровень, если нужно
+        await level_up_if_needed(uid, conn)
 
         # Получаем свежие данные для ответа
         new_stats = await get_player_stats(uid, conn)
@@ -1207,102 +1401,285 @@ async def process_click(uid: int, conn: asyncpg.Connection = None) -> dict:
     else:
         return await _execute(conn)
 
-# ==================== ОБРАБОТЧИКИ КОМАНД ====================
+# ==================== КРАФТ (РЕЦЕПТЫ) ====================
 
-async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    u = update.effective_user
-    await get_player(u.id, u.username)
-    await show_main_menu(update, ctx)
+CRAFT_RECIPES = {
+    # Категория: зелья
+    'speed_potion': {
+        'name': '⚗️ Зелье скорости',
+        'description': '➕50% к опыту на 30 минут',
+        'category': 'potions',
+        'resources': {'coal': 5, 'iron': 2, 'magic_essence': 1},
+        'result_item_id': 'speed_potion',
+        'result_type': 'consumable',
+        'effect': {'exp_multiplier': 1.5},
+        'duration': 1800  # в секундах
+    },
+    'luck_elixir': {
+        'name': '🍀 Эликсир удачи',
+        'description': '➕10% к шансу крита на 1 час',
+        'category': 'potions',
+        'resources': {'gold': 3, 'diamond': 2, 'dragon_scale': 1},
+        'result_item_id': 'luck_elixir',
+        'result_type': 'consumable',
+        'effect': {'crit_chance_bonus': 10},
+        'duration': 3600
+    },
+    # Категория: ключи
+    'goblin_key': {
+        'name': '🔑 Ключ от логова гоблинов',
+        'description': 'Позволяет сразиться с Королём гоблинов ещё раз',
+        'category': 'keys',
+        'resources': {'coal': 50, 'iron': 20, 'gold': 5},
+        'result_item_id': 'goblin_key',
+        'result_type': 'key',
+        'effect': {'boss_id': 'goblin_king'}
+    },
+    'dragon_key': {
+        'name': '🔑 Ключ от логова дракона',
+        'description': 'Позволяет сразиться с Огненным драконом ещё раз',
+        'category': 'keys',
+        'resources': {'diamond': 30, 'soul_shard': 10, 'dragon_scale': 3},
+        'result_item_id': 'dragon_key',
+        'result_type': 'key',
+        'effect': {'boss_id': 'dragon_lair'}
+    },
+    'lich_key': {
+        'name': '🔑 Ключ от цитадели лича',
+        'description': 'Позволяет сразиться с Архиличем ещё раз',
+        'category': 'keys',
+        'resources': {'mithril': 20, 'magic_essence': 15, 'dragon_scale': 5},
+        'result_item_id': 'lich_key',
+        'result_type': 'key',
+        'effect': {'boss_id': 'lich_castle'}
+    },
+    # Категория: модификаторы для инструментов (постоянные)
+    'sharp_teeth': {
+        'name': '⚔️ Острые зубья',
+        'description': '➕2 к силе активного инструмента (постоянно)',
+        'category': 'mods',
+        'resources': {'iron': 20, 'gold': 10, 'diamond': 5},
+        'result_item_id': 'sharp_teeth',
+        'result_type': 'permanent',
+        'effect': {'tool_power_bonus': 2}
+    },
+    'magic_rune': {
+        'name': '🔮 Магическая руна',
+        'description': '➕5% к шансу двойной добычи (постоянно)',
+        'category': 'mods',
+        'resources': {'mithril': 10, 'soul_shard': 3, 'dragon_scale': 2},
+        'result_item_id': 'magic_rune',
+        'result_type': 'permanent',
+        'effect': {'crit_chance_bonus_permanent': 5}
+    },
+    # Категория: конвертация
+    'gold_ore_craft': {
+        'name': '🪙 Синтез золотой руды',
+        'description': 'Преобразовать 10 угля + 5 железа в 1 золотую руду',
+        'category': 'conversion',
+        'resources': {'coal': 10, 'iron': 5},
+        'result_item_id': 'gold',
+        'result_type': 'resource',
+        'effect': {'resource_id': 'gold', 'amount': 1}
+    },
+    'diamond_craft': {
+        'name': '💎 Синтез алмаза',
+        'description': 'Преобразовать 20 золота + 10 железа в 1 алмаз',
+        'category': 'conversion',
+        'resources': {'gold': 20, 'iron': 10},
+        'result_item_id': 'diamond',
+        'result_type': 'resource',
+        'effect': {'resource_id': 'diamond', 'amount': 1}
+    },
+    'mithril_craft': {
+        'name': '🔮 Синтез мифрила',
+        'description': 'Преобразовать 30 алмазов + 15 золота в 1 мифрил',
+        'category': 'conversion',
+        'resources': {'diamond': 30, 'gold': 15},
+        'result_item_id': 'mithril',
+        'result_type': 'resource',
+        'effect': {'resource_id': 'mithril', 'amount': 1}
+    },
+}
 
-async def cmd_mine(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    u = update.effective_user
-    await get_player(u.id, u.username)
-    await mine_action(update, ctx)
+category_map = {
+    'potions': '⚗️ Зелья',
+    'keys': '🔑 Ключи',
+    'mods': '⚔️ Модификаторы',
+    'conversion': '🔄 Конвертация ресурсов'
+}
 
-async def cmd_locations(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    u = update.effective_user
-    await get_player(u.id, u.username)
-    await show_locations(update, ctx)
+# ---------- Предметы (крафт) ----------
+async def get_player_items(uid: int, conn: asyncpg.Connection = None) -> dict:
+    async def _get(conn):
+        rows = await conn.fetch("SELECT item_id, quantity FROM player_items WHERE user_id = $1", uid)
+        return {row['item_id']: row['quantity'] for row in rows}
+    if conn:
+        return await _get(conn)
+    else:
+        async with db_pool.acquire() as conn:
+            return await _get(conn)
 
-async def cmd_shop(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    u = update.effective_user
-    await get_player(u.id, u.username)
-    await show_shop_menu(update, ctx)
+async def add_item(uid: int, item_id: str, quantity: int = 1, expires_at: datetime.datetime = None, conn: asyncpg.Connection = None):
+    async def _add(conn):
+        if expires_at:
+            await conn.execute("""
+                INSERT INTO player_items (user_id, item_id, quantity, expires_at)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (user_id, item_id) DO UPDATE
+                SET quantity = player_items.quantity + EXCLUDED.quantity
+            """, uid, item_id, quantity, expires_at)
+        else:
+            await conn.execute("""
+                INSERT INTO player_items (user_id, item_id, quantity)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (user_id, item_id) DO UPDATE
+                SET quantity = player_items.quantity + EXCLUDED.quantity
+            """, uid, item_id, quantity)
+    if conn:
+        await _add(conn)
+    else:
+        async with db_pool.acquire() as conn:
+            async with conn.transaction():
+                await _add(conn)
 
-async def cmd_tasks(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    u = update.effective_user
-    await get_player(u.id, u.username)
-    await show_daily_tasks(update, ctx)
+async def remove_item(uid: int, item_id: str, quantity: int = 1, conn: asyncpg.Connection = None) -> bool:
+    async def _remove(conn):
+        cur = await conn.fetchval("SELECT quantity FROM player_items WHERE user_id = $1 AND item_id = $2", uid, item_id)
+        if not cur or cur < quantity:
+            return False
+        new_qty = cur - quantity
+        if new_qty == 0:
+            await conn.execute("DELETE FROM player_items WHERE user_id = $1 AND item_id = $2", uid, item_id)
+        else:
+            await conn.execute("UPDATE player_items SET quantity = $1 WHERE user_id = $2 AND item_id = $3", new_qty, uid, item_id)
+        return True
+    if conn:
+        return await _remove(conn)
+    else:
+        async with db_pool.acquire() as conn:
+            async with conn.transaction():
+                return await _remove(conn)
 
-async def cmd_profile(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    u = update.effective_user
-    await get_player(u.id, u.username)
-    await show_profile(update, ctx)
+async def craft_item(uid: int, recipe_id: str, conn: asyncpg.Connection = None) -> Tuple[bool, str]:
+    recipe = CRAFT_RECIPES.get(recipe_id)
+    if not recipe:
+        return False, "Рецепт не найден"
+    
+    async def _craft(conn):
+        inv = await get_inventory(uid, conn)
+        for res, need in recipe['resources'].items():
+            if inv.get(res, 0) < need:
+                return False, f"Недостаточно {RESOURCES[res]['name']}"
+        
+        for res, need in recipe['resources'].items():
+            await remove_resource(uid, res, need, conn)
+        
+        result_type = recipe.get('result_type')
+        if result_type == 'resource':
+            await add_resource(uid, recipe['effect']['resource_id'], recipe['effect']['amount'], conn)
+            return True, f"✅ Создано: {recipe['effect']['amount']} {RESOURCES[recipe['effect']['resource_id']]['name']}"
+        elif result_type in ('consumable', 'key', 'permanent'):
+            if recipe.get('duration'):
+                expires_at = datetime.datetime.now() + datetime.timedelta(seconds=recipe['duration'])
+            else:
+                expires_at = None
+            await add_item(uid, recipe['result_item_id'], 1, expires_at, conn)
+            return True, f"✅ Создано: {recipe['name']}"
+        else:
+            return False, "Неизвестный тип результата"
+    
+    if conn:
+        async with conn.transaction():
+            return await _craft(conn)
+    else:
+        async with db_pool.acquire() as conn:
+            async with conn.transaction():
+                return await _craft(conn)
 
-async def cmd_inventory(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    u = update.effective_user
-    await get_player(u.id, u.username)
-    await show_inventory(update, ctx)
+# ==================== ФУНКЦИИ ОТОБРАЖЕНИЯ (КРАФТ) ====================
 
-async def cmd_market(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    u = update.effective_user
-    await get_player(u.id, u.username)
-    await show_market(update, ctx)
+async def show_craft_menu(update_or_query, ctx):
+    kb = [
+        [InlineKeyboardButton("⚗️ Зелья", callback_data='craft_category_potions')],
+        [InlineKeyboardButton("🔑 Ключи", callback_data='craft_category_keys')],
+        [InlineKeyboardButton("⚔️ Модификаторы", callback_data='craft_category_mods')],
+        [InlineKeyboardButton("🔄 Конвертация ресурсов", callback_data='craft_category_conversion')],
+        [InlineKeyboardButton("🎒 Мои предметы", callback_data='craft_my_items')],
+        [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]
+    ]
+    txt = "🔨 **Крафт**\n\nВыберите категорию рецептов:"
+    await reply_or_edit(update_or_query, txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
 
-async def cmd_leaderboard(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    u = update.effective_user
-    await get_player(u.id, u.username)
-    await show_leaderboard_menu(update, ctx)
+async def show_craft_category(update_or_query, ctx, category):
+    uid = update_or_query.from_user.id
+    inv = await get_inventory(uid)
+    txt = f"🔨 **Категория: {category_map.get(category, category)}**\n\n"
+    kb = []
+    for rid, recipe in CRAFT_RECIPES.items():
+        if recipe['category'] != category:
+            continue
+        name = recipe['name']
+        desc = recipe['description']
+        resources = []
+        for res, need in recipe['resources'].items():
+            have = inv.get(res, 0)
+            emoji = "🟢" if have >= need else "🔴"
+            res_name = RESOURCES[res]['name']
+            resources.append(f"{emoji} {res_name} {need} (у вас {have})")
+        res_str = "\n      ".join(resources)
+        txt += f"**{name}**\n{desc}\n   Требуется:\n      {res_str}\n\n"
+        kb.append([InlineKeyboardButton(f"Создать {name}", callback_data=f'craft_do_{rid}')])
+    if not kb:
+        txt += "В этой категории пока нет рецептов.\n"
+    kb.append([InlineKeyboardButton("🔙 К категориям", callback_data='craft_menu')])
+    await reply_or_edit(update_or_query, txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
 
-async def cmd_faq(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    uid = update.effective_user.id
+async def show_craft_my_items(update_or_query, ctx):
+    uid = update_or_query.from_user.id
+    items = await get_player_items(uid)
+    if not items:
+        txt = "🎒 **Мои предметы**\n\nУ вас пока нет созданных предметов."
+    else:
+        txt = "🎒 **Мои предметы**\n\n"
+        for item_id, qty in items.items():
+            # Ищем название рецепта по result_item_id
+            name = next((r['name'] for r in CRAFT_RECIPES.values() if r['result_item_id'] == item_id), item_id)
+            txt += f"• {name} x{qty}\n"
+    kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='craft_menu')]]
+    await reply_or_edit(update_or_query, txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+
+async def craft_do(update_or_query, ctx, recipe_id):
+    uid = update_or_query.from_user.id
+    success, msg = await craft_item(uid, recipe_id)
+    if success:
+        await update_or_query.answer("✅ Предмет создан!", show_alert=False)
+        await ctx.bot.send_message(chat_id=uid, text=msg)
+    else:
+        await update_or_query.answer(msg, show_alert=True)
+    # Возвращаемся в категорию
+    recipe = CRAFT_RECIPES.get(recipe_id)
+    if recipe:
+        await show_craft_category(update_or_query, ctx, recipe['category'])
+    else:
+        await show_craft_menu(update_or_query, ctx)
+
+# ==================== ОБНОВЛЁННОЕ ГЛАВНОЕ МЕНЮ ====================
+
+async def show_main_menu(update_or_query, ctx):
+    uid = update_or_query.from_user.id if not isinstance(update_or_query, Update) else update_or_query.effective_user.id
     stats = await get_player_stats(uid)
-    lvl = stats['level']
-    faq_dict = {item["question"]: item["answer"] for item in FAQ}
-    categories = {
-        "🪨 **Основное**": [
-            "🪨 Как добывать ресурсы?",
-            "🧰 Зачем нужны инструменты?",
-            "⚡ Как увеличить доход за клик?"
-        ],
-        "🗺 **Локации**": [
-            "🗺 Как открыть новые локации?",
-            "🗺 Какие локации существуют и что там добывают?"
-        ],
-        "📋 **Задания**": [
-            "📋 Что такое ежедневные и еженедельные задания?"
-        ],
-        "💰 **Экономика**": [
-            "💰 Как продать ресурсы?",
-            "🏆 Что такое достижения?"
-        ],
-        "🔄 **Инструменты**": [
-            "🔄 Как сменить активный инструмент?"
-        ]
-    }
-    text = "📚 **Часто задаваемые вопросы**\n\n"
-    for category, questions in categories.items():
-        text += f"{category}\n" + "─" * 25 + "\n\n"
-        for q in questions:
-            if q in faq_dict:
-                q_esc = escape_markdown(q, version=1)
-                a_esc = escape_markdown(faq_dict[q], version=1)
-                text += f"❓ **{q_esc}**\n{a_esc}\n\n"
-        text += "\n"
-    kb = [[InlineKeyboardButton("🗺 Локации", callback_data='faq_locations')]]
-    await update.message.reply_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
-
-async def cmd_achievements(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    uid = update.effective_user.id
-    await send_achievements(uid, ctx)
-
-async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    txt = ("🪨 **Шахтёрский бот**\n\nТы начинающий шахтёр. Кликай, добывай ресурсы, продавай их, улучшай инструменты и открывай новые локации.\n\n**Команды:**\n/start - главное меню\n/mine - копнуть в текущей локации\n/locations - выбрать локацию\n/shop - магазин улучшений\n/tasks - задания\n/profile - твой профиль\n/inventory - ресурсы\n/market - продать ресурсы\n/leaderboard - топ игроков\n/achievements - мои достижения\n/faq - часто задаваемые вопросы\n/help - это сообщение")
-    await update.message.reply_text(txt, parse_mode='Markdown')
-
-async def cmd_myid(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    uid = update.effective_user.id
-    await update.message.reply_text(f"🔑 Ваш Telegram ID: `{uid}`", parse_mode='Markdown')
+    kb = [
+        [InlineKeyboardButton("⛏ Добыть", callback_data='mine'),
+         InlineKeyboardButton("📋 Задания", callback_data='tasks'),
+         InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')]
+    ]
+    kb.append([InlineKeyboardButton("🔨 Крафт", callback_data='craft_menu')])
+    if stats['level'] >= 5:
+        kb.append([InlineKeyboardButton("⚔️ Босс-арена (3D)", web_app=WebAppInfo(url="https://vladislavbropiton.github.io/telegram-clicker-bot/"))])
+    rm = InlineKeyboardMarkup(kb)
+    txt = ("🪨 **Шахтёрская глубина**\n\nПривет, шахтёр! Твой путь к богатству начинается здесь.\n\n🏁 **Что делать?**\n• Нажимай «⛏ Добыть» – каждый клик приносит золото и ресурсы.\n• Выполняй «📋 Задания» – получай бонусы.\n• Соревнуйся в «🏆 Лидеры» – стань лучшим!\n• Создавай предметы в «🔨 Крафт».\n\nОстальные команды доступны в меню (кнопка слева внизу).")
+    await reply_or_edit(update_or_query, txt, reply_markup=rm, parse_mode='Markdown')
 
 # ==================== ФУНКЦИИ ОТОБРАЖЕНИЯ ====================
 
@@ -1314,10 +1691,11 @@ async def show_main_menu(update_or_query, ctx):
          InlineKeyboardButton("📋 Задания", callback_data='tasks'),
          InlineKeyboardButton("🏆 Лидеры", callback_data='leaderboard_menu')]
     ]
+    kb.append([InlineKeyboardButton("🔨 Крафт", callback_data='craft_menu')])
     if stats['level'] >= 5:
         kb.append([InlineKeyboardButton("⚔️ Босс-арена (3D)", web_app=WebAppInfo(url="https://vladislavbropiton.github.io/telegram-clicker-bot/"))])
     rm = InlineKeyboardMarkup(kb)
-    txt = ("🪨 **Шахтёрская глубина**\n\nПривет, шахтёр! Твой путь к богатству начинается здесь.\n\n🏁 **Что делать?**\n• Нажимай «⛏ Добыть» – каждый клик приносит золото и ресурсы.\n• Выполняй «📋 Задания» – получай бонусы.\n• Соревнуйся в «🏆 Лидеры» – стань лучшим!\n\nОстальные команды доступны в меню (кнопка слева внизу).")
+    txt = ("🪨 **Шахтёрская глубина**\n\nПривет, шахтёр! Твой путь к богатству начинается здесь.\n\n🏁 **Что делать?**\n• Нажимай «⛏ Добыть» – каждый клик приносит золото и ресурсы.\n• Выполняй «📋 Задания» – получай бонусы.\n• Соревнуйся в «🏆 Лидеры» – стань лучшим!\n• Создавай предметы в «🔨 Крафт».\n\nОстальные команды доступны в меню (кнопка слева внизу).")
     await reply_or_edit(update_or_query, txt, reply_markup=rm, parse_mode='Markdown')
 
 async def show_main_menu_from_query(query, ctx=None):
@@ -1486,7 +1864,7 @@ async def show_profile(update_or_query, ctx):
         return
     username = escape_markdown(update_or_query.from_user.username or 'Аноним', version=1) if hasattr(update_or_query, 'from_user') else 'Аноним'
     txt = (f"👤 **Профиль игрока**\n\n📊 **Статистика**\n• Уровень: **{stats['level']}**\n"
-           f"• Общий опыт: **{stats['total_exp']}**\n"   # ← изменено
+           f"• Общий опыт: **{stats['total_exp']}**\n"
            f"• Золото: **{stats['gold']}**💰\n• Всего кликов: **{stats['clicks']}**\n"
            f"• Всего добыто золота: **{stats['total_gold']}**💰\n• Критические удары: **{stats['total_crits']}**\n"
            f"• Макс. серия критов: **{stats['max_crit_streak']}**\n\n⚡ **Улучшения**\n"
@@ -1582,7 +1960,6 @@ async def show_leaderboard_resources_menu(update_or_query, ctx):
 
 async def show_leaderboard_level(update_or_query, ctx):
     async with db_pool.acquire() as conn:
-        # Получаем данные и сразу вычисляем общий опыт
         rows = await conn.fetch("SELECT username, level, exp FROM players ORDER BY level DESC, exp DESC LIMIT 10")
     txt = "📊 **Топ по уровню**\n\n"
     if not rows:
@@ -1591,7 +1968,7 @@ async def show_leaderboard_level(update_or_query, ctx):
         for i, row in enumerate(rows, 1):
             name = escape_markdown(row['username'] or 'Аноним', version=1)
             total_exp = (row['level'] - 1) * EXP_PER_LEVEL + row['exp']
-            txt += f"{i}. {name} — уровень {row['level']} (общий опыт {total_exp})\n"   # ← изменено
+            txt += f"{i}. {name} — уровень {row['level']} (общий опыт {total_exp})\n"
     kb = [[InlineKeyboardButton("🔙 К категориям", callback_data='leaderboard_menu')]]
     await reply_or_edit(update_or_query, txt, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
 
@@ -1706,7 +2083,6 @@ async def show_faq_locations(update_or_query, ctx):
         text += f"{emoji} **{name}**\n"
         text += f"   Требуется: уровень {req_level}{tool_text}\n"
         text += f"   {loc['description']}\n"
-        # Ресурсы
         res_list = []
         for res in loc['resources']:
             res_name = RESOURCES[res['res_id']]['name']
@@ -1723,33 +2099,29 @@ async def show_faq_locations(update_or_query, ctx):
 
 async def show_faq_boss_locations(update_or_query, ctx):
     text = "⚔️ **Босс-локации** ⚔️\n\n"
-    if 'BOSS_LOCATIONS' not in globals() or not BOSS_LOCATIONS:
-        text += "Информация о босс-локациях пока не добавлена."
-    else:
-        for bid, bloc in BOSS_LOCATIONS.items():
-            boss = bloc['boss']
-            if 'goblin' in bid:
-                emoji = "👑"
-            elif 'dragon' in bid:
-                emoji = "🐉"
-            else:
-                emoji = "💀"
-            
-            text += f"{emoji} **{bloc['name']}**\n"
-            text += f"   Требуется: уровень {bloc['min_level']}, инструмент {bloc['min_tool_level']} ур.\n"
-            text += f"   {bloc['description']}\n"
-            text += f"   Босс: {boss['name']} | Здоровье: {boss['health']}\n"
-            # Награда
-            rewards = []
-            if boss['reward_gold']:
-                rewards.append(f"{boss['reward_gold']}💰")
-            if boss['exp_reward']:
-                rewards.append(f"{boss['exp_reward']}✨")
-            for res, (minr, maxr) in boss['reward_resources'].items():
-                res_name = RESOURCES.get(res, {}).get('name', res)
-                amount = f"{minr}-{maxr}" if minr != maxr else str(minr)
-                rewards.append(f"{res_name} {amount} шт.")
-            text += f"   Награда: {', '.join(rewards)}\n\n"
+    for bid, bloc in BOSS_LOCATIONS.items():
+        boss = bloc['boss']
+        if 'goblin' in bid:
+            emoji = "👑"
+        elif 'dragon' in bid:
+            emoji = "🐉"
+        else:
+            emoji = "💀"
+        
+        text += f"{emoji} **{bloc['name']}**\n"
+        text += f"   Требуется: уровень {bloc['min_level']}, инструмент {bloc['min_tool_level']} ур.\n"
+        text += f"   {bloc['description']}\n"
+        text += f"   Босс: {boss['name']} | Здоровье: {boss['health']}\n"
+        rewards = []
+        if boss['reward_gold']:
+            rewards.append(f"{boss['reward_gold']}💰")
+        if boss['exp_reward']:
+            rewards.append(f"{boss['exp_reward']}✨")
+        for res, (minr, maxr) in boss['reward_resources'].items():
+            res_name = RESOURCES.get(res, {}).get('name', res)
+            amount = f"{minr}-{maxr}" if minr != maxr else str(minr)
+            rewards.append(f"{res_name} {amount} шт.")
+        text += f"   Награда: {', '.join(rewards)}\n\n"
     
     kb = [[InlineKeyboardButton("🔙 Назад к локациям", callback_data='faq_locations')]]
     await reply_or_edit(update_or_query, text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
@@ -1778,6 +2150,9 @@ async def back_to_faq(update_or_query, ctx):
         ],
         "🔄 **Инструменты**": [
             "🔄 Как сменить активный инструмент?"
+        ],
+        "🔨 **Крафт**": [
+            "🔨 Что такое крафт?"
         ]
     }
     text = "📚 **Часто задаваемые вопросы**\n\n"
@@ -1962,7 +2337,6 @@ async def goto_location(update_or_query, ctx):
             return
     await set_player_location(uid, lid)
     await update_or_query.answer(f"✅ Ты переместился в {loc['name']}")
-    # После перехода обновляем список локаций
     await show_locations(update_or_query, ctx)
 
 async def fight_boss(update_or_query, ctx):
@@ -2018,6 +2392,106 @@ async def fight_boss(update_or_query, ctx):
     
     await show_locations(q, ctx)
 
+# ==================== ОБРАБОТЧИКИ КОМАНД ====================
+
+async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    u = update.effective_user
+    await get_player(u.id, u.username)
+    await show_main_menu(update, ctx)
+
+async def cmd_mine(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    u = update.effective_user
+    await get_player(u.id, u.username)
+    await mine_action(update, ctx)
+
+async def cmd_locations(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    u = update.effective_user
+    await get_player(u.id, u.username)
+    await show_locations(update, ctx)
+
+async def cmd_shop(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    u = update.effective_user
+    await get_player(u.id, u.username)
+    await show_shop_menu(update, ctx)
+
+async def cmd_tasks(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    u = update.effective_user
+    await get_player(u.id, u.username)
+    await show_daily_tasks(update, ctx)
+
+async def cmd_profile(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    u = update.effective_user
+    await get_player(u.id, u.username)
+    await show_profile(update, ctx)
+
+async def cmd_inventory(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    u = update.effective_user
+    await get_player(u.id, u.username)
+    await show_inventory(update, ctx)
+
+async def cmd_market(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    u = update.effective_user
+    await get_player(u.id, u.username)
+    await show_market(update, ctx)
+
+async def cmd_leaderboard(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    u = update.effective_user
+    await get_player(u.id, u.username)
+    await show_leaderboard_menu(update, ctx)
+
+async def cmd_faq(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    uid = update.effective_user.id
+    stats = await get_player_stats(uid)
+    lvl = stats['level']
+    faq_dict = {item["question"]: item["answer"] for item in FAQ}
+    categories = {
+        "🪨 **Основное**": [
+            "🪨 Как добывать ресурсы?",
+            "🧰 Зачем нужны инструменты?",
+            "⚡ Как увеличить доход за клик?"
+        ],
+        "🗺 **Локации**": [
+            "🗺 Как открыть новые локации?",
+            "🗺 Какие локации существуют и что там добывают?"
+        ],
+        "📋 **Задания**": [
+            "📋 Что такое ежедневные и еженедельные задания?"
+        ],
+        "💰 **Экономика**": [
+            "💰 Как продать ресурсы?",
+            "🏆 Что такое достижения?"
+        ],
+        "🔄 **Инструменты**": [
+            "🔄 Как сменить активный инструмент?"
+        ],
+        "🔨 **Крафт**": [
+            "🔨 Что такое крафт?"
+        ]
+    }
+    text = "📚 **Часто задаваемые вопросы**\n\n"
+    for category, questions in categories.items():
+        text += f"{category}\n" + "─" * 25 + "\n\n"
+        for q in questions:
+            if q in faq_dict:
+                q_esc = escape_markdown(q, version=1)
+                a_esc = escape_markdown(faq_dict[q], version=1)
+                text += f"❓ **{q_esc}**\n{a_esc}\n\n"
+        text += "\n"
+    kb = [[InlineKeyboardButton("🗺 Локации", callback_data='faq_locations')]]
+    await update.message.reply_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(kb))
+
+async def cmd_achievements(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    uid = update.effective_user.id
+    await send_achievements(uid, ctx)
+
+async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    txt = ("🪨 **Шахтёрский бот**\n\nТы начинающий шахтёр. Кликай, добывай ресурсы, продавай их, улучшай инструменты и открывай новые локации.\n\n**Команды:**\n/start - главное меню\n/mine - копнуть в текущей локации\n/locations - выбрать локацию\n/shop - магазин улучшений\n/tasks - задания\n/profile - твой профиль\n/inventory - ресурсы\n/market - продать ресурсы\n/leaderboard - топ игроков\n/achievements - мои достижения\n/faq - часто задаваемые вопросы\n/help - это сообщение")
+    await update.message.reply_text(txt, parse_mode='Markdown')
+
+async def cmd_myid(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    uid = update.effective_user.id
+    await update.message.reply_text(f"🔑 Ваш Telegram ID: `{uid}`", parse_mode='Markdown')
+
 # ==================== ДИСПЕТЧЕР CALLBACK'ОВ ====================
 
 SIMPLE_CALLBACK_HANDLERS = {
@@ -2052,6 +2526,8 @@ SIMPLE_CALLBACK_HANDLERS = {
     'inventory': show_inventory,
     'market': show_market,
     'back_to_menu': show_main_menu_from_query,
+    'craft_menu': show_craft_menu,
+    'craft_my_items': show_craft_my_items,
 }
 
 async def button_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -2064,7 +2540,13 @@ async def button_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await q.answer()
         return
 
-    if data.startswith('activate_tool_'):
+    if data.startswith('craft_category_'):
+        cat = data.replace('craft_category_', '')
+        await show_craft_category(q, ctx, cat)
+    elif data.startswith('craft_do_'):
+        recipe_id = data.replace('craft_do_', '')
+        await craft_do(q, ctx, recipe_id)
+    elif data.startswith('activate_tool_'):
         await activate_tool(q, ctx)
     elif data.startswith('upgrade_tool_'):
         await upgrade_tool_handler(q, ctx)
@@ -2136,7 +2618,6 @@ async def api_user(request):
         stats = await get_player_stats(uid, conn)
         inv = await get_inventory(uid, conn)
         current_location = await get_player_current_location(uid, conn)
-
         active_tool_id = await get_active_tool(uid, conn)
         active_tool_name = TOOLS.get(active_tool_id, {}).get('name', active_tool_id)
 
@@ -2363,6 +2844,7 @@ app = Starlette(
     on_shutdown=[shutdown_event]
 )
 
+# Добавляем маршруты API
 app.router.routes.extend([
     Route('/api/user', api_user, methods=['GET']),
     Route('/api/click', api_click, methods=['POST']),
@@ -2370,9 +2852,10 @@ app.router.routes.extend([
     Route('/api/boss/{boss_id}', api_boss_info, methods=['GET']),
 ])
 
+# Добавляем CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Временно разрешаем все домены (для теста)
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -2383,8 +2866,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
