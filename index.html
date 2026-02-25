@@ -656,25 +656,25 @@
             return group;
         }
 
-        // ========== ФУНКЦИИ СОЗДАНИЯ КЛИКАБЕЛЬНЫХ ОБЪЕКТОВ ==========
+        // ========== ИСПРАВЛЕННЫЕ ФУНКЦИИ СОЗДАНИЯ КЛИКАБЕЛЬНЫХ ОБЪЕКТОВ ==========
         function createGoldBag() {
             const group = new THREE.Group();
             const bagMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.7 });
-            const bag = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16), bagMat);
+            const bag = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16), bagMat);
             bag.scale.set(1.0, 0.8, 1.0);
-            bag.position.y = 0.5;
+            bag.position.y = 0.8;
             group.add(bag);
 
             const ropeMat = new THREE.MeshStandardMaterial({ color: 0x654321 });
-            const rope = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.05, 8, 24), ropeMat);
+            const rope = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.07, 8, 24), ropeMat);
             rope.rotation.x = Math.PI / 2;
-            rope.position.y = 0.8;
+            rope.position.y = 1.1;
             group.add(rope);
 
             const coinMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
             for (let i = 0; i < 3; i++) {
-                const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.05, 8), coinMat);
-                coin.position.set(0.2 * Math.sin(i), 1.0 + i * 0.05, 0.2 * Math.cos(i));
+                const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.08, 8), coinMat);
+                coin.position.set(0.3 * Math.sin(i), 1.4 + i * 0.08, 0.3 * Math.cos(i));
                 coin.rotation.x = Math.random() * Math.PI;
                 coin.rotation.z = Math.random() * Math.PI;
                 group.add(coin);
@@ -685,12 +685,12 @@
         function createGoldBar() {
             const group = new THREE.Group();
             const barMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.9, roughness: 0.3, emissive: 0x331100 });
-            const bar = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.2, 0.4), barMat);
-            bar.position.y = 0.2;
+            const bar = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.3, 0.6), barMat);
+            bar.position.y = 0.3;
             group.add(bar);
             const digitMat = new THREE.MeshStandardMaterial({ color: 0xcc8800 });
-            const digit = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.1), digitMat);
-            digit.position.set(0.2, 0.3, 0.1);
+            const digit = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.08, 0.15), digitMat);
+            digit.position.set(0.3, 0.45, 0.15);
             group.add(digit);
             return group;
         }
@@ -699,8 +699,8 @@
             const group = new THREE.Group();
             const coinMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
             for (let i = 0; i < 8; i++) {
-                const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.05, 8), coinMat);
-                coin.position.set(Math.sin(i)*0.3, 0.1 + i*0.03, Math.cos(i)*0.3);
+                const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.08, 8), coinMat);
+                coin.position.set(Math.sin(i)*0.5, 0.15 + i*0.05, Math.cos(i)*0.5);
                 coin.rotation.x = Math.random() * Math.PI;
                 coin.rotation.z = Math.random() * Math.PI;
                 group.add(coin);
@@ -710,22 +710,22 @@
 
         function createGem() {
             const gemMat = new THREE.MeshStandardMaterial({ color: 0xff44aa, emissive: 0x331122, transparent: true, opacity: 0.8 });
-            const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.3), gemMat);
+            const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.5), gemMat);
             return gem;
         }
 
         function createBone() {
             const group = new THREE.Group();
             const boneMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
-            const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.8), boneMat);
+            const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1.2), boneMat);
             shaft.rotation.z = 0.2;
-            shaft.position.y = 0.4;
+            shaft.position.y = 0.6;
             group.add(shaft);
-            const end1 = new THREE.Mesh(new THREE.SphereGeometry(0.15), boneMat);
-            end1.position.set(0.1, 0.8, 0);
+            const end1 = new THREE.Mesh(new THREE.SphereGeometry(0.25), boneMat);
+            end1.position.set(0.15, 1.2, 0);
             group.add(end1);
-            const end2 = new THREE.Mesh(new THREE.SphereGeometry(0.15), boneMat);
-            end2.position.set(-0.1, 0.0, 0);
+            const end2 = new THREE.Mesh(new THREE.SphereGeometry(0.25), boneMat);
+            end2.position.set(-0.15, 0.0, 0);
             group.add(end2);
             return group;
         }
@@ -733,14 +733,14 @@
         function createDragonEgg() {
             const group = new THREE.Group();
             const eggMat = new THREE.MeshStandardMaterial({ color: 0xaa4422, emissive: 0x331100 });
-            const egg = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16), eggMat);
-            egg.scale.set(1.0, 1.2, 1.0);
-            egg.position.y = 0.6;
+            const egg = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16), eggMat);
+            egg.scale.set(1.0, 1.3, 1.0);
+            egg.position.y = 0.9;
             group.add(egg);
             const scaleMat = new THREE.MeshStandardMaterial({ color: 0xcc5533 });
             for (let i = 0; i < 6; i++) {
-                const s = new THREE.Mesh(new THREE.SphereGeometry(0.1, 4), scaleMat);
-                s.position.set(Math.sin(i)*0.4, 0.6 + Math.cos(i*2)*0.2, Math.cos(i)*0.4);
+                const s = new THREE.Mesh(new THREE.SphereGeometry(0.15, 4), scaleMat);
+                s.position.set(Math.sin(i)*0.6, 0.9 + Math.cos(i*2)*0.3, Math.cos(i)*0.6);
                 group.add(s);
             }
             return group;
@@ -749,11 +749,11 @@
         function createVolcanicCrystal() {
             const group = new THREE.Group();
             const crystalMat = new THREE.MeshStandardMaterial({ color: 0xff3300, emissive: 0x441100, transparent: true, opacity: 0.7 });
-            const crystal = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4), crystalMat);
+            const crystal = new THREE.Mesh(new THREE.DodecahedronGeometry(0.7), crystalMat);
             group.add(crystal);
             for (let i = 0; i < 3; i++) {
-                const small = new THREE.Mesh(new THREE.OctahedronGeometry(0.15), crystalMat);
-                small.position.set(0.5*Math.sin(i), 0.2, 0.5*Math.cos(i));
+                const small = new THREE.Mesh(new THREE.OctahedronGeometry(0.25), crystalMat);
+                small.position.set(0.7*Math.sin(i), 0.3, 0.7*Math.cos(i));
                 group.add(small);
             }
             return group;
@@ -761,26 +761,26 @@
 
         function createObsidianRock() {
             const rockMat = new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0x110000 });
-            const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5), rockMat);
+            const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.8), rockMat);
             return rock;
         }
 
         function createSoul() {
             const group = new THREE.Group();
             const soulMat = new THREE.MeshStandardMaterial({ color: 0x88aaff, emissive: 0x224466, transparent: true, opacity: 0.7 });
-            const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8), soulMat);
+            const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.6, 8), soulMat);
             group.add(sphere);
             const particleCount = 6;
             const particleGeom = new THREE.BufferGeometry();
             const positions = new Float32Array(particleCount * 3);
             for (let i = 0; i < particleCount; i++) {
                 const angle = (i / particleCount) * Math.PI * 2;
-                positions[i*3] = Math.cos(angle) * 0.7;
-                positions[i*3+1] = Math.sin(angle) * 0.2;
-                positions[i*3+2] = Math.sin(angle) * 0.7;
+                positions[i*3] = Math.cos(angle) * 1.0;
+                positions[i*3+1] = Math.sin(angle) * 0.3;
+                positions[i*3+2] = Math.sin(angle) * 1.0;
             }
             particleGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            const particleMat = new THREE.PointsMaterial({ color: 0xaaccff, size: 0.1 });
+            const particleMat = new THREE.PointsMaterial({ color: 0xaaccff, size: 0.15 });
             const particles = new THREE.Points(particleGeom, particleMat);
             group.add(particles);
             return group;
@@ -789,17 +789,17 @@
         function createFloatingBook() {
             const group = new THREE.Group();
             const coverMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
-            const cover = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.1, 0.6), coverMat);
+            const cover = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.15, 0.9), coverMat);
             cover.position.y = 0;
             group.add(cover);
             const pagesMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
-            const pages = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.2, 0.5), pagesMat);
-            pages.position.y = 0.15;
+            const pages = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.3, 0.7), pagesMat);
+            pages.position.y = 0.2;
             group.add(pages);
             const runeMat = new THREE.MeshStandardMaterial({ color: 0xaa88ff, emissive: 0x331166 });
             for (let i = 0; i < 3; i++) {
-                const rune = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.1), runeMat);
-                rune.position.set(0.2, 0.25, 0.2 * i - 0.2);
+                const rune = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.08, 0.15), runeMat);
+                rune.position.set(0.3, 0.35, 0.3 * i - 0.3);
                 group.add(rune);
             }
             return group;
@@ -808,18 +808,18 @@
         function createVial() {
             const group = new THREE.Group();
             const glassMat = new THREE.MeshStandardMaterial({ color: 0x88aaff, transparent: true, opacity: 0.4, emissive: 0x112244 });
-            const glass = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16), glassMat);
-            glass.scale.set(1.0, 1.2, 1.0);
-            glass.position.y = 0.4;
+            const glass = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16), glassMat);
+            glass.scale.set(1.0, 1.3, 1.0);
+            glass.position.y = 0.6;
             group.add(glass);
             const liquidMat = new THREE.MeshStandardMaterial({ color: 0x44aaff, emissive: 0x113366 });
-            const liquid = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8), liquidMat);
-            liquid.scale.set(1.0, 0.9, 1.0);
-            liquid.position.y = 0.4;
+            const liquid = new THREE.Mesh(new THREE.SphereGeometry(0.45, 8), liquidMat);
+            liquid.scale.set(1.0, 1.0, 1.0);
+            liquid.position.y = 0.6;
             group.add(liquid);
             const corkMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
-            const cork = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.2), corkMat);
-            cork.position.y = 0.8;
+            const cork = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.3), corkMat);
+            cork.position.y = 1.1;
             group.add(cork);
             return group;
         }
@@ -827,40 +827,40 @@
         function createSkull() {
             const group = new THREE.Group();
             const boneMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
-            const head = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8), boneMat);
-            head.scale.set(0.9, 0.7, 0.9);
-            head.position.y = 0.3;
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.6, 8), boneMat);
+            head.scale.set(0.9, 0.8, 0.9);
+            head.position.y = 0.5;
             group.add(head);
-            const jaw = new THREE.Mesh(new THREE.SphereGeometry(0.3, 6), boneMat);
-            jaw.scale.set(0.8, 0.4, 0.6);
-            jaw.position.set(0, 0.0, 0.2);
+            const jaw = new THREE.Mesh(new THREE.SphereGeometry(0.45, 6), boneMat);
+            jaw.scale.set(0.8, 0.5, 0.7);
+            jaw.position.set(0, 0.1, 0.3);
             group.add(jaw);
-            const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.1), new THREE.MeshStandardMaterial({ color: 0x000000 }));
-            eye1.position.set(-0.15, 0.45, 0.3);
+            const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.15), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+            eye1.position.set(-0.25, 0.7, 0.4);
             group.add(eye1);
             const eye2 = eye1.clone();
-            eye2.position.set(0.15, 0.45, 0.3);
+            eye2.position.set(0.25, 0.7, 0.4);
             group.add(eye2);
             return group;
         }
 
         function createDarkCrystal() {
             const crystalMat = new THREE.MeshStandardMaterial({ color: 0x8822aa, emissive: 0x331144, transparent: true, opacity: 0.8 });
-            const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.5), crystalMat);
+            const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.8), crystalMat);
             return crystal;
         }
 
-        // --- ФУНКЦИЯ для создания кликабельных объектов в зависимости от босса ---
+        // --- ФУНКЦИЯ для создания кликабельных объектов (исправленная позиция Y) ---
         function createResourceObjectsForBoss(bossId) {
             resourceObjects.forEach(obj => scene.remove(obj));
             resourceObjects = [];
 
             const positions = [
-                [-3, 1.5, -2],
-                [3, 1.5, -2],
-                [0, 1.5, 2],
-                [-2, 1.5, 3],
-                [2, 1.5, 3]
+                [-3, 2.2, -2],
+                [3, 2.2, -2],
+                [0, 2.2, 2],
+                [-2, 2.2, 3],
+                [2, 2.2, 3]
             ];
 
             let creators = [];
