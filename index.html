@@ -179,7 +179,7 @@
         let currentBossIndex = 0;
         let currentBossId = BOSS_IDS[0];
         let isAttacking = false;
-        let resourceObjects = []; // массив кликабельных объектов
+        let resourceObjects = [];
         let scene, camera, renderer, controls;
         let bossGroup = null;
         let threeReady = false;
@@ -322,7 +322,7 @@
             stars.push(skySphere);
         }
 
-        // --- ВИЗУАЛЬНАЯ МОДЕЛЬ БОССА (ПОЛНОСТЬЮ ИЗ СТАРОЙ ВЕРСИИ) ---
+        // --- ВИЗУАЛЬНАЯ МОДЕЛЬ БОССА (ПОЛНОСТЬЮ) ---
         function createVisualBossModel(bossId) {
             const group = new THREE.Group();
 
@@ -656,7 +656,7 @@
             return group;
         }
 
-        // ========== ИСПРАВЛЕННЫЕ ФУНКЦИИ СОЗДАНИЯ КЛИКАБЕЛЬНЫХ ОБЪЕКТОВ ==========
+        // ========== ФУНКЦИИ СОЗДАНИЯ КЛИКАБЕЛЬНЫХ ОБЪЕКТОВ (УВЕЛИЧЕННЫЕ) ==========
         function createGoldBag() {
             const group = new THREE.Group();
             const bagMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.7 });
@@ -850,7 +850,7 @@
             return crystal;
         }
 
-        // --- ФУНКЦИЯ для создания кликабельных объектов (исправленная позиция Y) ---
+        // --- ФУНКЦИЯ для создания кликабельных объектов ---
         function createResourceObjectsForBoss(bossId) {
             resourceObjects.forEach(obj => scene.remove(obj));
             resourceObjects = [];
@@ -903,7 +903,7 @@
             scene.background = new THREE.Color(0x0a0a20);
         }
 
-        // --- УЛУЧШЕННЫЕ ДЕКОРАЦИИ ДЛЯ ЛОКАЦИЙ БОССОВ (ПОЛНОСТЬЮ ИЗ СТАРОЙ ВЕРСИИ) ---
+        // --- УЛУЧШЕННЫЕ ДЕКОРАЦИИ ДЛЯ ЛОКАЦИЙ БОССОВ (ПОЛНОСТЬЮ) ---
         function createEnvironmentForBoss(bossId) {
             if (!scene || !THREE) return;
 
@@ -1755,50 +1755,56 @@
                     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
                     raycaster.setFromCamera(mouse, camera);
-                    const allObjects = [...resourceObjects, ...bossGroup.children];
-                    const intersects = raycaster.intersectObjects(allObjects);
 
-                    if (intersects.length > 0) {
-                        const hit = intersects[0].object;
-                        debugLog(`Hit object: userData: ${JSON.stringify(hit.userData)}`);
-                        if (hit.userData.type === 'resource') {
-                            hapticFeedback('light');
-                            const originalScale = hit.scale.clone();
-                            hit.scale.set(0.8, 0.8, 0.8);
-                            setTimeout(() => hit.scale.copy(originalScale), 100);
-                            createHitParticles(hit.position.clone());
-                            if (hit.material) {
-                                const originalEmissive = hit.material.emissive ? hit.material.emissive.clone() : null;
-                                hit.material.emissive.setHex(0xffaa22);
-                                setTimeout(() => {
-                                    if (originalEmissive) hit.material.emissive.copy(originalEmissive);
-                                    else hit.material.emissive.setHex(0x000000);
-                                }, 150);
-                            }
-                            apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
-                                if (data) {
-                                    goldSpan.textContent = data.new_gold;
-                                    hudExp.textContent = data.new_exp;
-                                    updateInventoryDisplay(data.inventory);
-                                    loadUser();
-                                    let phrase = '';
-                                    if (data.is_crit) {
-                                        phrase = CRIT_PHRASES[Math.floor(Math.random() * CRIT_PHRASES.length)];
-                                    } else if (data.found_resource && RARE_FIND_PHRASES[data.found_resource]) {
-                                        const arr = RARE_FIND_PHRASES[data.found_resource];
-                                        phrase = arr[Math.floor(Math.random() * arr.length)];
-                                    }
-                                    if (phrase) showToast(phrase, 1000);
+                    // Сначала проверяем кликабельные объекты
+                    const resourceIntersects = raycaster.intersectObjects(resourceObjects);
+                    if (resourceIntersects.length > 0) {
+                        const hit = resourceIntersects[0].object;
+                        debugLog(`Hit resource: ${JSON.stringify(hit.userData)}`);
+
+                        hapticFeedback('light');
+                        const originalScale = hit.scale.clone();
+                        hit.scale.set(0.8, 0.8, 0.8);
+                        setTimeout(() => hit.scale.copy(originalScale), 100);
+                        createHitParticles(hit.position.clone());
+
+                        if (hit.material) {
+                            const originalEmissive = hit.material.emissive ? hit.material.emissive.clone() : null;
+                            hit.material.emissive.setHex(0xffaa22);
+                            setTimeout(() => {
+                                if (originalEmissive) hit.material.emissive.copy(originalEmissive);
+                                else hit.material.emissive.setHex(0x000000);
+                            }, 150);
+                        }
+
+                        apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
+                            if (data) {
+                                goldSpan.textContent = data.new_gold;
+                                hudExp.textContent = data.new_exp;
+                                updateInventoryDisplay(data.inventory);
+                                loadUser();
+
+                                let phrase = '';
+                                if (data.is_crit) {
+                                    phrase = CRIT_PHRASES[Math.floor(Math.random() * CRIT_PHRASES.length)];
+                                } else if (data.found_resource && RARE_FIND_PHRASES[data.found_resource]) {
+                                    const arr = RARE_FIND_PHRASES[data.found_resource];
+                                    phrase = arr[Math.floor(Math.random() * arr.length)];
                                 }
-                            });
-                        } else if (hit.userData.isBossPart) {
+                                if (phrase) showToast(phrase, 1000);
+                            }
+                        });
+                        return; // Важно: не продолжаем проверку босса
+                    }
+
+                    // Затем проверяем босса
+                    const bossIntersects = raycaster.intersectObjects(bossGroup.children);
+                    if (bossIntersects.length > 0) {
+                        const hit = bossIntersects[0].object;
+                        if (hit.userData.isBossPart) {
                             debugLog('✅ Это часть босса (коллайдер)!');
                             attackBoss();
-                        } else {
-                            debugLog('Неизвестный объект');
                         }
-                    } else {
-                        debugLog('No intersection');
                     }
                 }
 
@@ -1813,7 +1819,6 @@
                 function animate() {
                     time += 0.01;
 
-                    // Анимация объектов ресурсов
                     resourceObjects.forEach((obj, idx) => {
                         if (obj.geometry && (obj.geometry.type === 'OctahedronGeometry' || obj.geometry.type === 'DodecahedronGeometry')) {
                             obj.rotation.y += 0.01;
