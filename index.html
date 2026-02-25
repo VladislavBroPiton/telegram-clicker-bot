@@ -109,7 +109,6 @@
         <div>Уровень <span id="level">1</span> • <span id="exp-current">0</span>/100</div>
         <div>📦 Инвентарь: <span id="inventory">—</span></div>
         <div id="tool-display">🧰 Инструмент: <span id="active-tool">загрузка...</span></div>
-        <!-- НОВОЕ: кнопка для открытия меню крафта -->
         <div style="margin-top: 5px;">
             <button id="craft-btn" style="background: #8a6d3b; border: none; color: white; border-radius: 20px; padding: 5px 10px;">🔨 Крафт</button>
         </div>
@@ -126,7 +125,6 @@
             <button class="boss-nav-btn" id="next-boss">→</button>
         </div>
     </div>
-    <!-- НОВОЕ: модальное окно крафта -->
     <div id="craft-menu">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <h2>🔨 Крафт</h2>
@@ -134,7 +132,6 @@
         </div>
         <div id="craft-content"></div>
     </div>
-    <!-- НОВОЕ: тост-уведомления -->
     <div id="toast" class="toast"></div>
     <div id="debug-info"></div>
 
@@ -169,7 +166,6 @@
             'magic_essence': '✨'
         };
 
-        // НОВОЕ: эмоциональные фразы
         const CRIT_PHRASES = ["💥 КРИТ!", "⚡ СВЕРХУДАР!", "🔥 ОГОНЬ!", "✨ УДАЧА!"];
         const RARE_FIND_PHRASES = {
             'diamond': ['💎 Алмаз!', '💎 Бриллиант!'],
@@ -183,7 +179,6 @@
         let currentBossIndex = 0;
         let currentBossId = BOSS_IDS[0];
         let isAttacking = false;
-        let cubes = [];
         let scene, camera, renderer, controls;
         let bossGroup = null;
         let threeReady = false;
@@ -218,7 +213,6 @@
         const bossMaxHealth = document.getElementById('boss-max-health');
         const bossHealthFill = document.getElementById('boss-health-fill');
         const bossIndexSpan = document.getElementById('boss-index');
-        // НОВОЕ: элементы для крафта и тостов
         const craftMenu = document.getElementById('craft-menu');
         const craftContent = document.getElementById('craft-content');
         const closeCraft = document.getElementById('close-craft');
@@ -284,21 +278,19 @@
             bossHealthFill.style.width = (max ? (current / max) * 100 : 0) + '%';
         }
 
-        // НОВОЕ: функция показа тост-уведомления
         function showToast(message, duration = 2000) {
             toast.textContent = message;
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), duration);
         }
 
-        // НОВОЕ: тактильный отклик
         function hapticFeedback(style = 'light') {
             if (tg && tg.HapticFeedback) {
                 tg.HapticFeedback.impactOccurred(style);
             }
         }
 
-        // --- УЛУЧШЕННОЕ ЗВЁЗДНОЕ НЕБО (сфера с текстурой) ---
+        // --- ЗВЁЗДНОЕ НЕБО ---
         function createStars() {
             if (!THREE) return;
             const geometry = new THREE.SphereGeometry(100, 32, 16);
@@ -330,12 +322,12 @@
             stars.push(skySphere);
         }
 
-        // --- ВИЗУАЛЬНАЯ МОДЕЛЬ БОССА (финальная версия) ---
+        // --- МОДЕЛИ БОССОВ (полная версия) ---
         function createVisualBossModel(bossId) {
             const group = new THREE.Group();
 
             if (bossId === 'goblin_king') {
-                // --- Тело с текстурой кожи ---
+                // Тело
                 const bodyCanvas = document.createElement('canvas');
                 bodyCanvas.width = 64;
                 bodyCanvas.height = 64;
@@ -355,7 +347,7 @@
                 body.position.y = 1.1;
                 group.add(body);
 
-                // --- Нагрудник с заклёпками ---
+                // Нагрудник
                 const chestGeom = new THREE.SphereGeometry(1.0, 8, 4, 0, Math.PI);
                 const chestMat = new THREE.MeshStandardMaterial({ color: 0xaa8866, emissive: 0x332211 });
                 const chest = new THREE.Mesh(chestGeom, chestMat);
@@ -370,7 +362,7 @@
                     group.add(rivet);
                 }
 
-                // --- Плечевые шипы ---
+                // Плечевые шипы
                 const spikeGeom = new THREE.ConeGeometry(0.5, 1.0, 6);
                 const spikeMat = new THREE.MeshStandardMaterial({ color: 0x886644, emissive: 0x221100 });
                 const spikeL = new THREE.Mesh(spikeGeom, spikeMat);
@@ -382,7 +374,7 @@
                 spikeR.rotation.z = -0.4;
                 group.add(spikeR);
 
-                // --- Голова с текстурой ---
+                // Голова
                 const headCanvas = document.createElement('canvas');
                 headCanvas.width = 32;
                 headCanvas.height = 32;
@@ -400,7 +392,7 @@
                 head.position.y = 2.4;
                 group.add(head);
 
-                // --- Корона ---
+                // Корона
                 const crownMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
                 for (let i = -1; i <= 1; i++) {
                     const spike = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.7, 4), crownMat);
@@ -412,7 +404,7 @@
                 gem.position.set(0, 3.1, 0.4);
                 group.add(gem);
 
-                // --- Глаза ---
+                // Глаза
                 const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffaa22, emissive: 0x442200 });
                 const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.2, 6), eyeMat);
                 eyeL.position.set(-0.3, 2.5, 0.7);
@@ -421,7 +413,7 @@
                 eyeR.position.set(0.3, 2.5, 0.7);
                 group.add(eyeR);
 
-                // --- Плащ ---
+                // Плащ
                 const cloakCanvas = document.createElement('canvas');
                 cloakCanvas.width = 32;
                 cloakCanvas.height = 32;
@@ -440,7 +432,7 @@
                 cloak.rotation.x = 0.3;
                 group.add(cloak);
 
-                // --- Топор ---
+                // Топор
                 const axeGroup = new THREE.Group();
                 const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1.5), new THREE.MeshStandardMaterial({ color: 0x8B4513 }));
                 handle.position.y = 0.8;
@@ -457,9 +449,8 @@
 
                 group.userData = { axe: axeGroup };
             }
-
             else if (bossId === 'dragon_lair') {
-                // --- Тело ---
+                // Тело
                 const bodyMat = new THREE.MeshStandardMaterial({ color: 0xaa4422, emissive: 0x331100 });
                 const bodyGeom = new THREE.SphereGeometry(1.2, 8);
                 const body = new THREE.Mesh(bodyGeom, bodyMat);
@@ -475,14 +466,14 @@
                     group.add(scale);
                 }
 
-                // --- Шея ---
+                // Шея
                 const neckGeom = new THREE.CylinderGeometry(0.8, 0.9, 1.5);
                 const neck = new THREE.Mesh(neckGeom, bodyMat);
                 neck.position.set(0, 2.2, 0.8);
                 neck.rotation.x = 0.3;
                 group.add(neck);
 
-                // --- Голова ---
+                // Голова
                 const headMat = new THREE.MeshStandardMaterial({ color: 0xcc5533, emissive: 0x331100 });
                 const headGeom = new THREE.SphereGeometry(1.0, 8);
                 const head = new THREE.Mesh(headGeom, headMat);
@@ -556,9 +547,8 @@
                     eyes: [eyeL, eyeR]
                 };
             }
-
             else if (bossId === 'lich_castle') {
-                // --- Мантия ---
+                // Мантия
                 const mantleCanvas = document.createElement('canvas');
                 mantleCanvas.width = 64;
                 mantleCanvas.height = 64;
@@ -580,14 +570,14 @@
                 mantle.rotation.x = 0.1;
                 group.add(mantle);
 
-                // --- Тело ---
+                // Тело
                 const bodyMat = new THREE.MeshStandardMaterial({ color: 0x557799, emissive: 0x113344 });
                 const bodyGeom = new THREE.CylinderGeometry(0.7, 0.9, 2.5, 6);
                 const body = new THREE.Mesh(bodyGeom, bodyMat);
                 body.position.y = 1.5;
                 group.add(body);
 
-                // --- Голова ---
+                // Голова
                 const headGeom = new THREE.SphereGeometry(0.7, 6);
                 const headMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
                 const head = new THREE.Mesh(headGeom, headMat);
@@ -612,7 +602,7 @@
                 glowR.position.set(0.3, 3.1, 0.8);
                 group.add(glowR);
 
-                // --- Посох ---
+                // Посох
                 const staffGroup = new THREE.Group();
                 const staffGeom = new THREE.CylinderGeometry(0.1, 0.1, 3.5);
                 const staffMat = new THREE.MeshStandardMaterial({ color: 0x886644 });
@@ -634,7 +624,7 @@
                 staffGroup.rotation.y = 0.3;
                 group.add(staffGroup);
 
-                // --- Парящие души ---
+                // Парящие души
                 const soulParticlesGeom = new THREE.BufferGeometry();
                 const soulCount = 15;
                 const soulPositions = new Float32Array(soulCount * 3);
@@ -664,6 +654,243 @@
             return group;
         }
 
+        // ========== ФУНКЦИИ СОЗДАНИЯ КЛИКАБЕЛЬНЫХ ОБЪЕКТОВ ==========
+        function createGoldBag() {
+            const group = new THREE.Group();
+            const bagMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.7 });
+            const bag = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16), bagMat);
+            bag.scale.set(1.0, 0.8, 1.0);
+            bag.position.y = 0.5;
+            group.add(bag);
+
+            const ropeMat = new THREE.MeshStandardMaterial({ color: 0x654321 });
+            const rope = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.05, 8, 24), ropeMat);
+            rope.rotation.x = Math.PI / 2;
+            rope.position.y = 0.8;
+            group.add(rope);
+
+            const coinMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
+            for (let i = 0; i < 3; i++) {
+                const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.05, 8), coinMat);
+                coin.position.set(0.2 * Math.sin(i), 1.0 + i * 0.05, 0.2 * Math.cos(i));
+                coin.rotation.x = Math.random() * Math.PI;
+                coin.rotation.z = Math.random() * Math.PI;
+                group.add(coin);
+            }
+
+            group.userData = { type: 'resource', resourceId: 'gold' };
+            return group;
+        }
+
+        function createGoldBar() {
+            const group = new THREE.Group();
+            const barMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.9, roughness: 0.3, emissive: 0x331100 });
+            const bar = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.2, 0.4), barMat);
+            bar.position.y = 0.2;
+            group.add(bar);
+
+            const digitMat = new THREE.MeshStandardMaterial({ color: 0xcc8800 });
+            const digit = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.1), digitMat);
+            digit.position.set(0.2, 0.3, 0.1);
+            group.add(digit);
+
+            group.userData = { type: 'resource', resourceId: 'gold' };
+            return group;
+        }
+
+        function createCoinPile() {
+            const group = new THREE.Group();
+            const coinMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
+            for (let i = 0; i < 8; i++) {
+                const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.05, 8), coinMat);
+                coin.position.set(Math.sin(i)*0.3, 0.1 + i*0.03, Math.cos(i)*0.3);
+                coin.rotation.x = Math.random() * Math.PI;
+                coin.rotation.z = Math.random() * Math.PI;
+                group.add(coin);
+            }
+            group.userData = { type: 'resource', resourceId: 'gold' };
+            return group;
+        }
+
+        function createGem() {
+            const gemMat = new THREE.MeshStandardMaterial({ color: 0xff44aa, emissive: 0x331122, transparent: true, opacity: 0.8 });
+            const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.3), gemMat);
+            gem.userData = { type: 'resource', resourceId: 'diamond' };
+            return gem;
+        }
+
+        function createBone() {
+            const group = new THREE.Group();
+            const boneMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
+            const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.8), boneMat);
+            shaft.rotation.z = 0.2;
+            shaft.position.y = 0.4;
+            group.add(shaft);
+            const end1 = new THREE.Mesh(new THREE.SphereGeometry(0.15), boneMat);
+            end1.position.set(0.1, 0.8, 0);
+            group.add(end1);
+            const end2 = new THREE.Mesh(new THREE.SphereGeometry(0.15), boneMat);
+            end2.position.set(-0.1, 0.0, 0);
+            group.add(end2);
+            group.userData = { type: 'resource', resourceId: 'soul_shard' };
+            return group;
+        }
+
+        function createDragonEgg() {
+            const group = new THREE.Group();
+            const eggMat = new THREE.MeshStandardMaterial({ color: 0xaa4422, emissive: 0x331100 });
+            const egg = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16), eggMat);
+            egg.scale.set(1.0, 1.2, 1.0);
+            egg.position.y = 0.6;
+            group.add(egg);
+
+            const scaleMat = new THREE.MeshStandardMaterial({ color: 0xcc5533 });
+            for (let i = 0; i < 6; i++) {
+                const s = new THREE.Mesh(new THREE.SphereGeometry(0.1, 4), scaleMat);
+                s.position.set(Math.sin(i)*0.4, 0.6 + Math.cos(i*2)*0.2, Math.cos(i)*0.4);
+                group.add(s);
+            }
+            group.userData = { type: 'resource', resourceId: 'dragon_scale' };
+            return group;
+        }
+
+        function createVolcanicCrystal() {
+            const group = new THREE.Group();
+            const crystalMat = new THREE.MeshStandardMaterial({ color: 0xff3300, emissive: 0x441100, transparent: true, opacity: 0.7 });
+            const crystal = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4), crystalMat);
+            group.add(crystal);
+            for (let i = 0; i < 3; i++) {
+                const small = new THREE.Mesh(new THREE.OctahedronGeometry(0.15), crystalMat);
+                small.position.set(0.5*Math.sin(i), 0.2, 0.5*Math.cos(i));
+                group.add(small);
+            }
+            group.userData = { type: 'resource', resourceId: 'magic_essence' };
+            return group;
+        }
+
+        function createObsidianRock() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#222222';
+            ctx.fillRect(0, 0, 64, 64);
+            ctx.strokeStyle = '#ff4422';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 10; i++) {
+                ctx.beginPath();
+                ctx.moveTo(Math.random()*64, Math.random()*64);
+                ctx.lineTo(Math.random()*64, Math.random()*64);
+                ctx.stroke();
+            }
+            const texture = new THREE.CanvasTexture(canvas);
+            const rockMat = new THREE.MeshStandardMaterial({ map: texture, color: 0x333333 });
+            const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5), rockMat);
+            rock.userData = { type: 'resource', resourceId: 'mithril' };
+            return rock;
+        }
+
+        function createSoul() {
+            const group = new THREE.Group();
+            const soulMat = new THREE.MeshStandardMaterial({ color: 0x88aaff, emissive: 0x224466, transparent: true, opacity: 0.7 });
+            const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8), soulMat);
+            group.add(sphere);
+
+            const particleCount = 6;
+            const particleGeom = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount; i++) {
+                const angle = (i / particleCount) * Math.PI * 2;
+                positions[i*3] = Math.cos(angle) * 0.7;
+                positions[i*3+1] = Math.sin(angle) * 0.2;
+                positions[i*3+2] = Math.sin(angle) * 0.7;
+            }
+            particleGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const particleMat = new THREE.PointsMaterial({ color: 0xaaccff, size: 0.1 });
+            const particles = new THREE.Points(particleGeom, particleMat);
+            group.add(particles);
+
+            group.userData = { type: 'resource', resourceId: 'soul_shard' };
+            return group;
+        }
+
+        function createFloatingBook() {
+            const group = new THREE.Group();
+            const coverMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+            const cover = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.1, 0.6), coverMat);
+            cover.position.y = 0;
+            group.add(cover);
+
+            const pagesMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
+            const pages = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.2, 0.5), pagesMat);
+            pages.position.y = 0.15;
+            group.add(pages);
+
+            const runeMat = new THREE.MeshStandardMaterial({ color: 0xaa88ff, emissive: 0x331166 });
+            for (let i = 0; i < 3; i++) {
+                const rune = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.1), runeMat);
+                rune.position.set(0.2, 0.25, 0.2 * i - 0.2);
+                group.add(rune);
+            }
+
+            group.userData = { type: 'resource', resourceId: 'magic_essence' };
+            return group;
+        }
+
+        function createVial() {
+            const group = new THREE.Group();
+            const glassMat = new THREE.MeshStandardMaterial({ color: 0x88aaff, transparent: true, opacity: 0.4, emissive: 0x112244 });
+            const glass = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16), glassMat);
+            glass.scale.set(1.0, 1.2, 1.0);
+            glass.position.y = 0.4;
+            group.add(glass);
+
+            const liquidMat = new THREE.MeshStandardMaterial({ color: 0x44aaff, emissive: 0x113366 });
+            const liquid = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8), liquidMat);
+            liquid.scale.set(1.0, 0.9, 1.0);
+            liquid.position.y = 0.4;
+            group.add(liquid);
+
+            const corkMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+            const cork = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.2), corkMat);
+            cork.position.y = 0.8;
+            group.add(cork);
+
+            group.userData = { type: 'resource', resourceId: 'magic_essence' };
+            return group;
+        }
+
+        function createSkull() {
+            const group = new THREE.Group();
+            const boneMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8), boneMat);
+            head.scale.set(0.9, 0.7, 0.9);
+            head.position.y = 0.3;
+            group.add(head);
+
+            const jaw = new THREE.Mesh(new THREE.SphereGeometry(0.3, 6), boneMat);
+            jaw.scale.set(0.8, 0.4, 0.6);
+            jaw.position.set(0, 0.0, 0.2);
+            group.add(jaw);
+
+            const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.1), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+            eye1.position.set(-0.15, 0.45, 0.3);
+            group.add(eye1);
+            const eye2 = eye1.clone();
+            eye2.position.set(0.15, 0.45, 0.3);
+            group.add(eye2);
+
+            group.userData = { type: 'resource', resourceId: 'soul_shard' };
+            return group;
+        }
+
+        function createDarkCrystal() {
+            const crystalMat = new THREE.MeshStandardMaterial({ color: 0x8822aa, emissive: 0x331144, transparent: true, opacity: 0.8 });
+            const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.5), crystalMat);
+            crystal.userData = { type: 'resource', resourceId: 'magic_essence' };
+            return crystal;
+        }
+
         // --- ОЧИСТКА ОКРУЖЕНИЯ ---
         function clearEnvironment() {
             torchLights = [];
@@ -682,10 +909,11 @@
             scene.background = new THREE.Color(0x0a0a20);
         }
 
-        // --- УЛУЧШЕННЫЕ ДЕКОРАЦИИ ДЛЯ ЛОКАЦИЙ БОССОВ ---
+        // --- УЛУЧШЕННЫЕ ДЕКОРАЦИИ ДЛЯ ЛОКАЦИЙ БОССОВ + КЛИКАБЕЛЬНЫЕ ОБЪЕКТЫ ---
         function createEnvironmentForBoss(bossId) {
             if (!scene || !THREE) return;
 
+            // ---------- ДЕКОРАЦИИ (полностью из старой версии) ----------
             switch (bossId) {
                 case 'goblin_king': {
                     // --- ПОЛ: каменная плита с трещинами, выбоинами и лужами ---
@@ -744,7 +972,7 @@
                         environmentObjects.push(rock);
                     }
 
-                    // --- КОЛОННЫ (радиус 8, смещение 0.3) ---
+                    // КОЛОННЫ
                     const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x777777, roughness: 0.8 });
                     for (let i = 0; i < 4; i++) {
                         const angle = (i * Math.PI / 2) + 0.3;
@@ -756,7 +984,7 @@
                         environmentObjects.push(pillar);
                     }
 
-                    // --- ФАКЕЛЫ (радиус 6.5, смещение 0.8) ---
+                    // ФАКЕЛЫ
                     const torchMaterial = new THREE.MeshStandardMaterial({ color: 0xcc6600 });
                     const flameMaterial = new THREE.MeshStandardMaterial({ color: 0xffaa22, emissive: 0x442200 });
                     for (let i = 0; i < 4; i++) {
@@ -792,7 +1020,7 @@
                         environmentObjects.push(stal);
                     }
 
-                    // --- ПРЕДМЕТЫ НА ПОЛУ (без изменений) ---
+                    // ПРЕДМЕТЫ НА ПОЛУ
                     const boxMaterial = new THREE.MeshStandardMaterial({ color: 0x8B5A2B });
                     for (let i = 0; i < 3; i++) {
                         const box = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), boxMaterial);
@@ -855,6 +1083,7 @@
                     scene.add(smokeParticles);
                     environmentObjects.push(smokeParticles);
 
+                    // Кучи золота (декоративные)
                     const goldMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
                     for (let i = 0; i < 5; i++) {
                         const pile = new THREE.Group();
@@ -1201,6 +1430,92 @@
                 default:
                     break;
             }
+
+            // ---------- КЛИКАБЕЛЬНЫЕ ОБЪЕКТЫ (добавляем после декораций) ----------
+            const clickableObjects = [];
+
+            if (bossId === 'goblin_king') {
+                const bag = createGoldBag();
+                bag.position.set(2.5, 1.0, 1.5);
+                scene.add(bag);
+                clickableObjects.push(bag);
+
+                const bar = createGoldBar();
+                bar.position.set(-2.5, 0.5, 1.5);
+                scene.add(bar);
+                clickableObjects.push(bar);
+
+                const pile = createCoinPile();
+                pile.position.set(2.0, 0.5, -2.0);
+                scene.add(pile);
+                clickableObjects.push(pile);
+
+                const gem = createGem();
+                gem.position.set(-2.0, 0.8, -2.0);
+                scene.add(gem);
+                clickableObjects.push(gem);
+
+                const bone = createBone();
+                bone.position.set(0, 0.5, -3.0);
+                scene.add(bone);
+                clickableObjects.push(bone);
+            }
+            else if (bossId === 'dragon_lair') {
+                const egg = createDragonEgg();
+                egg.position.set(2.5, 1.0, 1.5);
+                scene.add(egg);
+                clickableObjects.push(egg);
+
+                const crystal = createVolcanicCrystal();
+                crystal.position.set(-2.5, 1.0, 1.5);
+                scene.add(crystal);
+                clickableObjects.push(crystal);
+
+                const rock = createObsidianRock();
+                rock.position.set(2.0, 0.8, -2.0);
+                scene.add(rock);
+                clickableObjects.push(rock);
+
+                const goldBar = createGoldBar();
+                goldBar.material.color.setHex(0x886644);
+                goldBar.position.set(-2.0, 0.5, -2.0);
+                scene.add(goldBar);
+                clickableObjects.push(goldBar);
+
+                const bone = createBone();
+                bone.material.color.setHex(0x442211);
+                bone.position.set(0, 0.5, -3.0);
+                scene.add(bone);
+                clickableObjects.push(bone);
+            }
+            else if (bossId === 'lich_castle') {
+                const soul = createSoul();
+                soul.position.set(2.5, 1.5, 1.5);
+                scene.add(soul);
+                clickableObjects.push(soul);
+
+                const book = createFloatingBook();
+                book.position.set(-2.5, 1.5, 1.5);
+                scene.add(book);
+                clickableObjects.push(book);
+
+                const vial = createVial();
+                vial.position.set(2.0, 1.2, -2.0);
+                scene.add(vial);
+                clickableObjects.push(vial);
+
+                const skull = createSkull();
+                skull.position.set(-2.0, 0.8, -2.0);
+                scene.add(skull);
+                clickableObjects.push(skull);
+
+                const darkCrystal = createDarkCrystal();
+                darkCrystal.position.set(0, 1.2, -3.0);
+                scene.add(darkCrystal);
+                clickableObjects.push(darkCrystal);
+            }
+
+            environmentObjects.push(...clickableObjects);
         }
 
         // --- ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ ---
@@ -1222,13 +1537,10 @@
             activeToolSpan.textContent = toolDisplay;
 
             if (data.boss_progress) {
-                // Проверяем, жив ли текущий босс
                 if (currentBossId && data.boss_progress[currentBossId] && !data.boss_progress[currentBossId].defeated) {
-                    // Текущий босс ещё жив, оставляем его
+                    // оставляем
                 } else {
-                    // Текущий босс мёртв или не определён, ищем следующего живого
                     let found = false;
-                    // Начинаем поиск с текущего индекса + 1
                     for (let i = currentBossIndex + 1; i < BOSS_IDS.length; i++) {
                         const prog = data.boss_progress[BOSS_IDS[i]];
                         if (prog && !prog.defeated) {
@@ -1239,7 +1551,6 @@
                         }
                     }
                     if (!found) {
-                        // Если не нашли, пробуем сначала (с 0 до текущего индекса)
                         for (let i = 0; i < currentBossIndex; i++) {
                             const prog = data.boss_progress[BOSS_IDS[i]];
                             if (prog && !prog.defeated) {
@@ -1251,7 +1562,6 @@
                         }
                     }
                     if (!found) {
-                        // Все боссы мертвы, оставляем текущий индекс (или ставим 0)
                         currentBossIndex = 0;
                         currentBossId = BOSS_IDS[0];
                     }
@@ -1406,12 +1716,11 @@
             animateSprite();
         }
 
-        // --- АТАКА ---
+        // --- АТАКА БОССА ---
         async function attackBoss() {
             debugLog('⚔️ attackBoss called');
             if (isAttacking) return;
             isAttacking = true;
-            // НОВОЕ: тактильный отклик (тяжёлый)
             hapticFeedback('heavy');
             if (bossGroup) {
                 bossGroup.traverse(obj => {
@@ -1448,7 +1757,6 @@
                     }
                 }
                 if (data.defeated) {
-                    // НОВОЕ: эффект смерти – несколько взрывов частиц
                     for (let i = 0; i < 5; i++) {
                         setTimeout(() => {
                             if (bossGroup) {
@@ -1459,7 +1767,6 @@
                     }
                     bossGroup.visible = false;
                     bossHealthDiv.style.display = 'none';
-                    // НОВОЕ: тост с наградой
                     if (data.loot && data.loot.length) {
                         showToast(`🏆 Босс побеждён! Награда: ${data.loot.join(', ')}`, 3000);
                     } else {
@@ -1508,72 +1815,6 @@
 
                 createStars();
 
-                // --- КУБЫ-РЕСУРСЫ (улучшенный внешний вид) ---
-                const positions = [[-3,1.5,-2], [3,1.5,-2], [0,1.5,2], [-2,1.5,3], [2,1.5,3]];
-                const baseColors = [0x333333, 0x8B5A2B, 0xFFD700, 0x88CCFF, 0xC0C0C0];
-                const emissiveColors = [0x111111, 0x331100, 0x442200, 0x112244, 0x222222];
-                const metalnessValues = [0.1, 0.8, 0.9, 0.3, 0.7];
-                const roughnessValues = [0.8, 0.5, 0.4, 0.3, 0.4];
-
-                positions.forEach((pos, i) => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = 128;
-                    canvas.height = 128;
-                    const ctx = canvas.getContext('2d');
-                    ctx.fillStyle = '#' + baseColors[i].toString(16).padStart(6, '0');
-                    ctx.fillRect(0, 0, 128, 128);
-                    const imageData = ctx.getImageData(0, 0, 128, 128);
-                    const data = imageData.data;
-                    for (let j = 0; j < data.length; j += 4) {
-                        const noise = (Math.random() - 0.5) * 40;
-                        data[j] = Math.min(255, Math.max(0, data[j] + noise));
-                        data[j+1] = Math.min(255, Math.max(0, data[j+1] + noise));
-                        data[j+2] = Math.min(255, Math.max(0, data[j+2] + noise));
-                    }
-                    ctx.putImageData(imageData, 0, 0);
-                    ctx.strokeStyle = '#ffffff';
-                    ctx.lineWidth = 2;
-                    for (let j = 0; j < 8; j++) {
-                        ctx.beginPath();
-                        ctx.moveTo(Math.random()*128, Math.random()*128);
-                        ctx.lineTo(Math.random()*128, Math.random()*128);
-                        ctx.strokeStyle = `rgba(255,255,255,${0.3+Math.random()*0.3})`;
-                        ctx.stroke();
-                    }
-                    if (i === 3) {
-                        ctx.strokeStyle = 'rgba(100,200,255,0.5)';
-                        ctx.lineWidth = 1.5;
-                        for (let j = 0; j < 5; j++) {
-                            ctx.beginPath();
-                            ctx.moveTo(Math.random()*128, Math.random()*128);
-                            ctx.lineTo(Math.random()*128, Math.random()*128);
-                            ctx.stroke();
-                        }
-                    }
-                    if (i === 2) {
-                        for (let j = 0; j < 20; j++) {
-                            ctx.fillStyle = `rgba(255,215,0,${Math.random()*0.8})`;
-                            ctx.beginPath();
-                            ctx.arc(Math.random()*128, Math.random()*128, Math.random()*3+1, 0, 2*Math.PI);
-                            ctx.fill();
-                        }
-                    }
-                    const texture = new THREE.CanvasTexture(canvas);
-                    const material = new THREE.MeshStandardMaterial({ 
-                        map: texture,
-                        color: baseColors[i],
-                        emissive: emissiveColors[i],
-                        roughness: roughnessValues[i],
-                        metalness: metalnessValues[i],
-                        emissiveIntensity: 0.2
-                    });
-                    const cube = new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,1.2), material);
-                    cube.position.set(pos[0], pos[1], pos[2]);
-                    cube.userData = { type: 'resource', id: i, baseScale: 1 };
-                    scene.add(cube);
-                    cubes.push(cube);
-                });
-
                 // Группа для босса
                 bossGroup = new THREE.Group();
                 scene.add(bossGroup);
@@ -1605,38 +1846,42 @@
                     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
                     raycaster.setFromCamera(mouse, camera);
-                    const intersects = raycaster.intersectObjects([...cubes, ...bossGroup.children]);
+                    const allObjects = [...environmentObjects, ...bossGroup.children];
+                    const intersects = raycaster.intersectObjects(allObjects);
 
                     if (intersects.length > 0) {
                         const hit = intersects[0].object;
                         debugLog(`Hit object: userData: ${JSON.stringify(hit.userData)}`);
-                        if (hit.userData.type === 'resource') {
-                            // НОВОЕ: тактильный отклик (лёгкий)
+                        
+                        if (hit.userData.isBossPart) {
+                            debugLog('✅ Это часть босса (коллайдер)!');
+                            attackBoss();
+                        }
+                        else if (hit.userData.type === 'resource') {
                             hapticFeedback('light');
-                            // НОВОЕ: анимация сжатия куба
                             const originalScale = hit.scale.clone();
                             hit.scale.set(0.8, 0.8, 0.8);
                             setTimeout(() => hit.scale.copy(originalScale), 100);
-                            // НОВОЕ: частицы при клике
+                            
                             createHitParticles(hit.position.clone());
-                            // Вспышка куба
-                        if (hit.material) {
-                            const originalEmissive = hit.material.emissive ? hit.material.emissive.clone() : null;
-                            hit.material.emissive.setHex(0xffaa22); // яркий оранжевый
-                            setTimeout(() => {
-                        if (originalEmissive) hit.material.emissive.copy(originalEmissive);
-                            else hit.material.emissive.setHex(0x000000);
-                            }, 150);
-                        }
+                            
+                            if (hit.material) {
+                                const originalEmissive = hit.material.emissive ? hit.material.emissive.clone() : null;
+                                hit.material.emissive.setHex(0xffaa22);
+                                setTimeout(() => {
+                                    if (originalEmissive) hit.material.emissive.copy(originalEmissive);
+                                    else hit.material.emissive.setHex(0x000000);
+                                }, 150);
+                            }
 
-                            apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
+                            const resourceId = hit.userData.resourceId;
+                            apiCall('click', 'POST', { resourceId }).then(data => {
                                 if (data) {
                                     goldSpan.textContent = data.new_gold;
                                     hudExp.textContent = data.new_exp;
                                     updateInventoryDisplay(data.inventory);
                                     loadUser();
 
-                                    // НОВОЕ: эмоциональные сообщения
                                     let phrase = '';
                                     if (data.is_crit) {
                                         phrase = CRIT_PHRASES[Math.floor(Math.random() * CRIT_PHRASES.length)];
@@ -1647,9 +1892,6 @@
                                     if (phrase) showToast(phrase, 1000);
                                 }
                             });
-                        } else if (hit.userData.isBossPart) {
-                            debugLog('✅ Это часть босса (коллайдер)!');
-                            attackBoss();
                         } else {
                             debugLog('Неизвестный объект');
                         }
@@ -1669,15 +1911,21 @@
                 function animate() {
                     time += 0.01;
 
-                    cubes.forEach((c, idx) => {
-                        c.rotation.y += 0.005;
-                        const scale = 1 + Math.sin(time * 5 + idx) * 0.02;
-                        c.scale.set(scale, scale, scale);
-                    });
-
                     if (bossGroup && bossGroup.children.length > 0) {
                         bossGroup.rotation.y += 0.005;
                     }
+
+                    environmentObjects.forEach(obj => {
+                        if (obj.userData.type === 'resource') {
+                            if (obj.geometry && (obj.geometry.type === 'OctahedronGeometry' || obj.geometry.type === 'DodecahedronGeometry')) {
+                                obj.rotation.y += 0.01;
+                            }
+                            if (obj.userData.resourceId === 'soul_shard' || obj.userData.resourceId === 'dragon_scale') {
+                                const scale = 1 + Math.sin(time * 5) * 0.05;
+                                obj.scale.set(scale, scale, scale);
+                            }
+                        }
+                    });
 
                     // Анимации боссов
                     if (currentBossId === 'goblin_king' && bossGroup.userData && bossGroup.userData.axe) {
@@ -1874,7 +2122,6 @@
                         item.light.intensity = Math.max(0.2, intensity);
                     });
 
-                    // Вращаем небо
                     stars.forEach(s => s.rotation.y += 0.0001);
 
                     controls.update();
@@ -1896,9 +2143,8 @@
             }
         }
 
-        // НОВОЕ: обработчики крафта
+        // --- КРАФТ ---
         function openCraftMenu() {
-            // Здесь можно загрузить рецепты с сервера, пока моковые
             const recipes = [
                 { name: '⚗️ Зелье скорости', desc: '+50% опыта на 30 мин', resources: '⚫5, ⚙️2, ✨1' },
                 { name: '🔑 Ключ от логова', desc: 'Повторный бой с боссом', resources: '⚫50, ⚙️20, 🪙5' },
@@ -1917,7 +2163,6 @@
         }
 
         window.craftItem = function(itemName) {
-            // Анимация нажатия
             const items = document.querySelectorAll('.craft-item');
             items.forEach(item => {
                 if (item.querySelector('.name')?.textContent === itemName) {
@@ -1927,7 +2172,6 @@
             });
             hapticFeedback('light');
             showToast(`🔨 Создано: ${itemName}`, 1500);
-            // Здесь должен быть API-запрос на крафт
         };
 
         closeCraft.addEventListener('click', () => craftMenu.style.display = 'none');
@@ -1938,6 +2182,3 @@
     </script>
 </body>
 </html>
-
-
-
