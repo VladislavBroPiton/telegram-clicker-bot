@@ -1567,7 +1567,7 @@
                         metalness: metalnessValues[i],
                         emissiveIntensity: 0.2
                     });
-                    const cube = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), material);
+                    const cube = new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,1.2), material);
                     cube.position.set(pos[0], pos[1], pos[2]);
                     cube.userData = { type: 'resource', id: i, baseScale: 1 };
                     scene.add(cube);
@@ -1661,7 +1661,7 @@
                     time += 0.01;
 
                     cubes.forEach((c, idx) => {
-                        c.rotation.y += 0.01;
+                        c.rotation.y += 0.005;
                         const scale = 1 + Math.sin(time * 5 + idx) * 0.02;
                         c.scale.set(scale, scale, scale);
                     });
@@ -1929,3 +1929,4 @@
     </script>
 </body>
 </html>
+
