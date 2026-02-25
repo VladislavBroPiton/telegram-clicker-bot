@@ -392,6 +392,30 @@ function createSoul() {
     group.add(particles);
     return group;
 }
+        function addOneResourceObjectForBoss(bossId) {
+    // Удаляем предыдущий объект, если был
+    resourceObjects.forEach(obj => scene.remove(obj));
+    resourceObjects = [];
+
+    // Позиция первого куба (самая левая)
+    const pos = [-3, 2.2, -2];
+
+    let obj;
+    if (bossId === 'goblin_king') {
+        obj = createGoldBag();
+    } else if (bossId === 'dragon_lair') {
+        obj = createDragonEgg();
+    } else if (bossId === 'lich_castle') {
+        obj = createSoul();
+    } else {
+        return;
+    }
+
+    obj.position.set(pos[0], pos[1], pos[2]);
+    obj.userData = { type: 'resource', id: 0 }; // временный id
+    scene.add(obj);
+    resourceObjects.push(obj);
+}
 
         // --- ВИЗУАЛЬНАЯ МОДЕЛЬ БОССА (финальная версия) ---
         function createVisualBossModel(bossId) {
@@ -1636,6 +1660,8 @@ function createSoul() {
                     scene.add(cube);
                     cubes.push(cube);
                 });
+                // Создаём один новый объект для текущего босса
+                    addOneResourceObjectForBoss(currentBossId);
 
                 // Группа для босса
                 bossGroup = new THREE.Group();
@@ -2001,5 +2027,6 @@ function createSoul() {
     </script>
 </body>
 </html>
+
 
 
