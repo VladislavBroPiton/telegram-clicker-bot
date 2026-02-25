@@ -1627,6 +1627,7 @@
                         if (originalEmissive) hit.material.emissive.copy(originalEmissive);
                             else hit.material.emissive.setHex(0x000000);
                             }, 150);
+                        }
 
                             apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
                                 if (data) {
@@ -1937,5 +1938,6 @@
     </script>
 </body>
 </html>
+
 
 
