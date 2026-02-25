@@ -147,12 +147,7 @@ BOSS_LOCATIONS = {
             'reward_gold': 5000,
             'reward_resources': {'soul_shard': (1, 3), 'gold': (10, 20)},
             'exp_reward': 500
-        },
-        'resources': [                       # <-- добавить
-            {'res_id': 'gold', 'prob': 1.0, 'min': 1, 'max': 3},
-            {'res_id': 'diamond', 'prob': 0.5, 'min': 1, 'max': 1},
-            {'res_id': 'soul_shard', 'prob': 0.2, 'min': 1, 'max': 1}
-        ]
+        }
     },
     'dragon_lair': {
         'name': 'Логово дракона',
@@ -165,12 +160,7 @@ BOSS_LOCATIONS = {
             'reward_gold': 20000,
             'reward_resources': {'dragon_scale': (1, 2), 'magic_essence': (2, 5)},
             'exp_reward': 2000
-        },
-        'resources': [
-            {'res_id': 'dragon_scale', 'prob': 1.0, 'min': 1, 'max': 2},
-            {'res_id': 'magic_essence', 'prob': 0.7, 'min': 1, 'max': 2},
-            {'res_id': 'gold', 'prob': 0.5, 'min': 1, 'max': 5}
-        ]
+        }
     },
     'lich_castle': {
         'name': 'Цитадель лича',
@@ -183,12 +173,7 @@ BOSS_LOCATIONS = {
             'reward_gold': 50000,
             'reward_resources': {'soul_shard': (5, 10), 'magic_essence': (3, 7)},
             'exp_reward': 5000
-        },
-         'resources': [
-            {'res_id': 'soul_shard', 'prob': 1.0, 'min': 1, 'max': 3},
-            {'res_id': 'magic_essence', 'prob': 0.8, 'min': 1, 'max': 3},
-            {'res_id': 'diamond', 'prob': 0.3, 'min': 1, 'max': 2}
-        ]
+        }
     }
 }
 
@@ -1317,47 +1302,27 @@ async def craft_item(uid: int, recipe_id: str, conn: asyncpg.Connection = None) 
 
 # ==================== ОБЩАЯ ЛОГИКА КЛИКА ====================
 
-async def process_click(uid: int, conn: asyncpg.Connection = None, resource_id: str = None) -> dict:
+async def process_click(uid: int, conn: asyncpg.Connection = None) -> dict:
+    """
+    Выполняет логику одного клика в транзакции.
+    Возвращает словарь с результатами.
+    """
     async def _execute(conn):
         # Получаем текущую локацию
         loc_id = await get_player_current_location(uid, conn)
-        
-        # Определяем, является ли локация босс-локацией
-        if loc_id in BOSS_LOCATIONS:
-            loc_data = BOSS_LOCATIONS[loc_id]
-            loc_resources = loc_data.get('resources', [])
-        else:
-            loc_data = LOCATIONS.get(loc_id, LOCATIONS['coal_mine'])
-            loc_resources = loc_data['resources']
+        loc = LOCATIONS.get(loc_id, LOCATIONS['coal_mine'])
 
-        # Если передан resource_id, используем его
-        if resource_id is not None:
-            # Проверяем, что ресурс существует
-            if resource_id not in RESOURCES:
-                raise ValueError(f"Resource {resource_id} not found")
-            
-            # Проверяем, разрешён ли ресурс в текущей локации
-            allowed = any(r['res_id'] == resource_id for r in loc_resources)
-            if not allowed:
-                raise ValueError(f"Resource {resource_id} not allowed in current location")
-            
-            found = resource_id
-            amt = 1  # или можно взять из диапазона: next(r['min'] for r in loc_resources if r['res_id'] == resource_id)
-        else:
-            # Случайный выбор из ресурсов локации
-            rnd = random.random()
-            cum = 0
-            found = None
-            amt = 0
-            for r in loc_resources:
-                cum += r['prob']
-                if rnd < cum:
-                    found = r['res_id']
-                    amt = random.randint(r['min'], r['max'])
-                    break
-
-        # Далее как обычно: базовая награда, модификатор инструмента и т.д.
-        # ... (остальной код без изменений, но учтите, что found может быть None, если ни один ресурс не выпал)
+        # Добыча ресурса
+        rnd = random.random()
+        cum = 0
+        found = None
+        amt = 0
+        for r in loc['resources']:
+            cum += r['prob']
+            if rnd < cum:
+                found = r['res_id']
+                amt = random.randint(r['min'], r['max'])
+                break
 
         # Базовая награда
         stats = await get_player_stats(uid, conn)
@@ -2816,12 +2781,7 @@ async def api_click(request):
         return JSONResponse({'error': 'Invalid init data'}, status_code=403)
 
     uid = user['id']
-    body = await request.json()
-    resource_id = body.get('resourceId')  # может быть None
-    try:
-        result = await process_click(uid, resource_id=resource_id)
-    except ValueError as e:
-        return JSONResponse({'error': str(e)}, status_code=400)
+    result = await process_click(uid)
     return JSONResponse(result)
 
 # ==================== ЗАПУСК ====================
@@ -2906,8 +2866,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
