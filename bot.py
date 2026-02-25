@@ -1317,7 +1317,7 @@ async def craft_item(uid: int, recipe_id: str, conn: asyncpg.Connection = None) 
 
 # ==================== ОБЩАЯ ЛОГИКА КЛИКА ====================
 
-async def process_click(uid: int, conn: asyncpg.Connection = None) -> dict:
+async def process_click(uid: int, conn: asyncpg.Connection = None, resource_id: str = None) -> dict:
     """
     Выполняет логику одного клика в транзакции.
     Возвращает словарь с результатами.
@@ -2881,4 +2881,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
