@@ -2816,7 +2816,12 @@ async def api_click(request):
         return JSONResponse({'error': 'Invalid init data'}, status_code=403)
 
     uid = user['id']
-    result = await process_click(uid)
+    body = await request.json()
+    resource_id = body.get('resourceId')  # может быть None
+    try:
+        result = await process_click(uid, resource_id=resource_id)
+    except ValueError as e:
+        return JSONResponse({'error': str(e)}, status_code=400)
     return JSONResponse(result)
 
 # ==================== ЗАПУСК ====================
@@ -2901,6 +2906,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
