@@ -109,7 +109,6 @@
         <div>Уровень <span id="level">1</span> • <span id="exp-current">0</span>/100</div>
         <div>📦 Инвентарь: <span id="inventory">—</span></div>
         <div id="tool-display">🧰 Инструмент: <span id="active-tool">загрузка...</span></div>
-        <!-- НОВОЕ: кнопка для открытия меню крафта -->
         <div style="margin-top: 5px;">
             <button id="craft-btn" style="background: #8a6d3b; border: none; color: white; border-radius: 20px; padding: 5px 10px;">🔨 Крафт</button>
         </div>
@@ -126,7 +125,6 @@
             <button class="boss-nav-btn" id="next-boss">→</button>
         </div>
     </div>
-    <!-- НОВОЕ: модальное окно крафта -->
     <div id="craft-menu">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <h2>🔨 Крафт</h2>
@@ -134,7 +132,6 @@
         </div>
         <div id="craft-content"></div>
     </div>
-    <!-- НОВОЕ: тост-уведомления -->
     <div id="toast" class="toast"></div>
     <div id="debug-info"></div>
 
@@ -169,7 +166,6 @@
             'magic_essence': '✨'
         };
 
-        // НОВОЕ: эмоциональные фразы
         const CRIT_PHRASES = ["💥 КРИТ!", "⚡ СВЕРХУДАР!", "🔥 ОГОНЬ!", "✨ УДАЧА!"];
         const RARE_FIND_PHRASES = {
             'diamond': ['💎 Алмаз!', '💎 Бриллиант!'],
@@ -178,6 +174,9 @@
             'dragon_scale': ['🐉 Чешуя дракона!', '🐉 Драконья чешуя!'],
             'magic_essence': ['✨ Эссенция магии!', '✨ Магическая субстанция!']
         };
+
+        // Список редких ресурсов для визуальной подсветки
+        const RARE_RESOURCES = ['diamond', 'mithril', 'soul_shard', 'dragon_scale', 'magic_essence'];
 
         // Глобальные переменные
         let currentBossIndex = 0;
@@ -191,7 +190,6 @@
         let stars = [];
         let bossCollider = null;
         let environmentObjects = [];
-        // Для анимаций окружения
         let torchLights = [];
         let lavaPlane = null;
         let lavaTexture = null;
@@ -218,7 +216,6 @@
         const bossMaxHealth = document.getElementById('boss-max-health');
         const bossHealthFill = document.getElementById('boss-health-fill');
         const bossIndexSpan = document.getElementById('boss-index');
-        // НОВОЕ: элементы для крафта и тостов
         const craftMenu = document.getElementById('craft-menu');
         const craftContent = document.getElementById('craft-content');
         const closeCraft = document.getElementById('close-craft');
@@ -284,18 +281,26 @@
             bossHealthFill.style.width = (max ? (current / max) * 100 : 0) + '%';
         }
 
-        // НОВОЕ: функция показа тост-уведомления
         function showToast(message, duration = 2000) {
             toast.textContent = message;
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), duration);
         }
 
-        // НОВОЕ: тактильный отклик
         function hapticFeedback(style = 'light') {
             if (tg && tg.HapticFeedback) {
                 tg.HapticFeedback.impactOccurred(style);
             }
+        }
+
+        // --- ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ПОДСВЕТКИ КУБА ---
+        function flashCube(cube, colorHex, durationMs) {
+            if (!cube || !cube.material) return;
+            const originalEmissive = cube.material.emissive ? cube.material.emissive.clone() : new THREE.Color(0x000000);
+            cube.material.emissive.setHex(colorHex);
+            setTimeout(() => {
+                cube.material.emissive.copy(originalEmissive);
+            }, durationMs);
         }
 
         // --- УЛУЧШЕННОЕ ЗВЁЗДНОЕ НЕБО (сфера с текстурой) ---
@@ -1411,7 +1416,6 @@
             debugLog('⚔️ attackBoss called');
             if (isAttacking) return;
             isAttacking = true;
-            // НОВОЕ: тактильный отклик (тяжёлый)
             hapticFeedback('heavy');
             if (bossGroup) {
                 bossGroup.traverse(obj => {
@@ -1448,7 +1452,6 @@
                     }
                 }
                 if (data.defeated) {
-                    // НОВОЕ: эффект смерти – несколько взрывов частиц
                     for (let i = 0; i < 5; i++) {
                         setTimeout(() => {
                             if (bossGroup) {
@@ -1459,7 +1462,6 @@
                     }
                     bossGroup.visible = false;
                     bossHealthDiv.style.display = 'none';
-                    // НОВОЕ: тост с наградой
                     if (data.loot && data.loot.length) {
                         showToast(`🏆 Босс побеждён! Награда: ${data.loot.join(', ')}`, 3000);
                     } else {
@@ -1611,23 +1613,20 @@
                         const hit = intersects[0].object;
                         debugLog(`Hit object: userData: ${JSON.stringify(hit.userData)}`);
                         if (hit.userData.type === 'resource') {
-                            // НОВОЕ: тактильный отклик (лёгкий)
                             hapticFeedback('light');
-                            // НОВОЕ: анимация сжатия куба
                             const originalScale = hit.scale.clone();
                             hit.scale.set(0.8, 0.8, 0.8);
                             setTimeout(() => hit.scale.copy(originalScale), 100);
-                            // НОВОЕ: частицы при клике
                             createHitParticles(hit.position.clone());
                             // Вспышка куба
-                        if (hit.material) {
-                            const originalEmissive = hit.material.emissive ? hit.material.emissive.clone() : null;
-                            hit.material.emissive.setHex(0xffaa22); // яркий оранжевый
-                            setTimeout(() => {
-                        if (originalEmissive) hit.material.emissive.copy(originalEmissive);
-                            else hit.material.emissive.setHex(0x000000);
-                            }, 150);
-                        }
+                            if (hit.material) {
+                                const originalEmissive = hit.material.emissive ? hit.material.emissive.clone() : null;
+                                hit.material.emissive.setHex(0xffaa22);
+                                setTimeout(() => {
+                                    if (originalEmissive) hit.material.emissive.copy(originalEmissive);
+                                    else hit.material.emissive.setHex(0x000000);
+                                }, 150);
+                            }
 
                             apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
                                 if (data) {
@@ -1636,13 +1635,19 @@
                                     updateInventoryDisplay(data.inventory);
                                     loadUser();
 
-                                    // НОВОЕ: эмоциональные сообщения
+                                    // НОВОЕ: эмоциональные сообщения и подсветка
                                     let phrase = '';
                                     if (data.is_crit) {
                                         phrase = CRIT_PHRASES[Math.floor(Math.random() * CRIT_PHRASES.length)];
+                                        // Золотая подсветка при критическом ударе
+                                        flashCube(hit, 0xffdd44, 400);
                                     } else if (data.found_resource && RARE_FIND_PHRASES[data.found_resource]) {
                                         const arr = RARE_FIND_PHRASES[data.found_resource];
                                         phrase = arr[Math.floor(Math.random() * arr.length)];
+                                        // Фиолетовая подсветка для редких ресурсов
+                                        if (RARE_RESOURCES.includes(data.found_resource)) {
+                                            flashCube(hit, 0xaa88ff, 400);
+                                        }
                                     }
                                     if (phrase) showToast(phrase, 1000);
                                 }
@@ -1938,5 +1943,3 @@
     </script>
 </body>
 </html>
-
-
