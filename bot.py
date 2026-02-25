@@ -147,7 +147,7 @@ BOSS_LOCATIONS = {
             'reward_gold': 5000,
             'reward_resources': {'soul_shard': (1, 3), 'gold': (10, 20)},
             'exp_reward': 500
-        }
+        },
         'resources': [                       # <-- добавить
             {'res_id': 'gold', 'prob': 1.0, 'min': 1, 'max': 3},
             {'res_id': 'diamond', 'prob': 0.5, 'min': 1, 'max': 1},
@@ -165,7 +165,7 @@ BOSS_LOCATIONS = {
             'reward_gold': 20000,
             'reward_resources': {'dragon_scale': (1, 2), 'magic_essence': (2, 5)},
             'exp_reward': 2000
-        }
+        },
         'resources': [
             {'res_id': 'dragon_scale', 'prob': 1.0, 'min': 1, 'max': 2},
             {'res_id': 'magic_essence', 'prob': 0.7, 'min': 1, 'max': 2},
@@ -183,7 +183,7 @@ BOSS_LOCATIONS = {
             'reward_gold': 50000,
             'reward_resources': {'soul_shard': (5, 10), 'magic_essence': (3, 7)},
             'exp_reward': 5000
-        }
+        },
          'resources': [
             {'res_id': 'soul_shard', 'prob': 1.0, 'min': 1, 'max': 3},
             {'res_id': 'magic_essence', 'prob': 0.8, 'min': 1, 'max': 3},
@@ -2906,6 +2906,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
