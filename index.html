@@ -412,6 +412,13 @@ function createSoul() {
     }
 
     obj.position.set(pos[0], pos[1], pos[2]);
+            // временно сделаем объект ярко-красным и увеличим
+obj.traverse(child => {
+    if (child.isMesh) {
+        child.material.emissive.setHex(0xff0000);
+        child.material.emissiveIntensity = 1.0;
+    }
+});
     obj.userData = { type: 'resource', id: 0 }; // временный id
     scene.add(obj);
     resourceObjects.push(obj);
@@ -2062,6 +2069,7 @@ if (cubes.length > 0) {
     </script>
 </body>
 </html>
+
 
 
 
