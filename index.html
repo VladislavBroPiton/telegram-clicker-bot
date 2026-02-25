@@ -175,7 +175,6 @@
             'magic_essence': ['✨ Эссенция магии!', '✨ Магическая субстанция!']
         };
 
-        // Список редких ресурсов для визуальной подсветки
         const RARE_RESOURCES = ['diamond', 'mithril', 'soul_shard', 'dragon_scale', 'magic_essence'];
 
         // Глобальные переменные
@@ -1510,8 +1509,8 @@
 
                 createStars();
 
-                // --- КУБЫ-РЕСУРСЫ (улучшенный внешний вид) ---
-                const positions = [[-3,1.5,-2], [3,1.5,-2], [0,1.5,2], [-2,1.5,3], [2,1.5,3]];
+                // --- КУБЫ-РЕСУРСЫ (уменьшены, стоят на полу, неподвижны) ---
+                const positions = [[-3,0.5,-2], [3,0.5,-2], [0,0.5,2], [-2,0.5,3], [2,0.5,3]];
                 const baseColors = [0x333333, 0x8B5A2B, 0xFFD700, 0x88CCFF, 0xC0C0C0];
                 const emissiveColors = [0x111111, 0x331100, 0x442200, 0x112244, 0x222222];
                 const metalnessValues = [0.1, 0.8, 0.9, 0.3, 0.7];
@@ -1569,7 +1568,7 @@
                         metalness: metalnessValues[i],
                         emissiveIntensity: 0.2
                     });
-                    const cube = new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,1.2), material);
+                    const cube = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.0, 1.0), material);
                     cube.position.set(pos[0], pos[1], pos[2]);
                     cube.userData = { type: 'resource', id: i, baseScale: 1 };
                     scene.add(cube);
@@ -1635,7 +1634,6 @@
                                     updateInventoryDisplay(data.inventory);
                                     loadUser();
 
-                                    // НОВОЕ: эмоциональные сообщения и подсветка
                                     let phrase = '';
                                     if (data.is_crit) {
                                         phrase = CRIT_PHRASES[Math.floor(Math.random() * CRIT_PHRASES.length)];
@@ -1674,11 +1672,12 @@
                 function animate() {
                     time += 0.01;
 
-                    cubes.forEach((c, idx) => {
-                        c.rotation.y += 0.005;
-                        const scale = 1 + Math.sin(time * 5 + idx) * 0.02;
-                        c.scale.set(scale, scale, scale);
-                    });
+                    // Кубы больше не вращаются и не масштабируются
+                    // cubes.forEach((c, idx) => {
+                    //     c.rotation.y += 0.005;
+                    //     const scale = 1 + Math.sin(time * 5 + idx) * 0.02;
+                    //     c.scale.set(scale, scale, scale);
+                    // });
 
                     if (bossGroup && bossGroup.children.length > 0) {
                         bossGroup.rotation.y += 0.005;
@@ -1901,7 +1900,7 @@
             }
         }
 
-        // НОВОЕ: обработчики крафта
+        // --- ОБРАБОТЧИКИ КРАФТА ---
         function openCraftMenu() {
             // Здесь можно загрузить рецепты с сервера, пока моковые
             const recipes = [
