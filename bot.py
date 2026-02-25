@@ -148,6 +148,11 @@ BOSS_LOCATIONS = {
             'reward_resources': {'soul_shard': (1, 3), 'gold': (10, 20)},
             'exp_reward': 500
         }
+        'resources': [                       # <-- добавить
+            {'res_id': 'gold', 'prob': 1.0, 'min': 1, 'max': 3},
+            {'res_id': 'diamond', 'prob': 0.5, 'min': 1, 'max': 1},
+            {'res_id': 'soul_shard', 'prob': 0.2, 'min': 1, 'max': 1}
+        ]
     },
     'dragon_lair': {
         'name': 'Логово дракона',
@@ -161,6 +166,11 @@ BOSS_LOCATIONS = {
             'reward_resources': {'dragon_scale': (1, 2), 'magic_essence': (2, 5)},
             'exp_reward': 2000
         }
+        'resources': [
+            {'res_id': 'dragon_scale', 'prob': 1.0, 'min': 1, 'max': 2},
+            {'res_id': 'magic_essence', 'prob': 0.7, 'min': 1, 'max': 2},
+            {'res_id': 'gold', 'prob': 0.5, 'min': 1, 'max': 5}
+        ]
     },
     'lich_castle': {
         'name': 'Цитадель лича',
@@ -174,6 +184,11 @@ BOSS_LOCATIONS = {
             'reward_resources': {'soul_shard': (5, 10), 'magic_essence': (3, 7)},
             'exp_reward': 5000
         }
+         'resources': [
+            {'res_id': 'soul_shard', 'prob': 1.0, 'min': 1, 'max': 3},
+            {'res_id': 'magic_essence', 'prob': 0.8, 'min': 1, 'max': 3},
+            {'res_id': 'diamond', 'prob': 0.3, 'min': 1, 'max': 2}
+        ]
     }
 }
 
@@ -2866,3 +2881,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
