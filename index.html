@@ -334,7 +334,7 @@
 function createGoldBag() {
     const group = new THREE.Group();
     const bagMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.7 });
-    const bag = new THREE.Mesh(new THREE.SphereGeometry(1.5, 16), bagMat);
+    const bag = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16), bagMat);
     bag.scale.set(1.0, 0.8, 1.0);
     bag.position.y = 0.8;
     group.add(bag);
@@ -2069,6 +2069,7 @@ if (cubes.length > 0) {
     </script>
 </body>
 </html>
+
 
 
 
