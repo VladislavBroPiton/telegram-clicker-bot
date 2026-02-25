@@ -184,7 +184,6 @@
         let currentBossId = BOSS_IDS[0];
         let isAttacking = false;
         let cubes = [];
-        let resourceObjects = [];
         let scene, camera, renderer, controls;
         let bossGroup = null;
         let threeReady = false;
@@ -330,99 +329,6 @@
             scene.add(skySphere);
             stars.push(skySphere);
         }
-        // ========== НОВЫЕ КЛИКАБЕЛЬНЫЕ ОБЪЕКТЫ ==========
-function createGoldBag() {
-    const group = new THREE.Group();
-    const bagMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.7 });
-    const bag = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16), bagMat);
-    bag.scale.set(1.0, 0.8, 1.0);
-    bag.position.y = 0.8;
-    group.add(bag);
-
-    const ropeMat = new THREE.MeshStandardMaterial({ color: 0x654321 });
-    const rope = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.07, 8, 24), ropeMat);
-    rope.rotation.x = Math.PI / 2;
-    rope.position.y = 1.1;
-    group.add(rope);
-
-    const coinMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
-    for (let i = 0; i < 3; i++) {
-        const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.08, 8), coinMat);
-        coin.position.set(0.3 * Math.sin(i), 1.4 + i * 0.08, 0.3 * Math.cos(i));
-        coin.rotation.x = Math.random() * Math.PI;
-        coin.rotation.z = Math.random() * Math.PI;
-        group.add(coin);
-    }
-    return group;
-}
-
-function createDragonEgg() {
-    const group = new THREE.Group();
-    const eggMat = new THREE.MeshStandardMaterial({ color: 0xaa4422, emissive: 0x331100 });
-    const egg = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16), eggMat);
-    egg.scale.set(1.0, 1.3, 1.0);
-    egg.position.y = 0.9;
-    group.add(egg);
-    const scaleMat = new THREE.MeshStandardMaterial({ color: 0xcc5533 });
-    for (let i = 0; i < 6; i++) {
-        const s = new THREE.Mesh(new THREE.SphereGeometry(0.15, 4), scaleMat);
-        s.position.set(Math.sin(i)*0.6, 0.9 + Math.cos(i*2)*0.3, Math.cos(i)*0.6);
-        group.add(s);
-    }
-    return group;
-}
-
-function createSoul() {
-    const group = new THREE.Group();
-    const soulMat = new THREE.MeshStandardMaterial({ color: 0x88aaff, emissive: 0x224466, transparent: true, opacity: 0.7 });
-    const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.6, 8), soulMat);
-    group.add(sphere);
-    const particleCount = 6;
-    const particleGeom = new THREE.BufferGeometry();
-    const positions = new Float32Array(particleCount * 3);
-    for (let i = 0; i < particleCount; i++) {
-        const angle = (i / particleCount) * Math.PI * 2;
-        positions[i*3] = Math.cos(angle) * 1.0;
-        positions[i*3+1] = Math.sin(angle) * 0.3;
-        positions[i*3+2] = Math.sin(angle) * 1.0;
-    }
-    particleGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const particleMat = new THREE.PointsMaterial({ color: 0xaaccff, size: 0.15 });
-    const particles = new THREE.Points(particleGeom, particleMat);
-    group.add(particles);
-    return group;
-}
-        function addOneResourceObjectForBoss(bossId) {
-    // Удаляем предыдущий объект, если был
-    resourceObjects.forEach(obj => scene.remove(obj));
-    resourceObjects = [];
-
-    // Позиция первого куба (самая левая)
-    const pos = [-3, 2.2, -2];
-
-    let obj;
-    if (bossId === 'goblin_king') {
-        obj = createGoldBag();
-    } else if (bossId === 'dragon_lair') {
-        obj = createDragonEgg();
-    } else if (bossId === 'lich_castle') {
-        obj = createSoul();
-    } else {
-        return;
-    }
-
-    obj.position.set(pos[0], pos[3], pos[5]);
-            // временно сделаем объект ярко-красным и увеличим
-obj.traverse(child => {
-    if (child.isMesh) {
-        child.material.emissive.setHex(0xff0000);
-        child.material.emissiveIntensity = 1.0;
-    }
-});
-    obj.userData = { type: 'resource', id: 0 }; // временный id
-    scene.add(obj);
-    resourceObjects.push(obj);
-}
 
         // --- ВИЗУАЛЬНАЯ МОДЕЛЬ БОССА (финальная версия) ---
         function createVisualBossModel(bossId) {
@@ -1398,7 +1304,6 @@ obj.traverse(child => {
 
                     clearEnvironment();
                     createEnvironmentForBoss(currentBossId);
-                    addOneResourceObjectForBoss(currentBossId);
                 }
             }
         });
@@ -1422,7 +1327,6 @@ obj.traverse(child => {
 
                     clearEnvironment();
                     createEnvironmentForBoss(currentBossId);
-                    addOneResourceObjectForBoss(currentBossId);
                 }
             }
         });
@@ -1669,13 +1573,6 @@ obj.traverse(child => {
                     scene.add(cube);
                     cubes.push(cube);
                 });
-                // Удаляем первый куб (индекс 0)
-if (cubes.length > 0) {
-    scene.remove(cubes[0]);
-    cubes.splice(0, 1);
-}
-                // Создаём один новый объект для текущего босса
-                    addOneResourceObjectForBoss(currentBossId);
 
                 // Группа для босса
                 bossGroup = new THREE.Group();
@@ -1703,91 +1600,63 @@ if (cubes.length > 0) {
                 const mouse = new THREE.Vector2();
 
                 function handleClick(event) {
-    const rect = renderer.domElement.getBoundingClientRect();
-    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                    const rect = renderer.domElement.getBoundingClientRect();
+                    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-    raycaster.setFromCamera(mouse, camera);
+                    raycaster.setFromCamera(mouse, camera);
+                    const intersects = raycaster.intersectObjects([...cubes, ...bossGroup.children]);
 
-    // Сначала проверяем новые объекты
-    const resourceIntersects = raycaster.intersectObjects(resourceObjects);
-    // Потом кубы
-    const cubeIntersects = raycaster.intersectObjects(cubes);
-    // Потом босса
-    const bossIntersects = raycaster.intersectObjects(bossGroup.children);
+                    if (intersects.length > 0) {
+                        const hit = intersects[0].object;
+                        debugLog(`Hit object: userData: ${JSON.stringify(hit.userData)}`);
+                        if (hit.userData.type === 'resource') {
+                            // НОВОЕ: тактильный отклик (лёгкий)
+                            hapticFeedback('light');
+                            // НОВОЕ: анимация сжатия куба
+                            const originalScale = hit.scale.clone();
+                            hit.scale.set(0.8, 0.8, 0.8);
+                            setTimeout(() => hit.scale.copy(originalScale), 100);
+                            // НОВОЕ: частицы при клике
+                            createHitParticles(hit.position.clone());
+                            // Вспышка куба
+                        if (hit.material) {
+                            const originalEmissive = hit.material.emissive ? hit.material.emissive.clone() : null;
+                            hit.material.emissive.setHex(0xffaa22); // яркий оранжевый
+                            setTimeout(() => {
+                        if (originalEmissive) hit.material.emissive.copy(originalEmissive);
+                            else hit.material.emissive.setHex(0x000000);
+                            }, 150);
+                        }
 
-    if (resourceIntersects.length > 0) {
-        const hit = resourceIntersects[0].object;
-        debugLog(`Hit new object: ${JSON.stringify(hit.userData)}`);
-        hapticFeedback('light');
-        const originalScale = hit.scale.clone();
-        hit.scale.set(0.8, 0.8, 0.8);
-        setTimeout(() => hit.scale.copy(originalScale), 100);
-        createHitParticles(hit.position.clone());
-        if (hit.material) {
-            const originalEmissive = hit.material.emissive ? hit.material.emissive.clone() : null;
-            hit.material.emissive.setHex(0xffaa22);
-            setTimeout(() => {
-                if (originalEmissive) hit.material.emissive.copy(originalEmissive);
-                else hit.material.emissive.setHex(0x000000);
-            }, 150);
-        }
-        apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
-            if (data) {
-                goldSpan.textContent = data.new_gold;
-                hudExp.textContent = data.new_exp;
-                updateInventoryDisplay(data.inventory);
-                loadUser();
-                let phrase = '';
-                if (data.is_crit) {
-                    phrase = CRIT_PHRASES[Math.floor(Math.random() * CRIT_PHRASES.length)];
-                } else if (data.found_resource && RARE_FIND_PHRASES[data.found_resource]) {
-                    const arr = RARE_FIND_PHRASES[data.found_resource];
-                    phrase = arr[Math.floor(Math.random() * arr.length)];
+                            apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
+                                if (data) {
+                                    goldSpan.textContent = data.new_gold;
+                                    hudExp.textContent = data.new_exp;
+                                    updateInventoryDisplay(data.inventory);
+                                    loadUser();
+
+                                    // НОВОЕ: эмоциональные сообщения
+                                    let phrase = '';
+                                    if (data.is_crit) {
+                                        phrase = CRIT_PHRASES[Math.floor(Math.random() * CRIT_PHRASES.length)];
+                                    } else if (data.found_resource && RARE_FIND_PHRASES[data.found_resource]) {
+                                        const arr = RARE_FIND_PHRASES[data.found_resource];
+                                        phrase = arr[Math.floor(Math.random() * arr.length)];
+                                    }
+                                    if (phrase) showToast(phrase, 1000);
+                                }
+                            });
+                        } else if (hit.userData.isBossPart) {
+                            debugLog('✅ Это часть босса (коллайдер)!');
+                            attackBoss();
+                        } else {
+                            debugLog('Неизвестный объект');
+                        }
+                    } else {
+                        debugLog('No intersection');
+                    }
                 }
-                if (phrase) showToast(phrase, 1000);
-            }
-        });
-    } else if (cubeIntersects.length > 0) {
-        const hit = cubeIntersects[0].object;
-        debugLog(`Hit cube: ${JSON.stringify(hit.userData)}`);
-        hapticFeedback('light');
-        const originalScale = hit.scale.clone();
-        hit.scale.set(0.8, 0.8, 0.8);
-        setTimeout(() => hit.scale.copy(originalScale), 100);
-        createHitParticles(hit.position.clone());
-        if (hit.material) {
-            const originalEmissive = hit.material.emissive ? hit.material.emissive.clone() : null;
-            hit.material.emissive.setHex(0xffaa22);
-            setTimeout(() => {
-                if (originalEmissive) hit.material.emissive.copy(originalEmissive);
-                else hit.material.emissive.setHex(0x000000);
-            }, 150);
-        }
-        apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
-            if (data) {
-                goldSpan.textContent = data.new_gold;
-                hudExp.textContent = data.new_exp;
-                updateInventoryDisplay(data.inventory);
-                loadUser();
-                let phrase = '';
-                if (data.is_crit) {
-                    phrase = CRIT_PHRASES[Math.floor(Math.random() * CRIT_PHRASES.length)];
-                } else if (data.found_resource && RARE_FIND_PHRASES[data.found_resource]) {
-                    const arr = RARE_FIND_PHRASES[data.found_resource];
-                    phrase = arr[Math.floor(Math.random() * arr.length)];
-                }
-                if (phrase) showToast(phrase, 1000);
-            }
-        });
-    } else if (bossIntersects.length > 0) {
-        const hit = bossIntersects[0].object;
-        if (hit.userData.isBossPart) {
-            debugLog('✅ Это часть босса (коллайдер)!');
-            attackBoss();
-        }
-    }
-}
 
                 renderer.domElement.addEventListener('click', handleClick);
                 renderer.domElement.addEventListener('touchstart', (e) => {
@@ -2069,13 +1938,5 @@ if (cubes.length > 0) {
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
 
 
