@@ -7,7 +7,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; }
-        #hud, #boss-health {
+        #hud, #boss-health, #craft-menu {
             position: absolute;
             color: white;
             background: rgba(20,20,30,0.85);
@@ -24,12 +24,25 @@
             left: 10px;
             pointer-events: none;
         }
+        #hud button {
+            pointer-events: auto;
+        }
         #boss-health {
             bottom: 10px;
             right: 10px;
             width: 220px;
             display: none;
             border-color: #ff4444;
+            pointer-events: auto;
+        }
+        #craft-menu {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 280px;
+            max-height: 80vh;
+            overflow-y: auto;
+            display: none;
             pointer-events: auto;
         }
         .health-bar { width: 100%; height: 16px; background-color: #333; border-radius: 8px; overflow: hidden; margin-top: 6px; }
@@ -46,6 +59,38 @@
             max-width: 100%;
             display: inline-block;
         }
+        .craft-category { margin-bottom: 15px; }
+        .craft-category h3 { margin: 0 0 5px; font-size: 16px; color: #ffaa66; }
+        .craft-item {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .craft-item:active { transform: scale(0.98); background: rgba(255,255,255,0.2); }
+        .craft-item .name { font-weight: bold; }
+        .craft-item .desc { font-size: 12px; opacity: 0.8; }
+        .craft-item .resources { font-size: 11px; color: #aaffaa; }
+        .close-btn { float: right; background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
+        .toast {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 300;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .toast.show { opacity: 1; }
     </style>
     <script type="importmap">
         {
@@ -64,6 +109,10 @@
         <div>Уровень <span id="level">1</span> • <span id="exp-current">0</span>/100</div>
         <div>📦 Инвентарь: <span id="inventory">—</span></div>
         <div id="tool-display">🧰 Инструмент: <span id="active-tool">загрузка...</span></div>
+        <!-- НОВОЕ: кнопка для открытия меню крафта -->
+        <div style="margin-top: 5px;">
+            <button id="craft-btn" style="background: #8a6d3b; border: none; color: white; border-radius: 20px; padding: 5px 10px;">🔨 Крафт</button>
+        </div>
     </div>
     <div id="boss-health">
         <div style="display: flex; justify-content: space-between;">
@@ -77,6 +126,16 @@
             <button class="boss-nav-btn" id="next-boss">→</button>
         </div>
     </div>
+    <!-- НОВОЕ: модальное окно крафта -->
+    <div id="craft-menu">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>🔨 Крафт</h2>
+            <button class="close-btn" id="close-craft">×</button>
+        </div>
+        <div id="craft-content"></div>
+    </div>
+    <!-- НОВОЕ: тост-уведомления -->
+    <div id="toast" class="toast"></div>
     <div id="debug-info"></div>
 
     <script type="module">
@@ -108,6 +167,16 @@
             'soul_shard': '💀',
             'dragon_scale': '🐉',
             'magic_essence': '✨'
+        };
+
+        // НОВОЕ: эмоциональные фразы
+        const CRIT_PHRASES = ["💥 КРИТ!", "⚡ СВЕРХУДАР!", "🔥 ОГОНЬ!", "✨ УДАЧА!"];
+        const RARE_FIND_PHRASES = {
+            'diamond': ['💎 Алмаз!', '💎 Бриллиант!'],
+            'mithril': ['🔮 Мифрил!', '🔮 Легендарный металл!'],
+            'soul_shard': ['💀 Осколок души!', '💀 Жуткая находка!'],
+            'dragon_scale': ['🐉 Чешуя дракона!', '🐉 Драконья чешуя!'],
+            'magic_essence': ['✨ Эссенция магии!', '✨ Магическая субстанция!']
         };
 
         // Глобальные переменные
@@ -149,6 +218,12 @@
         const bossMaxHealth = document.getElementById('boss-max-health');
         const bossHealthFill = document.getElementById('boss-health-fill');
         const bossIndexSpan = document.getElementById('boss-index');
+        // НОВОЕ: элементы для крафта и тостов
+        const craftMenu = document.getElementById('craft-menu');
+        const craftContent = document.getElementById('craft-content');
+        const closeCraft = document.getElementById('close-craft');
+        const craftBtn = document.getElementById('craft-btn');
+        const toast = document.getElementById('toast');
         const debugInfo = document.getElementById('debug-info');
 
         function debugLog(msg) {
@@ -207,6 +282,20 @@
             bossCurrentHealth.textContent = current;
             bossMaxHealth.textContent = max;
             bossHealthFill.style.width = (max ? (current / max) * 100 : 0) + '%';
+        }
+
+        // НОВОЕ: функция показа тост-уведомления
+        function showToast(message, duration = 2000) {
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), duration);
+        }
+
+        // НОВОЕ: тактильный отклик
+        function hapticFeedback(style = 'light') {
+            if (tg && tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred(style);
+            }
         }
 
         // --- УЛУЧШЕННОЕ ЗВЁЗДНОЕ НЕБО (сфера с текстурой) ---
@@ -1322,6 +1411,8 @@
             debugLog('⚔️ attackBoss called');
             if (isAttacking) return;
             isAttacking = true;
+            // НОВОЕ: тактильный отклик (тяжёлый)
+            hapticFeedback('heavy');
             if (bossGroup) {
                 bossGroup.traverse(obj => {
                     if (obj.isMesh && obj.material.emissive) {
@@ -1357,8 +1448,23 @@
                     }
                 }
                 if (data.defeated) {
+                    // НОВОЕ: эффект смерти – несколько взрывов частиц
+                    for (let i = 0; i < 5; i++) {
+                        setTimeout(() => {
+                            if (bossGroup) {
+                                const pos = bossGroup.position.clone();
+                                createHitParticles(pos);
+                            }
+                        }, i * 100);
+                    }
                     bossGroup.visible = false;
                     bossHealthDiv.style.display = 'none';
+                    // НОВОЕ: тост с наградой
+                    if (data.loot && data.loot.length) {
+                        showToast(`🏆 Босс побеждён! Награда: ${data.loot.join(', ')}`, 3000);
+                    } else {
+                        showToast('🏆 Босс побеждён!', 2000);
+                    }
                 }
                 loadUser();
             } else {
@@ -1505,12 +1611,31 @@
                         const hit = intersects[0].object;
                         debugLog(`Hit object: userData: ${JSON.stringify(hit.userData)}`);
                         if (hit.userData.type === 'resource') {
+                            // НОВОЕ: тактильный отклик (лёгкий)
+                            hapticFeedback('light');
+                            // НОВОЕ: анимация сжатия куба
+                            const originalScale = hit.scale.clone();
+                            hit.scale.set(0.8, 0.8, 0.8);
+                            setTimeout(() => hit.scale.copy(originalScale), 100);
+                            // НОВОЕ: частицы при клике
+                            createHitParticles(hit.position.clone());
+
                             apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
                                 if (data) {
                                     goldSpan.textContent = data.new_gold;
                                     hudExp.textContent = data.new_exp;
                                     updateInventoryDisplay(data.inventory);
                                     loadUser();
+
+                                    // НОВОЕ: эмоциональные сообщения
+                                    let phrase = '';
+                                    if (data.is_crit) {
+                                        phrase = CRIT_PHRASES[Math.floor(Math.random() * CRIT_PHRASES.length)];
+                                    } else if (data.found_resource && RARE_FIND_PHRASES[data.found_resource]) {
+                                        const arr = RARE_FIND_PHRASES[data.found_resource];
+                                        phrase = arr[Math.floor(Math.random() * arr.length)];
+                                    }
+                                    if (phrase) showToast(phrase, 1000);
                                 }
                             });
                         } else if (hit.userData.isBossPart) {
@@ -1761,6 +1886,43 @@
                 debugLog(`❌ Ошибка в init3D: ${e.message}`);
             }
         }
+
+        // НОВОЕ: обработчики крафта
+        function openCraftMenu() {
+            // Здесь можно загрузить рецепты с сервера, пока моковые
+            const recipes = [
+                { name: '⚗️ Зелье скорости', desc: '+50% опыта на 30 мин', resources: '⚫5, ⚙️2, ✨1' },
+                { name: '🔑 Ключ от логова', desc: 'Повторный бой с боссом', resources: '⚫50, ⚙️20, 🪙5' },
+                { name: '⚔️ Острые зубья', desc: '+2 силы инструмента', resources: '⚙️20, 🪙10, 💎5' }
+            ];
+            let html = '';
+            recipes.forEach(r => {
+                html += `<div class="craft-item" onclick="window.craftItem('${r.name}')">
+                    <div class="name">${r.name}</div>
+                    <div class="desc">${r.desc}</div>
+                    <div class="resources">${r.resources}</div>
+                </div>`;
+            });
+            craftContent.innerHTML = html;
+            craftMenu.style.display = 'block';
+        }
+
+        window.craftItem = function(itemName) {
+            // Анимация нажатия
+            const items = document.querySelectorAll('.craft-item');
+            items.forEach(item => {
+                if (item.querySelector('.name')?.textContent === itemName) {
+                    item.style.transform = 'scale(0.95)';
+                    setTimeout(() => item.style.transform = '', 200);
+                }
+            });
+            hapticFeedback('light');
+            showToast(`🔨 Создано: ${itemName}`, 1500);
+            // Здесь должен быть API-запрос на крафт
+        };
+
+        closeCraft.addEventListener('click', () => craftMenu.style.display = 'none');
+        craftBtn.addEventListener('click', openCraftMenu);
 
         // --- СТАРТ ---
         init3D();
