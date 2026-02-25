@@ -177,6 +177,140 @@ BOSS_LOCATIONS = {
     }
 }
 
+# ... (после lich_castle)
+BOSS_LOCATIONS.update({
+    'elemental_core': {
+        'name': 'Ядро элементаля',
+        'description': 'Магматический элементаль, охраняющий редкие минералы.',
+        'min_level': 10,
+        'min_tool_level': 2,
+        'boss': {
+            'name': 'Пылающий элементаль',
+            'health': 1500,
+            'reward_gold': 8000,
+            'reward_resources': {'soul_shard': (2, 4), 'magic_essence': (1, 2)},
+            'exp_reward': 800
+        }
+    },
+    'crystal_guardian': {
+        'name': 'Хрустальный зал',
+        'description': 'Гигантский голем из чистого кристалла.',
+        'min_level': 15,
+        'min_tool_level': 3,
+        'boss': {
+            'name': 'Кристальный страж',
+            'health': 2500,
+            'reward_gold': 12000,
+            'reward_resources': {'diamond': (15, 25), 'dragon_scale': (1, 2)},
+            'exp_reward': 1200
+        }
+    },
+    'abyssal_serpent': {
+        'name': 'Бездонная впадина',
+        'description': 'Древний змей, обитающий в подземном озере.',
+        'min_level': 20,
+        'min_tool_level': 3,
+        'boss': {
+            'name': 'Глубинный змей',
+            'health': 4000,
+            'reward_gold': 18000,
+            'reward_resources': {'magic_essence': (3, 6), 'dragon_scale': (2, 3)},
+            'exp_reward': 1800
+        }
+    },
+    'demon_lord': {
+        'name': 'Инфернальная крепость',
+        'description': 'Лорд демонов, жаждущий душ.',
+        'min_level': 25,
+        'min_tool_level': 4,
+        'boss': {
+            'name': 'Владыка демонов',
+            'health': 6000,
+            'reward_gold': 25000,
+            'reward_resources': {'soul_shard': (8, 12), 'magic_essence': (5, 8)},
+            'exp_reward': 2500
+        }
+    },
+    'ice_queen': {
+        'name': 'Ледяной дворец',
+        'description': 'Королева вечной мерзлоты.',
+        'min_level': 30,
+        'min_tool_level': 4,
+        'boss': {
+            'name': 'Снежная королева',
+            'health': 8000,
+            'reward_gold': 35000,
+            'reward_resources': {'diamond': (20, 30), 'dragon_scale': (3, 5)},
+            'exp_reward': 3000
+        }
+    },
+    'void_reaper': {
+        'name': 'Пустота',
+        'description': 'Жнец, пришедший из ниоткуда.',
+        'min_level': 35,
+        'min_tool_level': 5,
+        'boss': {
+            'name': 'Жнец душ',
+            'health': 10000,
+            'reward_gold': 50000,
+            'reward_resources': {'soul_shard': (10, 15), 'magic_essence': (8, 12)},
+            'exp_reward': 4000
+        }
+    },
+    'ancient_colossus': {
+        'name': 'Забытые руины',
+        'description': 'Колосс, охраняющий древние сокровища.',
+        'min_level': 40,
+        'min_tool_level': 5,
+        'boss': {
+            'name': 'Каменный колосс',
+            'health': 15000,
+            'reward_gold': 80000,
+            'reward_resources': {'mithril': (5, 10), 'dragon_scale': (5, 8)},
+            'exp_reward': 6000
+        }
+    },
+    'chaos_beast': {
+        'name': 'Логово хаоса',
+        'description': 'Зверь, искажающий реальность.',
+        'min_level': 45,
+        'min_tool_level': 5,
+        'boss': {
+            'name': 'Зверь хаоса',
+            'health': 20000,
+            'reward_gold': 120000,
+            'reward_resources': {'magic_essence': (12, 18), 'soul_shard': (15, 20)},
+            'exp_reward': 8000
+        }
+    },
+    'time_wyrm': {
+        'name': 'Временной разлом',
+        'description': 'Дракон, живущий вне времени.',
+        'min_level': 50,
+        'min_tool_level': 5,
+        'boss': {
+            'name': 'Хроно-дракон',
+            'health': 30000,
+            'reward_gold': 200000,
+            'reward_resources': {'dragon_scale': (10, 15), 'mithril': (8, 12)},
+            'exp_reward': 10000
+        }
+    },
+    'celestial_phoenix': {
+        'name': 'Небесный чертог',
+        'description': 'Феникс, возрождающийся в пламени.',
+        'min_level': 60,
+        'min_tool_level': 5,
+        'boss': {
+            'name': 'Небесный феникс',
+            'health': 50000,
+            'reward_gold': 500000,
+            'reward_resources': {'magic_essence': (20, 30), 'dragon_scale': (15, 20), 'soul_shard': (20, 30)},
+            'exp_reward': 20000
+        }
+    },
+})
+
 # Инструменты
 TOOLS = {
     'wooden_pickaxe': {'name': 'Деревянная кирка', 'description': 'Самая простая.', 'price': 0, 'required_level': 1, 'base_power': 1, 'upgrade_cost': {'coal': 5, 'iron': 2}},
@@ -2866,3 +3000,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
