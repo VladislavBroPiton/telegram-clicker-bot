@@ -330,6 +330,68 @@
             scene.add(skySphere);
             stars.push(skySphere);
         }
+        // ========== НОВЫЕ КЛИКАБЕЛЬНЫЕ ОБЪЕКТЫ ==========
+function createGoldBag() {
+    const group = new THREE.Group();
+    const bagMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.7 });
+    const bag = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16), bagMat);
+    bag.scale.set(1.0, 0.8, 1.0);
+    bag.position.y = 0.8;
+    group.add(bag);
+
+    const ropeMat = new THREE.MeshStandardMaterial({ color: 0x654321 });
+    const rope = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.07, 8, 24), ropeMat);
+    rope.rotation.x = Math.PI / 2;
+    rope.position.y = 1.1;
+    group.add(rope);
+
+    const coinMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
+    for (let i = 0; i < 3; i++) {
+        const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.08, 8), coinMat);
+        coin.position.set(0.3 * Math.sin(i), 1.4 + i * 0.08, 0.3 * Math.cos(i));
+        coin.rotation.x = Math.random() * Math.PI;
+        coin.rotation.z = Math.random() * Math.PI;
+        group.add(coin);
+    }
+    return group;
+}
+
+function createDragonEgg() {
+    const group = new THREE.Group();
+    const eggMat = new THREE.MeshStandardMaterial({ color: 0xaa4422, emissive: 0x331100 });
+    const egg = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16), eggMat);
+    egg.scale.set(1.0, 1.3, 1.0);
+    egg.position.y = 0.9;
+    group.add(egg);
+    const scaleMat = new THREE.MeshStandardMaterial({ color: 0xcc5533 });
+    for (let i = 0; i < 6; i++) {
+        const s = new THREE.Mesh(new THREE.SphereGeometry(0.15, 4), scaleMat);
+        s.position.set(Math.sin(i)*0.6, 0.9 + Math.cos(i*2)*0.3, Math.cos(i)*0.6);
+        group.add(s);
+    }
+    return group;
+}
+
+function createSoul() {
+    const group = new THREE.Group();
+    const soulMat = new THREE.MeshStandardMaterial({ color: 0x88aaff, emissive: 0x224466, transparent: true, opacity: 0.7 });
+    const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.6, 8), soulMat);
+    group.add(sphere);
+    const particleCount = 6;
+    const particleGeom = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+        const angle = (i / particleCount) * Math.PI * 2;
+        positions[i*3] = Math.cos(angle) * 1.0;
+        positions[i*3+1] = Math.sin(angle) * 0.3;
+        positions[i*3+2] = Math.sin(angle) * 1.0;
+    }
+    particleGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const particleMat = new THREE.PointsMaterial({ color: 0xaaccff, size: 0.15 });
+    const particles = new THREE.Points(particleGeom, particleMat);
+    group.add(particles);
+    return group;
+}
 
         // --- ВИЗУАЛЬНАЯ МОДЕЛЬ БОССА (финальная версия) ---
         function createVisualBossModel(bossId) {
@@ -1939,4 +2001,5 @@
     </script>
 </body>
 </html>
+
 
