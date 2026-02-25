@@ -1318,26 +1318,46 @@ async def craft_item(uid: int, recipe_id: str, conn: asyncpg.Connection = None) 
 # ==================== ОБЩАЯ ЛОГИКА КЛИКА ====================
 
 async def process_click(uid: int, conn: asyncpg.Connection = None, resource_id: str = None) -> dict:
-    """
-    Выполняет логику одного клика в транзакции.
-    Возвращает словарь с результатами.
-    """
     async def _execute(conn):
         # Получаем текущую локацию
         loc_id = await get_player_current_location(uid, conn)
-        loc = LOCATIONS.get(loc_id, LOCATIONS['coal_mine'])
+        
+        # Определяем, является ли локация босс-локацией
+        if loc_id in BOSS_LOCATIONS:
+            loc_data = BOSS_LOCATIONS[loc_id]
+            loc_resources = loc_data.get('resources', [])
+        else:
+            loc_data = LOCATIONS.get(loc_id, LOCATIONS['coal_mine'])
+            loc_resources = loc_data['resources']
 
-        # Добыча ресурса
-        rnd = random.random()
-        cum = 0
-        found = None
-        amt = 0
-        for r in loc['resources']:
-            cum += r['prob']
-            if rnd < cum:
-                found = r['res_id']
-                amt = random.randint(r['min'], r['max'])
-                break
+        # Если передан resource_id, используем его
+        if resource_id is not None:
+            # Проверяем, что ресурс существует
+            if resource_id not in RESOURCES:
+                raise ValueError(f"Resource {resource_id} not found")
+            
+            # Проверяем, разрешён ли ресурс в текущей локации
+            allowed = any(r['res_id'] == resource_id for r in loc_resources)
+            if not allowed:
+                raise ValueError(f"Resource {resource_id} not allowed in current location")
+            
+            found = resource_id
+            amt = 1  # или можно взять из диапазона: next(r['min'] for r in loc_resources if r['res_id'] == resource_id)
+        else:
+            # Случайный выбор из ресурсов локации
+            rnd = random.random()
+            cum = 0
+            found = None
+            amt = 0
+            for r in loc_resources:
+                cum += r['prob']
+                if rnd < cum:
+                    found = r['res_id']
+                    amt = random.randint(r['min'], r['max'])
+                    break
+
+        # Далее как обычно: базовая награда, модификатор инструмента и т.д.
+        # ... (остальной код без изменений, но учтите, что found может быть None, если ни один ресурс не выпал)
 
         # Базовая награда
         stats = await get_player_stats(uid, conn)
@@ -2881,5 +2901,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
