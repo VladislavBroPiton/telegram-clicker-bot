@@ -2453,15 +2453,18 @@
         }
 
         async function loadBossInfo(bid) {
-            debugLog(`loadBossInfo for ${bid}`);
-            const data = await apiCall(`boss/${bid}`);
-            if (data) {
-                bossNameSpan.textContent = BOSS_NAMES[bid] || bid;
-                updateBossHealth(data.current_health, data.max_health);
-                bossHealthDiv.style.display = 'block';
-                updateBossNavigation();
-            }
-        }
+    debugLog(`loadBossInfo for ${bid}`);
+    const data = await apiCall(`boss/${bid}`);
+    if (data) {
+        bossNameSpan.textContent = BOSS_NAMES[bid] || bid;
+        updateBossHealth(data.current_health, data.max_health);
+        bossHealthDiv.style.display = 'block';
+        updateBossNavigation();
+
+        // Добавляем тематический класс для панели босса
+        bossHealthDiv.className = 'boss-theme-' + bid;
+    }
+}
 
         function updateBossNavigation() {
             bossIndexSpan.textContent = `${currentBossIndex+1}/${BOSS_IDS.length}`;
@@ -3097,3 +3100,4 @@
     </script>
 </body>
 </html>
+
