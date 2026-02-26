@@ -93,9 +93,13 @@
         .toast.show { opacity: 1; }
         /* ===== Тематические стили для панели босса ===== */
 
-/* Король гоблинов */
+/* ===== Тематические стили для панели босса с SVG-текстурами ===== */
+
+/* Король гоблинов – грубая кожа с заклёпками */
 .boss-theme-goblin_king {
-    background: linear-gradient(145deg, #4a2c1a, #2e1b0e);
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='10' cy='10' r='3' fill='%23b8860b' opacity='0.2'/%3E%3Ccircle cx='30' cy='30' r='3' fill='%23b8860b' opacity='0.2'/%3E%3C/svg%3E") repeat,
+        linear-gradient(145deg, #4a2c1a, #2e1b0e);
     border: 3px solid #b8860b;
     box-shadow: 0 0 20px #b8860b, inset 0 0 10px #8b5a2b;
     border-radius: 30px 10px 30px 10px;
@@ -108,9 +112,11 @@
     margin-right: 8px;
 }
 
-/* Огненный дракон */
+/* Огненный дракон – языки пламени (полоски) */
 .boss-theme-dragon_lair {
-    background: radial-gradient(circle at 30% 30%, #ff4500, #8b0000);
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M5 5 L25 25 M25 5 L5 25' stroke='%23ff8c00' stroke-width='2' opacity='0.15'/%3E%3C/svg%3E") repeat,
+        radial-gradient(circle at 30% 30%, #ff4500, #8b0000);
     border: 3px solid #ff8c00;
     box-shadow: 0 0 30px #ff4500, inset 0 0 15px #ff6347;
     animation: flamePulse 2s infinite;
@@ -128,9 +134,11 @@
     filter: drop-shadow(0 0 5px orange);
 }
 
-/* Архилич */
+/* Архилич – магические руны (треугольники) */
 .boss-theme-lich_castle {
-    background: #1a0f1f;
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3E%3Cpath d='M25 10 L30 20 L25 30 L20 20 Z' fill='%239c27b0' opacity='0.1'/%3E%3C/svg%3E") repeat,
+        #1a0f1f;
     border: 2px solid #7b1fa2;
     box-shadow: 0 0 25px #9c27b0, inset 0 0 15px #4a148c;
     border-radius: 5px 30px 5px 30px;
@@ -142,9 +150,11 @@
     font-size: 26px;
 }
 
-/* Пылающий элементаль */
+/* Пылающий элементаль – искры (мелкие точки) */
 .boss-theme-elemental_core {
-    background: repeating-linear-gradient(45deg, #ff5722, #ff9800 10px);
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='2' fill='%23ffaa00' opacity='0.3'/%3E%3C/svg%3E") repeat,
+        repeating-linear-gradient(45deg, #ff5722, #ff9800 10px);
     border: 3px solid #ffc107;
     animation: heatWave 0.3s infinite alternate;
     color: #fff3e0;
@@ -159,9 +169,11 @@
     font-size: 28px;
 }
 
-/* Кристальный страж */
+/* Кристальный страж – геометрические грани */
 .boss-theme-crystal_guardian {
-    background: linear-gradient(135deg, #b3e5fc, #81d4fa);
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpolygon points='15,5 25,15 15,25 5,15' fill='%23ffffff' opacity='0.1'/%3E%3C/svg%3E") repeat,
+        linear-gradient(135deg, #b3e5fc, #81d4fa);
     border: 3px solid #ffffff;
     box-shadow: 0 0 30px #29b6f6, inset 0 0 20px #4fc3f7;
     border-radius: 20px 5px 20px 5px;
@@ -174,9 +186,11 @@
     font-size: 24px;
 }
 
-/* Глубинный змей */
+/* Глубинный змей – чешуя (круги) */
 .boss-theme-abyssal_serpent {
-    background: linear-gradient(180deg, #006994, #003366);
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='4' fill='%2340e0d0' opacity='0.2'/%3E%3C/svg%3E") repeat,
+        linear-gradient(180deg, #006994, #003366);
     border: 3px solid #40e0d0;
     box-shadow: 0 0 30px #40e0d0, inset 0 0 15px #00ced1;
     border-radius: 50% 20% / 10% 40%;
@@ -188,9 +202,11 @@
     font-size: 24px;
 }
 
-/* Владыка демонов */
+/* Владыка демонов – трещины (линии) */
 .boss-theme-demon_lord {
-    background: #330000;
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M0 0 L40 40 M40 0 L0 40' stroke='%23aa0000' stroke-width='1' opacity='0.2'/%3E%3C/svg%3E") repeat,
+        #330000;
     border: 3px solid #aa0000;
     box-shadow: 0 0 40px #ff0000, inset 0 0 20px #8b0000;
     border-radius: 10px 30px 10px 30px;
@@ -202,9 +218,11 @@
     font-size: 28px;
 }
 
-/* Снежная королева */
+/* Снежная королева – снежинки */
 .boss-theme-ice_queen {
-    background: linear-gradient(135deg, #aaddff, #88aaff);
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M15 2 L18 10 L15 18 L12 10 Z' fill='white' opacity='0.15'/%3E%3C/svg%3E") repeat,
+        linear-gradient(135deg, #aaddff, #88aaff);
     border: 3px solid #ffffff;
     box-shadow: 0 0 30px #aaddff, inset 0 0 20px #ffffff;
     border-radius: 30px 30px 5px 5px;
@@ -216,9 +234,11 @@
     font-size: 24px;
 }
 
-/* Жнец душ */
+/* Жнец душ – призрачные силуэты (полупрозрачные круги) */
 .boss-theme-void_reaper {
-    background: #0a0a0a;
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='10' fill='%238800ff' opacity='0.05'/%3E%3C/svg%3E") repeat,
+        #0a0a0a;
     border: 2px solid #440044;
     box-shadow: 0 0 30px #8800ff, inset 0 0 15px #220022;
     border-radius: 5px;
@@ -230,9 +250,11 @@
     font-size: 26px;
 }
 
-/* Каменный колосс */
+/* Каменный колосс – каменная кладка */
 .boss-theme-ancient_colossus {
-    background: #887766;
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect x='0' y='0' width='20' height='20' fill='%23665544' opacity='0.2'/%3E%3Crect x='20' y='20' width='20' height='20' fill='%23665544' opacity='0.2'/%3E%3C/svg%3E") repeat,
+        #887766;
     border: 5px solid #554433;
     box-shadow: 0 0 30px #aa8866, inset 0 0 15px #665544;
     border-radius: 10px;
@@ -244,9 +266,11 @@
     font-size: 24px;
 }
 
-/* Зверь хаоса */
+/* Зверь хаоса – хаотичные пиксели */
 .boss-theme-chaos_beast {
-    background: repeating-linear-gradient(45deg, #ff00ff, #00ffff 20px);
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Crect x='0' y='0' width='5' height='5' fill='%23ff00ff' opacity='0.2'/%3E%3Crect x='5' y='5' width='5' height='5' fill='%2300ffff' opacity='0.2'/%3E%3C/svg%3E") repeat,
+        repeating-linear-gradient(45deg, #ff00ff, #00ffff 20px);
     border: 3px solid #ffaa00;
     animation: chaosShift 1s infinite alternate;
     color: #ffffff;
@@ -261,9 +285,11 @@
     font-size: 26px;
 }
 
-/* Хроно-дракон */
+/* Хроно-дракон – шестерёнки и линии времени */
 .boss-theme-time_wyrm {
-    background: #223344;
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='8' fill='none' stroke='%23ccaaff' stroke-width='1' opacity='0.2'/%3E%3Cpath d='M20 5 L20 35 M5 20 L35 20' stroke='%23ccaaff' stroke-width='1' opacity='0.2'/%3E%3C/svg%3E") repeat,
+        #223344;
     border: 3px solid #ccaaff;
     box-shadow: 0 0 30px #ccaaff, inset 0 0 15px #99aaff;
     border-radius: 20px 20px 20px 20px;
@@ -292,9 +318,11 @@
     to { transform: translateX(100%); }
 }
 
-/* Небесный феникс */
+/* Небесный феникс – перья и сияние */
 .boss-theme-celestial_phoenix {
-    background: radial-gradient(circle at 30% 30%, #ffaa44, #aa4400);
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M15 5 L20 15 L15 25 L10 15 Z' fill='%23ffdd44' opacity='0.15'/%3E%3C/svg%3E") repeat,
+        radial-gradient(circle at 30% 30%, #ffaa44, #aa4400);
     border: 3px solid #ffdd44;
     box-shadow: 0 0 50px #ffaa44, inset 0 0 25px #ff8800;
     border-radius: 40% 10% / 20% 30%;
@@ -3314,5 +3342,6 @@
     </script>
 </body>
 </html>
+
 
 
