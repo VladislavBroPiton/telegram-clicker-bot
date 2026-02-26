@@ -1007,11 +1007,13 @@
                 group.add(ring4);
 
                 const plasmaMat = new THREE.MeshStandardMaterial({ color: 0xffaa22, emissive: 0x442200 });
+                const plasmaBalls = [];
                 for (let i = 0; i < 12; i++) {
                     const angle = (i / 12) * Math.PI * 2;
                     const plasma = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8), plasmaMat);
                     plasma.position.set(Math.cos(angle) * 2.0, Math.sin(angle) * 2.0, 0);
                     group.add(plasma);
+                    plasmaBalls.push({ mesh: plasma, angle: angle, speed: 0.005 + Math.random()*0.01, radius: 2.0 + Math.random()*0.5 });
                 }
 
                 const fireParticlesGeo = new THREE.BufferGeometry();
@@ -1032,7 +1034,7 @@
                 const fireParticles = new THREE.Points(fireParticlesGeo, fireParticlesMat);
                 group.add(fireParticles);
 
-                group.userData = { rings: [ring1, ring2, ring3, ring4], core: core, innerCore: innerCore };
+                group.userData = { rings: [ring1, ring2, ring3, ring4], core: core, innerCore: innerCore, plasmaBalls: plasmaBalls };
             }
             else if (bossId === 'crystal_guardian') {
                 const colors = [0x88aaff, 0xaaccff, 0x66aaff, 0x4488ff, 0xaa88ff, 0xcc88ff];
@@ -1558,7 +1560,7 @@
             return group;
         }
 
-        // ==================== ОЧИСТКА ОКРУЖЕНИЯ (обновлённая) ====================
+        // ==================== ОЧИСТКА ОКРУЖЕНИЯ ====================
         function clearEnvironment() {
             torchLights = [];
             sparkParticles = null;
@@ -1572,26 +1574,24 @@
             runeLights = [];
             environmentObjects.forEach(obj => scene.remove(obj));
             environmentObjects = [];
-            // Удаляем старое небо
             stars.forEach(s => scene.remove(s));
             stars = [];
             scene.fog = null;
             scene.background = new THREE.Color(0x0a0a20);
         }
 
-        // ==================== ОКРУЖЕНИЕ ДЛЯ КАЖДОГО БОССА (уникальное) ====================
+        // ==================== ОКРУЖЕНИЕ ДЛЯ КАЖДОГО БОССА ====================
         function createEnvironmentForBoss(bossId) {
             if (!scene || !THREE) return;
 
-            // Очищаем предыдущее окружение
             clearEnvironment();
 
-            // Создаём небо для любого босса
+            // Создаём небо
             createCustomSky(bossId);
 
-            // ===== СТАРЫЕ БОССЫ (с сохранением оригинального окружения) =====
+            // ===== СТАРЫЕ БОССЫ (полное окружение) =====
             if (bossId === 'goblin_king') {
-                // Пол (текстура) – как в старом коде
+                // Пол
                 const floorTexture = (() => {
                     const canvas = document.createElement('canvas');
                     canvas.width = 512;
@@ -2096,13 +2096,11 @@
 
                 scene.fog = new THREE.FogExp2(0x111122, 0.04);
             }
-
             // ===== НОВЫЕ БОССЫ (уникальное окружение) =====
             else if (bossId === 'elemental_core') {
-                // Пол уже создан в createCustomFloor, но мы можем добавить поверх него дополнительные элементы
                 createCustomFloor(bossId); // лавовый пол
 
-                // Стены – огненное кольцо (полупрозрачный цилиндр)
+                // Огненное кольцо-стена (полупрозрачный цилиндр)
                 const wallMat = new THREE.MeshStandardMaterial({ color: 0xff4400, emissive: 0x442200, transparent: true, opacity: 0.2 });
                 const wallGeo = new THREE.CylinderGeometry(8, 8, 5, 32, 1);
                 const wall = new THREE.Mesh(wallGeo, wallMat);
@@ -2110,34 +2108,28 @@
                 scene.add(wall);
                 environmentObjects.push(wall);
 
-                // Большие сталагмиты (огненные шипы)
-                const spikeMat = new THREE.MeshStandardMaterial({ color: 0x884422, emissive: 0x442200 });
+                // Огненные столбы
+                const pillarMat = new THREE.MeshStandardMaterial({ color: 0xff6600, emissive: 0x442200 });
                 for (let i = 0; i < 8; i++) {
                     const angle = (i / 8) * Math.PI * 2;
-                    const x = Math.sin(angle) * 6;
-                    const z = Math.cos(angle) * 6;
-                    const spike = new THREE.Mesh(new THREE.ConeGeometry(1, 3, 8), spikeMat);
-                    spike.position.set(x, 1.5, z);
-                    scene.add(spike);
-                    environmentObjects.push(spike);
+                    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 4, 8), pillarMat);
+                    pillar.position.set(Math.sin(angle) * 7, 2, Math.cos(angle) * 7);
+                    scene.add(pillar);
+                    environmentObjects.push(pillar);
+                    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.3), new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 }));
+                    ball.position.set(Math.sin(angle) * 7, 4, Math.cos(angle) * 7);
+                    scene.add(ball);
+                    environmentObjects.push(ball);
                 }
 
-                // Мелкие искры (дополнительные частицы)
+                // Мелкие искры
                 const sparkGeo = new THREE.BufferGeometry();
-                const sparkCount = 150;
                 const sparkPositions = [];
-                for (let i = 0; i < sparkCount; i++) {
-                    const r = 2 + Math.random() * 6;
-                    const theta = Math.random() * Math.PI * 2;
-                    const phi = Math.random() * Math.PI * 2;
-                    sparkPositions.push(
-                        Math.sin(theta) * Math.cos(phi) * r,
-                        Math.sin(theta) * Math.sin(phi) * r + 1.5,
-                        Math.cos(theta) * r
-                    );
+                for (let i = 0; i < 200; i++) {
+                    sparkPositions.push((Math.random() - 0.5) * 15, Math.random() * 5, (Math.random() - 0.5) * 15);
                 }
                 sparkGeo.setAttribute('position', new THREE.Float32BufferAttribute(sparkPositions, 3));
-                const sparkMat = new THREE.PointsMaterial({ color: 0xff6600, size: 0.15 });
+                const sparkMat = new THREE.PointsMaterial({ color: 0xff8800, size: 0.1 });
                 const sparks = new THREE.Points(sparkGeo, sparkMat);
                 scene.add(sparks);
                 environmentObjects.push(sparks);
@@ -2151,10 +2143,8 @@
                 const crystalMat = new THREE.MeshStandardMaterial({ color: 0x88aaff, emissive: 0x224466, transparent: true, opacity: 0.3 });
                 for (let i = 0; i < 12; i++) {
                     const angle = (i / 12) * Math.PI * 2;
-                    const x = Math.sin(angle) * 7;
-                    const z = Math.cos(angle) * 7;
                     const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 5, 8), crystalMat);
-                    pillar.position.set(x, 2.5, z);
+                    pillar.position.set(Math.sin(angle) * 7, 2.5, Math.cos(angle) * 7);
                     scene.add(pillar);
                     environmentObjects.push(pillar);
                 }
@@ -2173,29 +2163,25 @@
             else if (bossId === 'abyssal_serpent') {
                 createCustomFloor(bossId); // песок с водорослями
 
-                // Стены – скалы с водорослями
+                // Скалы с водорослями
                 const rockMat = new THREE.MeshStandardMaterial({ color: 0x446688 });
                 const seaweedMat = new THREE.MeshStandardMaterial({ color: 0x44aa44 });
                 for (let i = 0; i < 8; i++) {
                     const angle = (i / 8) * Math.PI * 2;
-                    const x = Math.sin(angle) * 7;
-                    const z = Math.cos(angle) * 7;
                     const rock = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.5, 4, 5), rockMat);
-                    rock.position.set(x, 2, z);
+                    rock.position.set(Math.sin(angle) * 7, 2, Math.cos(angle) * 7);
                     scene.add(rock);
                     environmentObjects.push(rock);
-                    // Водоросли
                     const seaweed = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1.5, 4), seaweedMat);
-                    seaweed.position.set(x + 0.5, 3.5, z + 0.5);
+                    seaweed.position.set(Math.sin(angle) * 7 + 0.5, 3.5, Math.cos(angle) * 7 + 0.5);
                     scene.add(seaweed);
                     environmentObjects.push(seaweed);
                 }
 
-                // Пузырьки (уже есть в общих частицах, но добавим ещё)
+                // Пузырьки
                 const bubbleGeo = new THREE.BufferGeometry();
-                const bubbleCount = 80;
                 const bubblePositions = [];
-                for (let i = 0; i < bubbleCount; i++) {
+                for (let i = 0; i < 80; i++) {
                     bubblePositions.push((Math.random()-0.5)*12, Math.random()*5, (Math.random()-0.5)*12);
                 }
                 bubbleGeo.setAttribute('position', new THREE.Float32BufferAttribute(bubblePositions, 3));
@@ -2209,14 +2195,12 @@
             else if (bossId === 'demon_lord') {
                 createCustomFloor(bossId); // тёмный камень
 
-                // Адские стены (чёрные с красными прожилками)
+                // Адские стены
                 const wallMat = new THREE.MeshStandardMaterial({ color: 0x442222, emissive: 0x220000 });
                 for (let i = 0; i < 8; i++) {
                     const angle = (i / 8) * Math.PI * 2;
-                    const x = Math.sin(angle) * 7;
-                    const z = Math.cos(angle) * 7;
                     const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 5, 8), wallMat);
-                    pillar.position.set(x, 2.5, z);
+                    pillar.position.set(Math.sin(angle) * 7, 2.5, Math.cos(angle) * 7);
                     scene.add(pillar);
                     environmentObjects.push(pillar);
                 }
@@ -2230,7 +2214,6 @@
                     environmentObjects.push(skull);
                 }
 
-                // Красный туман
                 scene.fog = new THREE.FogExp2(0x330000, 0.04);
             }
             else if (bossId === 'ice_queen') {
@@ -2240,10 +2223,8 @@
                 const iceMat = new THREE.MeshStandardMaterial({ color: 0xaaccff, emissive: 0x224466, transparent: true, opacity: 0.5 });
                 for (let i = 0; i < 8; i++) {
                     const angle = (i / 8) * Math.PI * 2;
-                    const x = Math.sin(angle) * 7;
-                    const z = Math.cos(angle) * 7;
                     const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 5, 8), iceMat);
-                    pillar.position.set(x, 2.5, z);
+                    pillar.position.set(Math.sin(angle) * 7, 2.5, Math.cos(angle) * 7);
                     scene.add(pillar);
                     environmentObjects.push(pillar);
                 }
@@ -2289,19 +2270,16 @@
                 const ruinMat = new THREE.MeshStandardMaterial({ color: 0x887766 });
                 for (let i = 0; i < 6; i++) {
                     const angle = (i / 6) * Math.PI * 2;
-                    const x = Math.sin(angle) * 6;
-                    const z = Math.cos(angle) * 6;
                     const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.0, 4, 8), ruinMat);
-                    pillar.position.set(x, 2, z);
+                    pillar.position.set(Math.sin(angle) * 6, 2, Math.cos(angle) * 6);
                     scene.add(pillar);
                     environmentObjects.push(pillar);
                 }
 
                 // Пыль (частицы)
                 const dustGeo = new THREE.BufferGeometry();
-                const dustCount = 100;
                 const dustPositions = [];
-                for (let i = 0; i < dustCount; i++) {
+                for (let i = 0; i < 100; i++) {
                     dustPositions.push((Math.random()-0.5)*12, Math.random()*5, (Math.random()-0.5)*12);
                 }
                 dustGeo.setAttribute('position', new THREE.Float32BufferAttribute(dustPositions, 3));
@@ -2315,7 +2293,7 @@
             else if (bossId === 'chaos_beast') {
                 createCustomFloor(bossId); // хаотичный пол
 
-                // Искажённые структуры (случайные торы)
+                // Искажённые структуры
                 const chaosMat = new THREE.MeshStandardMaterial({ color: 0xaa44ff, emissive: 0x331166 });
                 for (let i = 0; i < 5; i++) {
                     const chaos = new THREE.Mesh(new THREE.TorusKnotGeometry(0.5, 0.15, 20, 5), chaosMat);
@@ -2347,17 +2325,15 @@
                 const gearMat = new THREE.MeshStandardMaterial({ color: 0xccaaff, emissive: 0x332266 });
                 for (let i = 0; i < 6; i++) {
                     const angle = (i / 6) * Math.PI * 2;
-                    const x = Math.sin(angle) * 6;
-                    const z = Math.cos(angle) * 6;
                     const gear = new THREE.Mesh(new THREE.TorusGeometry(0.8, 0.2, 8, 24), gearMat);
-                    gear.position.set(x, 2.0, z);
+                    gear.position.set(Math.sin(angle) * 6, 2.0, Math.cos(angle) * 6);
                     gear.rotation.x = Math.PI/2;
                     gear.rotation.z = angle;
                     scene.add(gear);
                     environmentObjects.push(gear);
                 }
 
-                // Парящие стрелки часов
+                // Стрелки часов
                 const handMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
                 for (let i = 0; i < 3; i++) {
                     const hand = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.1), handMat);
@@ -2372,7 +2348,7 @@
             else if (bossId === 'celestial_phoenix') {
                 createCustomFloor(bossId); // сияющий пол
 
-                // Облака (полупрозрачные сферы)
+                // Облака
                 const cloudMat = new THREE.MeshStandardMaterial({ color: 0xffeedd, emissive: 0x442200, transparent: true, opacity: 0.2 });
                 for (let i = 0; i < 8; i++) {
                     const cloud = new THREE.Mesh(new THREE.SphereGeometry(1.5, 8), cloudMat);
@@ -2381,7 +2357,7 @@
                     environmentObjects.push(cloud);
                 }
 
-                // Лучи света (цилиндры)
+                // Лучи света
                 const beamMat = new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0x442200, transparent: true, opacity: 0.1 });
                 for (let i = 0; i < 4; i++) {
                     const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 8), beamMat);
@@ -2395,7 +2371,7 @@
                 scene.fog = new THREE.FogExp2(0x442200, 0.01);
             }
             else {
-                // На случай, если какой-то босс не попал в условия (например, старые уже обработаны, новые все выше)
+                // На случай, если какой-то босс не попал в условия
                 createCustomFloor(bossId);
                 scene.fog = new THREE.FogExp2(0x111122, 0.03);
             }
@@ -2420,11 +2396,9 @@
             activeToolSpan.textContent = toolDisplay;
 
             if (data.boss_progress) {
-                // Проверяем, жив ли текущий босс
                 if (currentBossId && data.boss_progress[currentBossId] && !data.boss_progress[currentBossId].defeated) {
                     // текущий жив
                 } else {
-                    // ищем следующего живого
                     let found = false;
                     for (let i = currentBossIndex + 1; i < BOSS_IDS.length; i++) {
                         const prog = data.boss_progress[BOSS_IDS[i]];
@@ -2792,7 +2766,6 @@
 
                     if (intersects.length > 0) {
                         let hit = intersects[0].object;
-                        // Поднимаемся по иерархии, пока не найдём объект с нужным userData
                         while (hit && !hit.userData?.type && !hit.userData?.isBossPart) {
                             hit = hit.parent;
                         }
@@ -2848,8 +2821,6 @@
                 let time = 0;
                 function animate() {
                     time += 0.01;
-
-                    // Ресурсы неподвижны
 
                     if (bossGroup && bossGroup.children.length > 0) {
                         bossGroup.rotation.y += 0.005;
@@ -2911,6 +2882,26 @@
                         if (eyes) {
                             eyes.forEach(eye => {
                                 eye.material.emissiveIntensity = 0.5 + Math.sin(time * 4) * 0.3;
+                            });
+                        }
+                    }
+                    if (currentBossId === 'elemental_core' && bossGroup.userData) {
+                        // Пульсация ядра
+                        const scale = 1 + Math.sin(time * 5) * 0.05;
+                        bossGroup.userData.core.scale.set(scale, scale, scale);
+                        // Движение плазменных шаров
+                        if (bossGroup.userData.plasmaBalls) {
+                            bossGroup.userData.plasmaBalls.forEach(item => {
+                                item.angle += item.speed;
+                                item.mesh.position.x = Math.cos(item.angle) * item.radius;
+                                item.mesh.position.y = Math.sin(item.angle) * item.radius;
+                            });
+                        }
+                        // Вращение колец
+                        if (bossGroup.userData.rings) {
+                            bossGroup.userData.rings.forEach(ring => {
+                                ring.rotation.y += 0.005;
+                                ring.rotation.x += 0.002;
                             });
                         }
                     }
