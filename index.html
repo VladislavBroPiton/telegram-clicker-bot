@@ -1787,49 +1787,21 @@
                     const intersects = raycaster.intersectObjects(allObjects, true);
 
                     if (intersects.length > 0) {
-                        let hit = intersects[0].object;
-                        while (hit && !hit.userData?.type) {
-                            hit = hit.parent;
-                        }
-                        if (hit && hit.userData.type === 'resource') {
-                            hapticFeedback('light');
-                            const originalScale = hit.scale.clone();
-                            hit.scale.set(0.8, 0.8, 0.8);
-                            setTimeout(() => hit.scale.copy(originalScale), 100);
-                            createHitParticles(hit.position.clone());
-                            flashObject(hit, 0xffaa22, 150);
-
-                            apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
-                                if (data) {
-                                    goldSpan.textContent = data.new_gold;
-                                    hudExp.textContent = data.new_exp;
-                                    updateInventoryDisplay(data.inventory);
-                                    loadUser();
-
-                                    let phrase = '';
-                                    if (data.is_crit) {
-                                        phrase = CRIT_PHRASES[Math.floor(Math.random() * CRIT_PHRASES.length)];
-                                        flashObject(hit, 0xffdd44, 400);
-                                    } else if (data.found_resource && RARE_FIND_PHRASES[data.found_resource]) {
-                                        const arr = RARE_FIND_PHRASES[data.found_resource];
-                                        phrase = arr[Math.floor(Math.random() * arr.length)];
-                                        if (RARE_RESOURCES.includes(data.found_resource)) {
-                                            flashObject(hit, 0xaa88ff, 400);
-                                        }
-                                    }
-                                    if (phrase) showToast(phrase, 1000);
-                                }
-                            });
-                        } else if (hit && hit.userData.isBossPart) {
-                            debugLog('✅ Это часть босса (коллайдер)!');
-                            attackBoss();
-                        } else {
-                            debugLog('Неизвестный объект');
-                        }
-                    } else {
-                        debugLog('No intersection');
-                    }
-                }
+                       let hit = intersects[0].object;
+// Поднимаемся по иерархии, пока не найдём объект с нужным userData
+while (hit && !hit.userData?.type && !hit.userData?.isBossPart) {
+    hit = hit.parent;
+}
+if (hit) {
+    if (hit.userData.type === 'resource') {
+        // ... обработка ресурса ...
+    } else if (hit.userData.isBossPart) {
+        debugLog('✅ Это часть босса!');
+        attackBoss();
+    } else {
+        debugLog('Неизвестный объект');
+    }
+}
 
                 renderer.domElement.addEventListener('click', handleClick);
                 renderer.domElement.addEventListener('touchstart', (e) => {
@@ -2095,6 +2067,7 @@
     </script>
 </body>
 </html>
+
 
 
 
