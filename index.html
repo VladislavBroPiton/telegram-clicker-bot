@@ -2239,16 +2239,182 @@
 function createResourceObjectsForBoss(bossId) {
     const objects = [];
     const positions = [[-3,0.5,-2], [3,0.5,-2], [0,0.5,2], [-2,0.5,3], [2,0.5,3]];
-    const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff]; // красный, зелёный, синий, жёлтый, фиолетовый
+    const resourceTypes = ['coal', 'iron', 'gold', 'diamond', 'mithril'];
+
+    // Универсальная функция для создания меша с заданной геометрией и цветом
+    const createMesh = (geometry, color, emissive = 0x000000) => {
+        const mat = new THREE.MeshStandardMaterial({ color, emissive });
+        return new THREE.Mesh(geometry, mat);
+    };
+
+    // Для каждого босса определяем цвета и геометрию
+    let geometries = [];
+    let colors = [];
+    let emissives = [];
+
+    switch (bossId) {
+        case 'goblin_king':
+            geometries = [
+                new THREE.SphereGeometry(0.6, 8),  // coal
+                new THREE.BoxGeometry(0.9, 0.3, 0.6), // iron
+                new THREE.SphereGeometry(0.6, 16), // gold
+                new THREE.OctahedronGeometry(0.6), // diamond
+                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8) // mithril
+            ];
+            colors = [0x8B5A2B, 0xCD7F32, 0xFFD700, 0x87CEEB, 0x4682B4];
+            emissives = [0x332211, 0x442200, 0x553300, 0x224466, 0x224466];
+            break;
+        case 'dragon_lair':
+            geometries = [
+                new THREE.SphereGeometry(0.6, 8),
+                new THREE.BoxGeometry(0.9, 0.3, 0.6),
+                new THREE.SphereGeometry(0.6, 16),
+                new THREE.OctahedronGeometry(0.6),
+                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
+            ];
+            colors = [0xFF4500, 0xB22222, 0xFF8C00, 0xFF6347, 0xFFA07A];
+            emissives = [0x442200, 0x331100, 0x552200, 0x442200, 0x442200];
+            break;
+        case 'lich_castle':
+            geometries = [
+                new THREE.SphereGeometry(0.6, 8),
+                new THREE.BoxGeometry(0.9, 0.3, 0.6),
+                new THREE.SphereGeometry(0.6, 16),
+                new THREE.OctahedronGeometry(0.6),
+                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
+            ];
+            colors = [0x483D8B, 0x4B0082, 0x9370DB, 0x8A2BE2, 0xBA55D3];
+            emissives = [0x220044, 0x330066, 0x440088, 0x5500AA, 0x6600CC];
+            break;
+        case 'elemental_core':
+            geometries = [
+                new THREE.SphereGeometry(0.6, 8),
+                new THREE.BoxGeometry(0.9, 0.3, 0.6),
+                new THREE.SphereGeometry(0.6, 16),
+                new THREE.OctahedronGeometry(0.6),
+                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
+            ];
+            colors = [0xFF4500, 0xFF8C00, 0xFFD700, 0xFFA500, 0xFF6347];
+            emissives = [0x442200, 0x552200, 0x663300, 0x773300, 0x883300];
+            break;
+        case 'crystal_guardian':
+            geometries = [
+                new THREE.DodecahedronGeometry(0.5), // crystal instead of coal
+                new THREE.BoxGeometry(0.9, 0.3, 0.6),
+                new THREE.SphereGeometry(0.6, 16),
+                new THREE.OctahedronGeometry(0.7),
+                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
+            ];
+            colors = [0x87CEEB, 0xADD8E6, 0xFFDAB9, 0xE0FFFF, 0xB0E0E6];
+            emissives = [0x224466, 0x224466, 0x442200, 0x88AACC, 0x88AACC];
+            break;
+        case 'abyssal_serpent':
+            geometries = [
+                new THREE.SphereGeometry(0.6, 8),
+                new THREE.BoxGeometry(0.9, 0.3, 0.6),
+                new THREE.SphereGeometry(0.6, 16),
+                new THREE.OctahedronGeometry(0.6),
+                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
+            ];
+            colors = [0x2E8B57, 0x3CB371, 0x66CDAA, 0x7FFFD4, 0x40E0D0];
+            emissives = [0x113322, 0x224433, 0x335544, 0x446655, 0x557766];
+            break;
+        case 'demon_lord':
+            geometries = [
+                new THREE.SphereGeometry(0.6, 8),
+                new THREE.BoxGeometry(0.9, 0.3, 0.6),
+                new THREE.SphereGeometry(0.6, 16),
+                new THREE.OctahedronGeometry(0.6),
+                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
+            ];
+            colors = [0x8B0000, 0xB22222, 0xDC143C, 0xFF4500, 0xFF6347];
+            emissives = [0x330000, 0x440000, 0x550000, 0x660000, 0x770000];
+            break;
+        case 'ice_queen':
+            geometries = [
+                new THREE.DodecahedronGeometry(0.5), // ice crystal
+                new THREE.BoxGeometry(0.9, 0.3, 0.6),
+                new THREE.SphereGeometry(0.6, 16),
+                new THREE.OctahedronGeometry(0.7),
+                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
+            ];
+            colors = [0xADD8E6, 0xB0E0E6, 0xE0FFFF, 0xF0F8FF, 0xFFFFFF];
+            emissives = [0x224466, 0x335577, 0x446688, 0x557799, 0x6688AA];
+            break;
+        case 'void_reaper':
+            geometries = [
+                new THREE.SphereGeometry(0.6, 8),
+                new THREE.BoxGeometry(0.9, 0.3, 0.6),
+                new THREE.SphereGeometry(0.6, 16),
+                new THREE.OctahedronGeometry(0.6),
+                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
+            ];
+            colors = [0x2F4F4F, 0x483D8B, 0x4B0082, 0x800080, 0x9400D3];
+            emissives = [0x111122, 0x222233, 0x333344, 0x444455, 0x555566];
+            break;
+        case 'ancient_colossus':
+            geometries = [
+                new THREE.SphereGeometry(0.6, 8),
+                new THREE.BoxGeometry(0.9, 0.3, 0.6),
+                new THREE.SphereGeometry(0.6, 16),
+                new THREE.OctahedronGeometry(0.6),
+                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
+            ];
+            colors = [0x8B7765, 0xA89F91, 0xC0A080, 0xD2B48C, 0xE1C699];
+            emissives = [0x332211, 0x443322, 0x554433, 0x665544, 0x776655];
+            break;
+        case 'chaos_beast':
+            geometries = [
+                new THREE.SphereGeometry(0.6, 8),
+                new THREE.BoxGeometry(0.9, 0.3, 0.6),
+                new THREE.SphereGeometry(0.6, 16),
+                new THREE.OctahedronGeometry(0.6),
+                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
+            ];
+            colors = [0xFF00FF, 0x00FFFF, 0xFFFF00, 0xFF1493, 0x00FF7F];
+            emissives = [0x330033, 0x003333, 0x333300, 0x330022, 0x003322];
+            break;
+        case 'time_wyrm':
+            geometries = [
+                new THREE.SphereGeometry(0.6, 8),
+                new THREE.BoxGeometry(0.9, 0.3, 0.6),
+                new THREE.SphereGeometry(0.6, 16),
+                new THREE.OctahedronGeometry(0.6),
+                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
+            ];
+            colors = [0x708090, 0x778899, 0x7B68EE, 0x6A5ACD, 0x483D8B];
+            emissives = [0x112233, 0x223344, 0x334455, 0x445566, 0x556677];
+            break;
+        case 'celestial_phoenix':
+            geometries = [
+                new THREE.SphereGeometry(0.6, 16),
+                new THREE.BoxGeometry(0.9, 0.3, 0.6),
+                new THREE.SphereGeometry(0.6, 16),
+                new THREE.OctahedronGeometry(0.7),
+                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
+            ];
+            colors = [0xFFD700, 0xFFA500, 0xFF8C00, 0xFF7F50, 0xFF6347];
+            emissives = [0x443300, 0x553300, 0x663300, 0x773300, 0x883300];
+            break;
+        default:
+            geometries = [
+                new THREE.SphereGeometry(0.6, 8),
+                new THREE.BoxGeometry(0.9, 0.3, 0.6),
+                new THREE.SphereGeometry(0.6, 16),
+                new THREE.OctahedronGeometry(0.6),
+                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
+            ];
+            colors = [0x888888, 0xAAAAAA, 0xCCCCCC, 0xEEEEEE, 0xFFFFFF];
+            emissives = [0x000000, 0x000000, 0x000000, 0x000000, 0x000000];
+    }
 
     for (let i = 0; i < 5; i++) {
-        const geom = new THREE.BoxGeometry(0.8, 0.8, 0.8);
-        const mat = new THREE.MeshStandardMaterial({ color: colors[i] });
-        const cube = new THREE.Mesh(geom, mat);
-        cube.position.set(positions[i][0], positions[i][1], positions[i][2]);
-        cube.userData = { type: 'resource', id: i, resourceType: 'test' };
-        objects.push(cube);
+        const mesh = createMesh(geometries[i], colors[i], emissives[i]);
+        mesh.position.set(positions[i][0], positions[i][1], positions[i][2]);
+        mesh.userData = { type: 'resource', id: i, resourceType: resourceTypes[i] };
+        objects.push(mesh);
     }
+
     return objects;
 }
 
@@ -3609,6 +3775,7 @@ function createResourceObjectsForBoss(bossId) {
     </script>
 </body>
 </html>
+
 
 
 
