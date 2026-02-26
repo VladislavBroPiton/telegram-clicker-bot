@@ -2241,179 +2241,187 @@ function createResourceObjectsForBoss(bossId) {
     const positions = [[-3,0.5,-2], [3,0.5,-2], [0,0.5,2], [-2,0.5,3], [2,0.5,3]];
     const resourceTypes = ['coal', 'iron', 'gold', 'diamond', 'mithril'];
 
-    // Универсальная функция для создания меша с заданной геометрией и цветом
-    const createMesh = (geometry, color, emissive = 0x000000) => {
-        const mat = new THREE.MeshStandardMaterial({ color, emissive });
-        return new THREE.Mesh(geometry, mat);
+    // Вспомогательные функции для создания разных форм
+    const createCoal = (color, emissive) => {
+        const group = new THREE.Group();
+        const main = new THREE.Mesh(
+            new THREE.SphereGeometry(0.5, 7),
+            new THREE.MeshStandardMaterial({ color, roughness: 0.9, emissive })
+        );
+        main.position.set(0,0,0);
+        group.add(main);
+        for (let j = 0; j < 4; j++) {
+            const chunk = new THREE.Mesh(
+                new THREE.SphereGeometry(0.2 + Math.random()*0.2, 5),
+                new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 })
+            );
+            chunk.position.set((Math.random()-0.5)*0.7, (Math.random()-0.5)*0.7, (Math.random()-0.5)*0.7);
+            group.add(chunk);
+        }
+        return group;
     };
 
-    // Для каждого босса определяем цвета и геометрию
-    let geometries = [];
-    let colors = [];
-    let emissives = [];
+    const createIron = (color, metalness, emissive) => {
+        const geom = new THREE.BoxGeometry(0.9, 0.3, 0.6);
+        const mat = new THREE.MeshStandardMaterial({ color, metalness, roughness: 0.3, emissive });
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.rotation.y = Math.random() * Math.PI;
+        return mesh;
+    };
+
+    const createGold = (color, emissive) => {
+        const geom = new THREE.SphereGeometry(0.6, 16);
+        const mat = new THREE.MeshStandardMaterial({ color, emissive, metalness: 0.5, roughness: 0.2 });
+        return new THREE.Mesh(geom, mat);
+    };
+
+    const createDiamond = (color, emissive) => {
+        const geom = new THREE.OctahedronGeometry(0.6);
+        const mat = new THREE.MeshStandardMaterial({ color, emissive, metalness: 0.3, roughness: 0.1 });
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.rotation.y = Math.PI/4;
+        return mesh;
+    };
+
+    const createMithril = (color, emissive) => {
+        const geom = new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8);
+        const mat = new THREE.MeshStandardMaterial({ color, emissive, metalness: 0.9, roughness: 0.2 });
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.rotation.y = Math.random() * Math.PI;
+        return mesh;
+    };
+
+    // Определяем цвета и свечение для каждого босса
+    let coalColor, ironColor, goldColor, diamondColor, mithrilColor;
+    let coalEmissive, ironEmissive, goldEmissive, diamondEmissive, mithrilEmissive;
 
     switch (bossId) {
         case 'goblin_king':
-            geometries = [
-                new THREE.SphereGeometry(0.6, 8),  // coal
-                new THREE.BoxGeometry(0.9, 0.3, 0.6), // iron
-                new THREE.SphereGeometry(0.6, 16), // gold
-                new THREE.OctahedronGeometry(0.6), // diamond
-                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8) // mithril
-            ];
-            colors = [0x8B5A2B, 0xCD7F32, 0xFFD700, 0x87CEEB, 0x4682B4];
-            emissives = [0x332211, 0x442200, 0x553300, 0x224466, 0x224466];
+            coalColor = 0x5a3e2b; coalEmissive = 0x221100;
+            ironColor = 0x8b5a2b; ironEmissive = 0x331100;
+            goldColor = 0xcc8800; goldEmissive = 0x442200;
+            diamondColor = 0x88aaff; diamondEmissive = 0x112244;
+            mithrilColor = 0x88aaff; mithrilEmissive = 0x112244;
             break;
         case 'dragon_lair':
-            geometries = [
-                new THREE.SphereGeometry(0.6, 8),
-                new THREE.BoxGeometry(0.9, 0.3, 0.6),
-                new THREE.SphereGeometry(0.6, 16),
-                new THREE.OctahedronGeometry(0.6),
-                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
-            ];
-            colors = [0xFF4500, 0xB22222, 0xFF8C00, 0xFF6347, 0xFFA07A];
-            emissives = [0x442200, 0x331100, 0x552200, 0x442200, 0x442200];
+            coalColor = 0xaa3300; coalEmissive = 0x442200;
+            ironColor = 0xaa5533; ironEmissive = 0x331100;
+            goldColor = 0xffaa00; goldEmissive = 0xaa3300;
+            diamondColor = 0xff8833; diamondEmissive = 0xaa3300;
+            mithrilColor = 0xffaa33; mithrilEmissive = 0xaa3300;
             break;
         case 'lich_castle':
-            geometries = [
-                new THREE.SphereGeometry(0.6, 8),
-                new THREE.BoxGeometry(0.9, 0.3, 0.6),
-                new THREE.SphereGeometry(0.6, 16),
-                new THREE.OctahedronGeometry(0.6),
-                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
-            ];
-            colors = [0x483D8B, 0x4B0082, 0x9370DB, 0x8A2BE2, 0xBA55D3];
-            emissives = [0x220044, 0x330066, 0x440088, 0x5500AA, 0x6600CC];
+            coalColor = 0x2a2a3a; coalEmissive = 0x220022;
+            ironColor = 0x557799; ironEmissive = 0x112233;
+            goldColor = 0xaa88aa; goldEmissive = 0x331144;
+            diamondColor = 0xaa88ff; diamondEmissive = 0x331166;
+            mithrilColor = 0xaa88ff; mithrilEmissive = 0x331166;
             break;
         case 'elemental_core':
-            geometries = [
-                new THREE.SphereGeometry(0.6, 8),
-                new THREE.BoxGeometry(0.9, 0.3, 0.6),
-                new THREE.SphereGeometry(0.6, 16),
-                new THREE.OctahedronGeometry(0.6),
-                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
-            ];
-            colors = [0xFF4500, 0xFF8C00, 0xFFD700, 0xFFA500, 0xFF6347];
-            emissives = [0x442200, 0x552200, 0x663300, 0x773300, 0x883300];
+            coalColor = 0xff5500; coalEmissive = 0xaa3300;
+            ironColor = 0xff7733; ironEmissive = 0xaa3300;
+            goldColor = 0xffaa00; goldEmissive = 0xff4400;
+            diamondColor = 0xffaa44; diamondEmissive = 0xaa3300;
+            mithrilColor = 0xffaa22; mithrilEmissive = 0xaa2200;
             break;
         case 'crystal_guardian':
-            geometries = [
-                new THREE.DodecahedronGeometry(0.5), // crystal instead of coal
-                new THREE.BoxGeometry(0.9, 0.3, 0.6),
-                new THREE.SphereGeometry(0.6, 16),
-                new THREE.OctahedronGeometry(0.7),
-                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
-            ];
-            colors = [0x87CEEB, 0xADD8E6, 0xFFDAB9, 0xE0FFFF, 0xB0E0E6];
-            emissives = [0x224466, 0x224466, 0x442200, 0x88AACC, 0x88AACC];
+            coalColor = 0x88aaff; coalEmissive = 0x224466;
+            ironColor = 0xaaccff; ironEmissive = 0x224466;
+            goldColor = 0xffaa88; goldEmissive = 0x442200;
+            diamondColor = 0xffffff; diamondEmissive = 0x88aaff;
+            mithrilColor = 0x88aaff; mithrilEmissive = 0x224466;
             break;
         case 'abyssal_serpent':
-            geometries = [
-                new THREE.SphereGeometry(0.6, 8),
-                new THREE.BoxGeometry(0.9, 0.3, 0.6),
-                new THREE.SphereGeometry(0.6, 16),
-                new THREE.OctahedronGeometry(0.6),
-                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
-            ];
-            colors = [0x2E8B57, 0x3CB371, 0x66CDAA, 0x7FFFD4, 0x40E0D0];
-            emissives = [0x113322, 0x224433, 0x335544, 0x446655, 0x557766];
+            coalColor = 0x226688; coalEmissive = 0x113355;
+            ironColor = 0x446688; ironEmissive = 0x113355;
+            goldColor = 0x88aadd; goldEmissive = 0x224466;
+            diamondColor = 0x88aaff; diamondEmissive = 0x224466;
+            mithrilColor = 0x88aaff; mithrilEmissive = 0x224466;
             break;
         case 'demon_lord':
-            geometries = [
-                new THREE.SphereGeometry(0.6, 8),
-                new THREE.BoxGeometry(0.9, 0.3, 0.6),
-                new THREE.SphereGeometry(0.6, 16),
-                new THREE.OctahedronGeometry(0.6),
-                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
-            ];
-            colors = [0x8B0000, 0xB22222, 0xDC143C, 0xFF4500, 0xFF6347];
-            emissives = [0x330000, 0x440000, 0x550000, 0x660000, 0x770000];
+            coalColor = 0xaa2222; coalEmissive = 0x440000;
+            ironColor = 0xaa4444; ironEmissive = 0x330000;
+            goldColor = 0xff8844; goldEmissive = 0xaa2200;
+            diamondColor = 0xff4444; diamondEmissive = 0xaa0000;
+            mithrilColor = 0xff8844; mithrilEmissive = 0xaa2200;
             break;
         case 'ice_queen':
-            geometries = [
-                new THREE.DodecahedronGeometry(0.5), // ice crystal
-                new THREE.BoxGeometry(0.9, 0.3, 0.6),
-                new THREE.SphereGeometry(0.6, 16),
-                new THREE.OctahedronGeometry(0.7),
-                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
-            ];
-            colors = [0xADD8E6, 0xB0E0E6, 0xE0FFFF, 0xF0F8FF, 0xFFFFFF];
-            emissives = [0x224466, 0x335577, 0x446688, 0x557799, 0x6688AA];
+            coalColor = 0xaaddff; coalEmissive = 0x224466;
+            ironColor = 0xaaccff; ironEmissive = 0x224466;
+            goldColor = 0xffffcc; goldEmissive = 0x88aaff;
+            diamondColor = 0xffffff; diamondEmissive = 0xaaccff;
+            mithrilColor = 0xaaddff; mithrilEmissive = 0x224466;
             break;
         case 'void_reaper':
-            geometries = [
-                new THREE.SphereGeometry(0.6, 8),
-                new THREE.BoxGeometry(0.9, 0.3, 0.6),
-                new THREE.SphereGeometry(0.6, 16),
-                new THREE.OctahedronGeometry(0.6),
-                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
-            ];
-            colors = [0x2F4F4F, 0x483D8B, 0x4B0082, 0x800080, 0x9400D3];
-            emissives = [0x111122, 0x222233, 0x333344, 0x444455, 0x555566];
+            coalColor = 0x222233; coalEmissive = 0x440044;
+            ironColor = 0x334466; ironEmissive = 0x220022;
+            goldColor = 0xaa88aa; goldEmissive = 0x440044;
+            diamondColor = 0xaa88ff; diamondEmissive = 0x440044;
+            mithrilColor = 0xaa88ff; mithrilEmissive = 0x440044;
             break;
         case 'ancient_colossus':
-            geometries = [
-                new THREE.SphereGeometry(0.6, 8),
-                new THREE.BoxGeometry(0.9, 0.3, 0.6),
-                new THREE.SphereGeometry(0.6, 16),
-                new THREE.OctahedronGeometry(0.6),
-                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
-            ];
-            colors = [0x8B7765, 0xA89F91, 0xC0A080, 0xD2B48C, 0xE1C699];
-            emissives = [0x332211, 0x443322, 0x554433, 0x665544, 0x776655];
+            coalColor = 0x887766; coalEmissive = 0x332211;
+            ironColor = 0xaa8866; ironEmissive = 0x332211;
+            goldColor = 0xccaa88; goldEmissive = 0x442200;
+            diamondColor = 0x88aacc; diamondEmissive = 0x224466;
+            mithrilColor = 0x88aacc; mithrilEmissive = 0x224466;
             break;
         case 'chaos_beast':
-            geometries = [
-                new THREE.SphereGeometry(0.6, 8),
-                new THREE.BoxGeometry(0.9, 0.3, 0.6),
-                new THREE.SphereGeometry(0.6, 16),
-                new THREE.OctahedronGeometry(0.6),
-                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
-            ];
-            colors = [0xFF00FF, 0x00FFFF, 0xFFFF00, 0xFF1493, 0x00FF7F];
-            emissives = [0x330033, 0x003333, 0x333300, 0x330022, 0x003322];
+            coalColor = 0xaa44aa; coalEmissive = 0x330033;
+            ironColor = 0xaa88ff; ironEmissive = 0x330033;
+            goldColor = 0xffaa88; goldEmissive = 0xaa44aa;
+            diamondColor = 0xff88ff; diamondEmissive = 0xaa00aa;
+            mithrilColor = 0xff88aa; mithrilEmissive = 0xaa44aa;
             break;
         case 'time_wyrm':
-            geometries = [
-                new THREE.SphereGeometry(0.6, 8),
-                new THREE.BoxGeometry(0.9, 0.3, 0.6),
-                new THREE.SphereGeometry(0.6, 16),
-                new THREE.OctahedronGeometry(0.6),
-                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
-            ];
-            colors = [0x708090, 0x778899, 0x7B68EE, 0x6A5ACD, 0x483D8B];
-            emissives = [0x112233, 0x223344, 0x334455, 0x445566, 0x556677];
+            coalColor = 0x334466; coalEmissive = 0x112233;
+            ironColor = 0x88aaff; ironEmissive = 0x224466;
+            goldColor = 0xffaa88; goldEmissive = 0x442200;
+            diamondColor = 0x88aaff; diamondEmissive = 0x224466;
+            mithrilColor = 0x88aaff; mithrilEmissive = 0x224466;
             break;
         case 'celestial_phoenix':
-            geometries = [
-                new THREE.SphereGeometry(0.6, 16),
-                new THREE.BoxGeometry(0.9, 0.3, 0.6),
-                new THREE.SphereGeometry(0.6, 16),
-                new THREE.OctahedronGeometry(0.7),
-                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
-            ];
-            colors = [0xFFD700, 0xFFA500, 0xFF8C00, 0xFF7F50, 0xFF6347];
-            emissives = [0x443300, 0x553300, 0x663300, 0x773300, 0x883300];
+            coalColor = 0xffaa44; coalEmissive = 0xaa4400;
+            ironColor = 0xffaa66; ironEmissive = 0xaa4400;
+            goldColor = 0xffdd88; goldEmissive = 0xaa4400;
+            diamondColor = 0xffdd88; diamondEmissive = 0xaa4400;
+            mithrilColor = 0xffaa44; mithrilEmissive = 0xaa4400;
             break;
         default:
-            geometries = [
-                new THREE.SphereGeometry(0.6, 8),
-                new THREE.BoxGeometry(0.9, 0.3, 0.6),
-                new THREE.SphereGeometry(0.6, 16),
-                new THREE.OctahedronGeometry(0.6),
-                new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8)
-            ];
-            colors = [0x888888, 0xAAAAAA, 0xCCCCCC, 0xEEEEEE, 0xFFFFFF];
-            emissives = [0x000000, 0x000000, 0x000000, 0x000000, 0x000000];
+            coalColor = 0x333333; coalEmissive = 0x111111;
+            ironColor = 0xaaaaaa; ironEmissive = 0x222222;
+            goldColor = 0xffaa00; goldEmissive = 0x442200;
+            diamondColor = 0x88ccff; diamondEmissive = 0x112244;
+            mithrilColor = 0x88aaff; mithrilEmissive = 0x112244;
     }
 
-    for (let i = 0; i < 5; i++) {
-        const mesh = createMesh(geometries[i], colors[i], emissives[i]);
-        mesh.position.set(positions[i][0], positions[i][1], positions[i][2]);
-        mesh.userData = { type: 'resource', id: i, resourceType: resourceTypes[i] };
-        objects.push(mesh);
-    }
+    // Создаём объекты
+    const coalObj = createCoal(coalColor, coalEmissive);
+    const ironObj = createIron(ironColor, 0.5, ironEmissive);
+    const goldObj = createGold(goldColor, goldEmissive);
+    const diamondObj = createDiamond(diamondColor, diamondEmissive);
+    const mithrilObj = createMithril(mithrilColor, mithrilEmissive);
+
+    // Расставляем по позициям и добавляем userData
+    coalObj.position.set(positions[0][0], positions[0][1], positions[0][2]);
+    coalObj.userData = { type: 'resource', id: 0, resourceType: 'coal' };
+    objects.push(coalObj);
+
+    ironObj.position.set(positions[1][0], positions[1][1], positions[1][2]);
+    ironObj.userData = { type: 'resource', id: 1, resourceType: 'iron' };
+    objects.push(ironObj);
+
+    goldObj.position.set(positions[2][0], positions[2][1], positions[2][2]);
+    goldObj.userData = { type: 'resource', id: 2, resourceType: 'gold' };
+    objects.push(goldObj);
+
+    diamondObj.position.set(positions[3][0], positions[3][1], positions[3][2]);
+    diamondObj.userData = { type: 'resource', id: 3, resourceType: 'diamond' };
+    objects.push(diamondObj);
+
+    mithrilObj.position.set(positions[4][0], positions[4][1], positions[4][2]);
+    mithrilObj.userData = { type: 'resource', id: 4, resourceType: 'mithril' };
+    objects.push(mithrilObj);
 
     return objects;
 }
@@ -3775,6 +3783,7 @@ function createResourceObjectsForBoss(bossId) {
     </script>
 </body>
 </html>
+
 
 
 
