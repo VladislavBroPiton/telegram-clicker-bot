@@ -2239,12 +2239,12 @@
 function createResourceObjectsForBoss(bossId) {
     const objects = [];
     const positions = [
-    [-2.5, 0.5, -2.5],
-    [2.5, 0.5, -2.5],
-    [-2.5, 0.5, 2.5],
-    [2.5, 0.5, 2.5],
-    [0, 0.5, 3.5]
-];
+        [-2.5, 0.5, -2.5],
+        [2.5, 0.5, -2.5],
+        [-2.5, 0.5, 2.5],
+        [2.5, 0.5, 2.5],
+        [0, 0.5, 3.5]
+    ];
     const resourceTypes = ['coal', 'iron', 'gold', 'diamond', 'mithril'];
 
     // Вспомогательные функции для создания разных форм
@@ -3198,30 +3198,30 @@ function clearEnvironment() {
         }
 
         async function loadBossInfo(bid) {
-            debugLog(`loadBossInfo for ${bid}`);
-            const data = await apiCall(`boss/${bid}`);
-            if (data) {
-                bossNameSpan.textContent = BOSS_NAMES[bid] || bid;
-                updateBossHealth(data.current_health, data.max_health);
-                bossHealthDiv.style.display = 'block';
-                updateBossNavigation();
+    debugLog(`loadBossInfo for ${bid}`);
+    const data = await apiCall(`boss/${bid}`);
+    if (data) {
+        bossNameSpan.textContent = BOSS_NAMES[bid] || bid;
+        updateBossHealth(data.current_health, data.max_health);
+        bossHealthDiv.style.display = 'block';
+        updateBossNavigation();
 
-                // Тематические классы для панели босса и для HUD
-                bossHealthDiv.className = 'boss-theme-' + bid;
-                document.getElementById('hud').className = 'hud-theme-' + bid;
+        // Тематические классы для панели босса и для HUD
+        bossHealthDiv.className = 'boss-theme-' + bid;
+        document.getElementById('hud').className = 'hud-theme-' + bid;
 
-                // Обновляем ресурсные объекты под нового босса
-                // Удаляем старые ресурсы
-                resourceObjects.forEach(obj => scene.remove(obj));
-                resourceObjects = [];
-                // Создаём новые
-                const newResources = createResourceObjectsForBoss(bid);
-                newResources.forEach(obj => {
-                    scene.add(obj);
-                    resourceObjects.push(obj);
-                });
-            }
-        }
+        // Удаляем старые ресурсы
+        resourceObjects.forEach(obj => scene.remove(obj));
+        resourceObjects = [];
+
+        // Создаём новые ресурсы для текущего босса
+        const newResources = createResourceObjectsForBoss(bid);
+        newResources.forEach(obj => {
+            scene.add(obj);
+            resourceObjects.push(obj);
+        });
+    }
+}
 
         function updateBossNavigation() {
             bossIndexSpan.textContent = `${currentBossIndex+1}/${BOSS_IDS.length}`;
@@ -3798,6 +3798,7 @@ function clearEnvironment() {
     </script>
 </body>
 </html>
+
 
 
 
