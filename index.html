@@ -6,484 +6,627 @@
     <title>Шахтёрская глубина 3D</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; }
-        #hud, #boss-health, #craft-menu {
-            position: absolute;
-            color: white;
-            background: rgba(20,20,30,0.85);
-            backdrop-filter: blur(4px);
-            padding: 10px 14px;
-            border-radius: 16px;
-            z-index: 200;
-            border: 1px solid rgba(255,215,0,0.3);
-            font-size: 14px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-        #hud {
-            top: 10px;
-            left: 10px;
-            pointer-events: none;
-        }
-        #hud button {
-            pointer-events: auto;
-        }
-        #boss-health {
-            bottom: 10px;
-            right: 10px;
-            width: 220px;
-            display: none;
-            border-color: #ff4444;
-            pointer-events: auto;
-        }
-        #craft-menu {
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 280px;
-            max-height: 80vh;
-            overflow-y: auto;
-            display: none;
-            pointer-events: auto;
-        }
-        .health-bar { width: 100%; height: 16px; background-color: #333; border-radius: 8px; overflow: hidden; margin-top: 6px; }
-        .health-fill { height: 100%; background: linear-gradient(90deg, #ff4444, #ff8844); width: 100%; transition: width 0.2s; }
-        .boss-navigation { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
-        .boss-nav-btn { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 20px; width: 40px; height: 40px; border-radius: 20px; cursor: pointer; pointer-events: auto; }
-        .boss-nav-btn:active { background: rgba(255,255,255,0.4); }
-        .boss-nav-btn.disabled { opacity: 0.3; pointer-events: none; }
-        #debug-info { display: none; }
-        #tool-display { margin-top: 8px; font-size: 13px; color: #ffaa66; border-top: 1px solid #444; padding-top: 6px; }
-        #inventory {
-            white-space: normal;
-            word-break: break-word;
-            max-width: 100%;
-            display: inline-block;
-        }
-        .craft-category { margin-bottom: 15px; }
-        .craft-category h3 { margin: 0 0 5px; font-size: 16px; color: #ffaa66; }
-        .craft-item {
-            background: rgba(255,255,255,0.1);
-            border-radius: 8px;
-            padding: 8px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-        .craft-item:active { transform: scale(0.98); background: rgba(255,255,255,0.2); }
-        .craft-item .name { font-weight: bold; }
-        .craft-item .desc { font-size: 12px; opacity: 0.8; }
-        .craft-item .resources { font-size: 11px; color: #aaffaa; }
-        .close-btn { float: right; background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
-        .toast {
-            position: absolute;
-            bottom: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            z-index: 300;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            white-space: nowrap;
-        }
-        .toast.show { opacity: 1; }
+    body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; }
+    #hud, #boss-health, #craft-menu {
+        position: absolute;
+        color: white;
+        background: rgba(20,20,30,0.85);
+        backdrop-filter: blur(4px);
+        padding: 10px 14px;
+        border-radius: 16px;
+        z-index: 200;
+        border: 1px solid rgba(255,215,0,0.3);
+        font-size: 14px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    #hud {
+        top: 10px;
+        left: 10px;
+        pointer-events: none;
+    }
+    #hud button {
+        pointer-events: auto;
+    }
+    #boss-health {
+        bottom: 10px;
+        right: 10px;
+        width: 220px;
+        display: none;
+        border-color: #ff4444;
+        pointer-events: auto;
+    }
+    #craft-menu {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 280px;
+        max-height: 80vh;
+        overflow-y: auto;
+        display: none;
+        pointer-events: auto;
+    }
+    .health-bar { width: 100%; height: 16px; background-color: #333; border-radius: 8px; overflow: hidden; margin-top: 6px; }
+    .health-fill { height: 100%; background: linear-gradient(90deg, #ff4444, #ff8844); width: 100%; transition: width 0.2s; }
+    .boss-navigation { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+    .boss-nav-btn { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 20px; width: 40px; height: 40px; border-radius: 20px; cursor: pointer; pointer-events: auto; }
+    .boss-nav-btn:active { background: rgba(255,255,255,0.4); }
+    .boss-nav-btn.disabled { opacity: 0.3; pointer-events: none; }
+    #debug-info { display: none; }
+    #tool-display { margin-top: 8px; font-size: 13px; color: #ffaa66; border-top: 1px solid #444; padding-top: 6px; }
+    #inventory {
+        white-space: normal;
+        word-break: break-word;
+        max-width: 100%;
+        display: inline-block;
+    }
+    .craft-category { margin-bottom: 15px; }
+    .craft-category h3 { margin: 0 0 5px; font-size: 16px; color: #ffaa66; }
+    .craft-item {
+        background: rgba(255,255,255,0.1);
+        border-radius: 8px;
+        padding: 8px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: transform 0.1s;
+    }
+    .craft-item:active { transform: scale(0.98); background: rgba(255,255,255,0.2); }
+    .craft-item .name { font-weight: bold; }
+    .craft-item .desc { font-size: 12px; opacity: 0.8; }
+    .craft-item .resources { font-size: 11px; color: #aaffaa; }
+    .close-btn { float: right; background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
+    .toast {
+        position: absolute;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        z-index: 300;
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+        white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
 
-        /* ===== Тематические стили для верхней панели (HUD) ===== */
+    /* ===== Тематические стили для панели босса, полоски здоровья и тостов ===== */
 
-/* Король гоблинов */
-.hud-theme-goblin_king {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='10' cy='10' r='3' fill='%23b8860b' opacity='0.15'/%3E%3Ccircle cx='30' cy='30' r='3' fill='%23b8860b' opacity='0.15'/%3E%3C/svg%3E") repeat,
-        linear-gradient(145deg, #3a2c1a, #1e1b0e);
-    border: 2px solid #b8860b;
-    box-shadow: 0 4px 15px #b8860b;
-    color: #ffd700;
-    text-shadow: 1px 1px 0 #3d2b1a;
-}
+    /* --- Король гоблинов --- */
+    .boss-theme-goblin_king {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='10' cy='10' r='3' fill='%23b8860b' opacity='0.2'/%3E%3Ccircle cx='30' cy='30' r='3' fill='%23b8860b' opacity='0.2'/%3E%3C/svg%3E") repeat,
+            linear-gradient(145deg, #4a2c1a, #2e1b0e);
+        border: 3px solid #b8860b;
+        box-shadow: 0 0 20px #b8860b, inset 0 0 10px #8b5a2b;
+        border-radius: 30px 10px 30px 10px;
+        color: #ffd700;
+        text-shadow: 2px 2px 0 #3d2b1a;
+    }
+    .boss-theme-goblin_king::before {
+        content: "👑 ";
+        font-size: 24px;
+        margin-right: 8px;
+    }
+    .boss-theme-goblin_king .health-fill {
+        background: linear-gradient(90deg, #b8860b, #ffd700);
+        box-shadow: 0 0 10px #ffd700;
+    }
 
-/* Огненный дракон */
-.hud-theme-dragon_lair {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M5 5 L25 25 M25 5 L5 25' stroke='%23ff8c00' stroke-width='2' opacity='0.1'/%3E%3C/svg%3E") repeat,
-        radial-gradient(circle at 30% 30%, #aa3300, #441100);
-    border: 2px solid #ff8c00;
-    box-shadow: 0 4px 20px #ff4500;
-    color: #fff5e6;
-    text-shadow: 0 0 8px #ffa500;
-}
+    /* --- Огненный дракон --- */
+    .boss-theme-dragon_lair {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M5 5 L25 25 M25 5 L5 25' stroke='%23ff8c00' stroke-width='2' opacity='0.15'/%3E%3C/svg%3E") repeat,
+            radial-gradient(circle at 30% 30%, #ff4500, #8b0000);
+        border: 3px solid #ff8c00;
+        box-shadow: 0 0 30px #ff4500, inset 0 0 15px #ff6347;
+        animation: flamePulse 2s infinite;
+        color: #fff5e6;
+        text-shadow: 0 0 10px #ffa500;
+    }
+    @keyframes flamePulse {
+        0% { box-shadow: 0 0 20px #ff4500; }
+        50% { box-shadow: 0 0 40px #ff6347; }
+        100% { box-shadow: 0 0 20px #ff4500; }
+    }
+    .boss-theme-dragon_lair::before {
+        content: "🐉 ";
+        font-size: 24px;
+        filter: drop-shadow(0 0 5px orange);
+    }
+    .boss-theme-dragon_lair .health-fill {
+        background: linear-gradient(90deg, #ff4500, #ffaa00, #ff4500);
+        background-size: 200% 100%;
+        animation: lavaFlow 2s infinite alternate;
+    }
+    @keyframes lavaFlow {
+        0% { background-position: 0% 0%; }
+        100% { background-position: 100% 0%; }
+    }
 
-/* Архилич */
-.hud-theme-lich_castle {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3E%3Cpath d='M25 10 L30 20 L25 30 L20 20 Z' fill='%239c27b0' opacity='0.1'/%3E%3C/svg%3E") repeat,
-        #0a0a1a;
-    border: 2px solid #7b1fa2;
-    box-shadow: 0 4px 20px #9c27b0;
-    color: #e1bee7;
-    text-shadow: 0 0 8px #ba68c8;
-}
+    /* --- Архилич --- */
+    .boss-theme-lich_castle {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3E%3Cpath d='M25 10 L30 20 L25 30 L20 20 Z' fill='%239c27b0' opacity='0.1'/%3E%3C/svg%3E") repeat,
+            #1a0f1f;
+        border: 2px solid #7b1fa2;
+        box-shadow: 0 0 25px #9c27b0, inset 0 0 15px #4a148c;
+        border-radius: 5px 30px 5px 30px;
+        color: #e1bee7;
+        text-shadow: 0 0 8px #ba68c8;
+    }
+    .boss-theme-lich_castle::before {
+        content: "💀 ";
+        font-size: 26px;
+    }
+    .boss-theme-lich_castle .health-fill {
+        background: linear-gradient(90deg, #4a148c, #9c27b0, #e1bee7);
+        box-shadow: 0 0 15px #ba68c8;
+    }
 
-/* Пылающий элементаль */
-.hud-theme-elemental_core {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='2' fill='%23ffaa00' opacity='0.2'/%3E%3C/svg%3E") repeat,
-        repeating-linear-gradient(45deg, #aa3300, #882200 10px);
-    border: 2px solid #ffc107;
-    box-shadow: 0 4px 20px #ff5722;
-    color: #fff3e0;
-    text-shadow: 0 0 10px #ff9800;
-}
+    /* --- Пылающий элементаль --- */
+    .boss-theme-elemental_core {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='2' fill='%23ffaa00' opacity='0.3'/%3E%3C/svg%3E") repeat,
+            repeating-linear-gradient(45deg, #ff5722, #ff9800 10px);
+        border: 3px solid #ffc107;
+        animation: heatWave 0.3s infinite alternate;
+        color: #fff3e0;
+        text-shadow: 0 0 15px #ff9800;
+    }
+    @keyframes heatWave {
+        from { filter: brightness(1); }
+        to { filter: brightness(1.3); }
+    }
+    .boss-theme-elemental_core::before {
+        content: "🔥 ";
+        font-size: 28px;
+    }
+    .boss-theme-elemental_core .health-fill {
+        background: repeating-linear-gradient(45deg, #ff5722, #ff9800 10px);
+        background-size: 200% 100%;
+        animation: heatWaveFill 0.5s infinite alternate;
+    }
+    @keyframes heatWaveFill {
+        from { filter: brightness(1); }
+        to { filter: brightness(1.5); }
+    }
 
-/* Кристальный страж */
-.hud-theme-crystal_guardian {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpolygon points='15,5 25,15 15,25 5,15' fill='%23ffffff' opacity='0.1'/%3E%3C/svg%3E") repeat,
-        linear-gradient(135deg, #1a4a7a, #0a2a4a);
-    border: 2px solid #88aaff;
-    box-shadow: 0 4px 20px #29b6f6;
-    color: #b3e5fc;
-    text-shadow: 0 0 5px #81d4fa;
-}
+    /* --- Кристальный страж --- */
+    .boss-theme-crystal_guardian {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpolygon points='15,5 25,15 15,25 5,15' fill='%23ffffff' opacity='0.1'/%3E%3C/svg%3E") repeat,
+            linear-gradient(135deg, #b3e5fc, #81d4fa);
+        border: 3px solid #ffffff;
+        box-shadow: 0 0 30px #29b6f6, inset 0 0 20px #4fc3f7;
+        border-radius: 20px 5px 20px 5px;
+        backdrop-filter: blur(2px);
+        color: #01579b;
+        text-shadow: 0 0 5px #b3e5fc;
+    }
+    .boss-theme-crystal_guardian::before {
+        content: "💎 ";
+        font-size: 24px;
+    }
+    .boss-theme-crystal_guardian .health-fill {
+        background: repeating-linear-gradient(45deg, #88ccff, #ffffff 10px);
+        background-size: 200% 100%;
+        animation: crystalShift 3s infinite linear;
+    }
+    @keyframes crystalShift {
+        from { background-position: 0% 0%; }
+        to { background-position: 100% 0%; }
+    }
 
-/* Глубинный змей */
-.hud-theme-abyssal_serpent {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='4' fill='%2340e0d0' opacity='0.15'/%3E%3C/svg%3E") repeat,
-        linear-gradient(180deg, #004466, #002244);
-    border: 2px solid #40e0d0;
-    box-shadow: 0 4px 20px #40e0d0;
-    color: #b0e0e6;
-    text-shadow: 0 0 8px #00ffff;
-}
+    /* --- Глубинный змей --- */
+    .boss-theme-abyssal_serpent {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='4' fill='%2340e0d0' opacity='0.2'/%3E%3C/svg%3E") repeat,
+            linear-gradient(180deg, #006994, #003366);
+        border: 3px solid #40e0d0;
+        box-shadow: 0 0 30px #40e0d0, inset 0 0 15px #00ced1;
+        border-radius: 50% 20% / 10% 40%;
+        color: #b0e0e6;
+        text-shadow: 0 0 8px #00ffff;
+    }
+    .boss-theme-abyssal_serpent::before {
+        content: "🐍 ";
+        font-size: 24px;
+    }
+    .boss-theme-abyssal_serpent .health-fill {
+        background: linear-gradient(90deg, #006994, #40e0d0, #006994);
+        background-size: 200% 100%;
+        animation: wave 2s infinite ease-in-out;
+    }
+    @keyframes wave {
+        0% { background-position: 0% 0%; }
+        50% { background-position: 100% 0%; }
+        100% { background-position: 0% 0%; }
+    }
 
-/* Владыка демонов */
-.hud-theme-demon_lord {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M0 0 L40 40 M40 0 L0 40' stroke='%23aa0000' stroke-width='1' opacity='0.15'/%3E%3C/svg%3E") repeat,
-        #220000;
-    border: 2px solid #aa0000;
-    box-shadow: 0 4px 25px #ff0000;
-    color: #ffaaaa;
-    text-shadow: 0 0 10px #ff4444;
-}
+    /* --- Владыка демонов --- */
+    .boss-theme-demon_lord {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M0 0 L40 40 M40 0 L0 40' stroke='%23aa0000' stroke-width='1' opacity='0.2'/%3E%3C/svg%3E") repeat,
+            #330000;
+        border: 3px solid #aa0000;
+        box-shadow: 0 0 40px #ff0000, inset 0 0 20px #8b0000;
+        border-radius: 10px 30px 10px 30px;
+        color: #ffcccc;
+        text-shadow: 0 0 15px #ff4444;
+    }
+    .boss-theme-demon_lord::before {
+        content: "👹 ";
+        font-size: 28px;
+    }
+    .boss-theme-demon_lord .health-fill {
+        background: linear-gradient(90deg, #8b0000, #ff4444, #8b0000);
+        box-shadow: 0 0 20px #ff0000;
+        animation: demonPulse 1s infinite alternate;
+    }
+    @keyframes demonPulse {
+        from { filter: brightness(1); }
+        to { filter: brightness(1.5); }
+    }
 
-/* Снежная королева */
-.hud-theme-ice_queen {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M15 2 L18 10 L15 18 L12 10 Z' fill='white' opacity='0.15'/%3E%3C/svg%3E") repeat,
-        linear-gradient(135deg, #2a5a7a, #1a3a5a);
-    border: 2px solid #aaddff;
-    box-shadow: 0 4px 20px #aaddff;
-    color: #e0f0ff;
-    text-shadow: 0 0 8px #88aaff;
-}
+    /* --- Снежная королева --- */
+    .boss-theme-ice_queen {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M15 2 L18 10 L15 18 L12 10 Z' fill='white' opacity='0.15'/%3E%3C/svg%3E") repeat,
+            linear-gradient(135deg, #aaddff, #88aaff);
+        border: 3px solid #ffffff;
+        box-shadow: 0 0 30px #aaddff, inset 0 0 20px #ffffff;
+        border-radius: 30px 30px 5px 5px;
+        color: #ffffff;
+        text-shadow: 0 0 10px #88aaff;
+    }
+    .boss-theme-ice_queen::before {
+        content: "❄️ ";
+        font-size: 24px;
+    }
+    .boss-theme-ice_queen .health-fill {
+        background: linear-gradient(90deg, #88aaff, #ffffff);
+        box-shadow: 0 0 15px #aaddff;
+    }
 
-/* Жнец душ */
-.hud-theme-void_reaper {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='10' fill='%238800ff' opacity='0.05'/%3E%3C/svg%3E") repeat,
-        #0a0a0a;
-    border: 2px solid #440044;
-    box-shadow: 0 4px 25px #8800ff;
-    color: #cc88ff;
-    text-shadow: 0 0 10px #aa00ff;
-}
+    /* --- Жнец душ --- */
+    .boss-theme-void_reaper {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='10' fill='%238800ff' opacity='0.05'/%3E%3C/svg%3E") repeat,
+            #0a0a0a;
+        border: 2px solid #440044;
+        box-shadow: 0 0 30px #8800ff, inset 0 0 15px #220022;
+        border-radius: 5px;
+        color: #cc88ff;
+        text-shadow: 0 0 12px #aa00ff;
+    }
+    .boss-theme-void_reaper::before {
+        content: "💀 ";
+        font-size: 26px;
+    }
+    .boss-theme-void_reaper .health-fill {
+        background: linear-gradient(90deg, #220022, #8800ff);
+        box-shadow: 0 0 20px #aa00ff;
+    }
 
-/* Каменный колосс */
-.hud-theme-ancient_colossus {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect x='0' y='0' width='20' height='20' fill='%23665544' opacity='0.2'/%3E%3Crect x='20' y='20' width='20' height='20' fill='%23665544' opacity='0.2'/%3E%3C/svg%3E") repeat,
-        #554433;
-    border: 3px solid #887766;
-    box-shadow: 0 4px 20px #aa8866;
-    color: #eeddcc;
-    text-shadow: 1px 1px 0 #332211;
-}
+    /* --- Каменный колосс --- */
+    .boss-theme-ancient_colossus {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect x='0' y='0' width='20' height='20' fill='%23665544' opacity='0.2'/%3E%3Crect x='20' y='20' width='20' height='20' fill='%23665544' opacity='0.2'/%3E%3C/svg%3E") repeat,
+            #887766;
+        border: 5px solid #554433;
+        box-shadow: 0 0 30px #aa8866, inset 0 0 15px #665544;
+        border-radius: 10px;
+        color: #eeddcc;
+        text-shadow: 2px 2px 0 #332211;
+    }
+    .boss-theme-ancient_colossus::before {
+        content: "🪨 ";
+        font-size: 24px;
+    }
+    .boss-theme-ancient_colossus .health-fill {
+        background: repeating-linear-gradient(90deg, #887766, #aa8866 10px);
+        background-size: 20px 100%;
+    }
 
-/* Зверь хаоса */
-.hud-theme-chaos_beast {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Crect x='0' y='0' width='5' height='5' fill='%23ff00ff' opacity='0.15'/%3E%3Crect x='5' y='5' width='5' height='5' fill='%2300ffff' opacity='0.15'/%3E%3C/svg%3E") repeat,
-        repeating-linear-gradient(45deg, #331133, #224422 20px);
-    border: 2px solid #ffaa00;
-    animation: chaosHudShift 3s infinite alternate;
-    color: #ffffff;
-    text-shadow: 0 0 10px #000000;
-}
-@keyframes chaosHudShift {
-    0% { filter: hue-rotate(0deg); }
-    100% { filter: hue-rotate(30deg); }
-}
+    /* --- Зверь хаоса --- */
+    .boss-theme-chaos_beast {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Crect x='0' y='0' width='5' height='5' fill='%23ff00ff' opacity='0.2'/%3E%3Crect x='5' y='5' width='5' height='5' fill='%2300ffff' opacity='0.2'/%3E%3C/svg%3E") repeat,
+            repeating-linear-gradient(45deg, #ff00ff, #00ffff 20px);
+        border: 3px solid #ffaa00;
+        animation: chaosShift 1s infinite alternate;
+        color: #ffffff;
+        text-shadow: 0 0 20px #000000;
+    }
+    @keyframes chaosShift {
+        0% { filter: hue-rotate(0deg); }
+        100% { filter: hue-rotate(360deg); }
+    }
+    .boss-theme-chaos_beast::before {
+        content: "👾 ";
+        font-size: 26px;
+    }
+    .boss-theme-chaos_beast .health-fill {
+        background: repeating-linear-gradient(90deg, #ff00ff, #00ffff 10px);
+        background-size: 200% 100%;
+        animation: chaosMove 0.5s infinite linear;
+    }
+    @keyframes chaosMove {
+        from { background-position: 0% 0%; }
+        to { background-position: 100% 0%; }
+    }
 
-/* Хроно-дракон */
-.hud-theme-time_wyrm {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='8' fill='none' stroke='%23ccaaff' stroke-width='1' opacity='0.15'/%3E%3Cpath d='M20 5 L20 35 M5 20 L35 20' stroke='%23ccaaff' stroke-width='1' opacity='0.15'/%3E%3C/svg%3E") repeat,
-        #112233;
-    border: 2px solid #ccaaff;
-    box-shadow: 0 4px 20px #ccaaff;
-    color: #e0e0ff;
-    text-shadow: 0 0 8px #99aaff;
-}
+    /* --- Хроно-дракон --- */
+    .boss-theme-time_wyrm {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='8' fill='none' stroke='%23ccaaff' stroke-width='1' opacity='0.2'/%3E%3Cpath d='M20 5 L20 35 M5 20 L35 20' stroke='%23ccaaff' stroke-width='1' opacity='0.2'/%3E%3C/svg%3E") repeat,
+            #223344;
+        border: 3px solid #ccaaff;
+        box-shadow: 0 0 30px #ccaaff, inset 0 0 15px #99aaff;
+        border-radius: 20px 20px 20px 20px;
+        color: #e0e0ff;
+        text-shadow: 0 0 8px #99aaff;
+        position: relative;
+        overflow: hidden;
+    }
+    .boss-theme-time_wyrm::before {
+        content: "⏳ ";
+        font-size: 24px;
+        margin-right: 8px;
+    }
+    .boss-theme-time_wyrm::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: repeating-linear-gradient(90deg, transparent, #ccaaff 10px);
+        animation: scan 4s linear infinite;
+    }
+    @keyframes scan {
+        from { transform: translateX(-100%); }
+        to { transform: translateX(100%); }
+    }
+    .boss-theme-time_wyrm .health-fill {
+        background: linear-gradient(90deg, #99aaff, #ccaaff);
+        box-shadow: 0 0 20px #99aaff;
+    }
 
-/* Небесный феникс */
-.hud-theme-celestial_phoenix {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M15 5 L20 15 L15 25 L10 15 Z' fill='%23ffdd44' opacity='0.15'/%3E%3C/svg%3E") repeat,
-        radial-gradient(circle at 30% 30%, #aa4400, #442200);
-    border: 2px solid #ffdd44;
-    box-shadow: 0 4px 30px #ffaa44;
-    color: #fff5e6;
-    text-shadow: 0 0 15px #ffaa00;
-}
-        
-        /* ===== Тематические стили для панели босса ===== */
+    /* --- Небесный феникс --- */
+    .boss-theme-celestial_phoenix {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M15 5 L20 15 L15 25 L10 15 Z' fill='%23ffdd44' opacity='0.15'/%3E%3C/svg%3E") repeat,
+            radial-gradient(circle at 30% 30%, #ffaa44, #aa4400);
+        border: 3px solid #ffdd44;
+        box-shadow: 0 0 50px #ffaa44, inset 0 0 25px #ff8800;
+        border-radius: 40% 10% / 20% 30%;
+        color: #fff5e6;
+        text-shadow: 0 0 20px #ffaa00;
+    }
+    .boss-theme-celestial_phoenix::before {
+        content: "🐦‍🔥 ";
+        font-size: 26px;
+    }
+    .boss-theme-celestial_phoenix .health-fill {
+        background: linear-gradient(90deg, #ffaa00, #ffdd44);
+        box-shadow: 0 0 30px #ffaa44;
+    }
 
-/* ===== Тематические стили для панели босса с SVG-текстурами ===== */
+    /* ===== Тематические стили для HUD ===== */
+    .hud-theme-goblin_king {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='10' cy='10' r='3' fill='%23b8860b' opacity='0.15'/%3E%3Ccircle cx='30' cy='30' r='3' fill='%23b8860b' opacity='0.15'/%3E%3C/svg%3E") repeat,
+            linear-gradient(145deg, #3a2c1a, #1e1b0e);
+        border: 2px solid #b8860b;
+        box-shadow: 0 4px 15px #b8860b;
+        color: #ffd700;
+        text-shadow: 1px 1px 0 #3d2b1a;
+    }
+    .hud-theme-dragon_lair {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M5 5 L25 25 M25 5 L5 25' stroke='%23ff8c00' stroke-width='2' opacity='0.1'/%3E%3C/svg%3E") repeat,
+            radial-gradient(circle at 30% 30%, #aa3300, #441100);
+        border: 2px solid #ff8c00;
+        box-shadow: 0 4px 20px #ff4500;
+        color: #fff5e6;
+        text-shadow: 0 0 8px #ffa500;
+    }
+    .hud-theme-lich_castle {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3E%3Cpath d='M25 10 L30 20 L25 30 L20 20 Z' fill='%239c27b0' opacity='0.1'/%3E%3C/svg%3E") repeat,
+            #0a0a1a;
+        border: 2px solid #7b1fa2;
+        box-shadow: 0 4px 20px #9c27b0;
+        color: #e1bee7;
+        text-shadow: 0 0 8px #ba68c8;
+    }
+    .hud-theme-elemental_core {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='2' fill='%23ffaa00' opacity='0.2'/%3E%3C/svg%3E") repeat,
+            repeating-linear-gradient(45deg, #aa3300, #882200 10px);
+        border: 2px solid #ffc107;
+        box-shadow: 0 4px 20px #ff5722;
+        color: #fff3e0;
+        text-shadow: 0 0 10px #ff9800;
+    }
+    .hud-theme-crystal_guardian {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpolygon points='15,5 25,15 15,25 5,15' fill='%23ffffff' opacity='0.1'/%3E%3C/svg%3E") repeat,
+            linear-gradient(135deg, #1a4a7a, #0a2a4a);
+        border: 2px solid #88aaff;
+        box-shadow: 0 4px 20px #29b6f6;
+        color: #b3e5fc;
+        text-shadow: 0 0 5px #81d4fa;
+    }
+    .hud-theme-abyssal_serpent {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='4' fill='%2340e0d0' opacity='0.15'/%3E%3C/svg%3E") repeat,
+            linear-gradient(180deg, #004466, #002244);
+        border: 2px solid #40e0d0;
+        box-shadow: 0 4px 20px #40e0d0;
+        color: #b0e0e6;
+        text-shadow: 0 0 8px #00ffff;
+    }
+    .hud-theme-demon_lord {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M0 0 L40 40 M40 0 L0 40' stroke='%23aa0000' stroke-width='1' opacity='0.15'/%3E%3C/svg%3E") repeat,
+            #220000;
+        border: 2px solid #aa0000;
+        box-shadow: 0 4px 25px #ff0000;
+        color: #ffaaaa;
+        text-shadow: 0 0 10px #ff4444;
+    }
+    .hud-theme-ice_queen {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M15 2 L18 10 L15 18 L12 10 Z' fill='white' opacity='0.15'/%3E%3C/svg%3E") repeat,
+            linear-gradient(135deg, #2a5a7a, #1a3a5a);
+        border: 2px solid #aaddff;
+        box-shadow: 0 4px 20px #aaddff;
+        color: #e0f0ff;
+        text-shadow: 0 0 8px #88aaff;
+    }
+    .hud-theme-void_reaper {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='10' fill='%238800ff' opacity='0.05'/%3E%3C/svg%3E") repeat,
+            #0a0a0a;
+        border: 2px solid #440044;
+        box-shadow: 0 4px 25px #8800ff;
+        color: #cc88ff;
+        text-shadow: 0 0 10px #aa00ff;
+    }
+    .hud-theme-ancient_colossus {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect x='0' y='0' width='20' height='20' fill='%23665544' opacity='0.2'/%3E%3Crect x='20' y='20' width='20' height='20' fill='%23665544' opacity='0.2'/%3E%3C/svg%3E") repeat,
+            #554433;
+        border: 3px solid #887766;
+        box-shadow: 0 4px 20px #aa8866;
+        color: #eeddcc;
+        text-shadow: 1px 1px 0 #332211;
+    }
+    .hud-theme-chaos_beast {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Crect x='0' y='0' width='5' height='5' fill='%23ff00ff' opacity='0.15'/%3E%3Crect x='5' y='5' width='5' height='5' fill='%2300ffff' opacity='0.15'/%3E%3C/svg%3E") repeat,
+            repeating-linear-gradient(45deg, #331133, #224422 20px);
+        border: 2px solid #ffaa00;
+        animation: chaosHudShift 3s infinite alternate;
+        color: #ffffff;
+        text-shadow: 0 0 10px #000000;
+    }
+    @keyframes chaosHudShift {
+        0% { filter: hue-rotate(0deg); }
+        100% { filter: hue-rotate(30deg); }
+    }
+    .hud-theme-time_wyrm {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='8' fill='none' stroke='%23ccaaff' stroke-width='1' opacity='0.15'/%3E%3Cpath d='M20 5 L20 35 M5 20 L35 20' stroke='%23ccaaff' stroke-width='1' opacity='0.15'/%3E%3C/svg%3E") repeat,
+            #112233;
+        border: 2px solid #ccaaff;
+        box-shadow: 0 4px 20px #ccaaff;
+        color: #e0e0ff;
+        text-shadow: 0 0 8px #99aaff;
+    }
+    .hud-theme-celestial_phoenix {
+        background: 
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M15 5 L20 15 L15 25 L10 15 Z' fill='%23ffdd44' opacity='0.15'/%3E%3C/svg%3E") repeat,
+            radial-gradient(circle at 30% 30%, #aa4400, #442200);
+        border: 2px solid #ffdd44;
+        box-shadow: 0 4px 30px #ffaa44;
+        color: #fff5e6;
+        text-shadow: 0 0 15px #ffaa00;
+    }
 
-/* Король гоблинов – грубая кожа с заклёпками */
-.boss-theme-goblin_king {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='10' cy='10' r='3' fill='%23b8860b' opacity='0.2'/%3E%3Ccircle cx='30' cy='30' r='3' fill='%23b8860b' opacity='0.2'/%3E%3C/svg%3E") repeat,
-        linear-gradient(145deg, #4a2c1a, #2e1b0e);
-    border: 3px solid #b8860b;
-    box-shadow: 0 0 20px #b8860b, inset 0 0 10px #8b5a2b;
-    border-radius: 30px 10px 30px 10px;
-    color: #ffd700;
-    text-shadow: 2px 2px 0 #3d2b1a;
-}
-.boss-theme-goblin_king::before {
-    content: "👑 ";
-    font-size: 24px;
-    margin-right: 8px;
-}
-
-/* Огненный дракон – языки пламени (полоски) */
-.boss-theme-dragon_lair {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M5 5 L25 25 M25 5 L5 25' stroke='%23ff8c00' stroke-width='2' opacity='0.15'/%3E%3C/svg%3E") repeat,
-        radial-gradient(circle at 30% 30%, #ff4500, #8b0000);
-    border: 3px solid #ff8c00;
-    box-shadow: 0 0 30px #ff4500, inset 0 0 15px #ff6347;
-    animation: flamePulse 2s infinite;
-    color: #fff5e6;
-    text-shadow: 0 0 10px #ffa500;
-}
-@keyframes flamePulse {
-    0% { box-shadow: 0 0 20px #ff4500; }
-    50% { box-shadow: 0 0 40px #ff6347; }
-    100% { box-shadow: 0 0 20px #ff4500; }
-}
-.boss-theme-dragon_lair::before {
-    content: "🐉 ";
-    font-size: 24px;
-    filter: drop-shadow(0 0 5px orange);
-}
-
-/* Архилич – магические руны (треугольники) */
-.boss-theme-lich_castle {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3E%3Cpath d='M25 10 L30 20 L25 30 L20 20 Z' fill='%239c27b0' opacity='0.1'/%3E%3C/svg%3E") repeat,
-        #1a0f1f;
-    border: 2px solid #7b1fa2;
-    box-shadow: 0 0 25px #9c27b0, inset 0 0 15px #4a148c;
-    border-radius: 5px 30px 5px 30px;
-    color: #e1bee7;
-    text-shadow: 0 0 8px #ba68c8;
-}
-.boss-theme-lich_castle::before {
-    content: "💀 ";
-    font-size: 26px;
-}
-
-/* Пылающий элементаль – искры (мелкие точки) */
-.boss-theme-elemental_core {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='2' fill='%23ffaa00' opacity='0.3'/%3E%3C/svg%3E") repeat,
-        repeating-linear-gradient(45deg, #ff5722, #ff9800 10px);
-    border: 3px solid #ffc107;
-    animation: heatWave 0.3s infinite alternate;
-    color: #fff3e0;
-    text-shadow: 0 0 15px #ff9800;
-}
-@keyframes heatWave {
-    from { filter: brightness(1); }
-    to { filter: brightness(1.3); }
-}
-.boss-theme-elemental_core::before {
-    content: "🔥 ";
-    font-size: 28px;
-}
-
-/* Кристальный страж – геометрические грани */
-.boss-theme-crystal_guardian {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpolygon points='15,5 25,15 15,25 5,15' fill='%23ffffff' opacity='0.1'/%3E%3C/svg%3E") repeat,
-        linear-gradient(135deg, #b3e5fc, #81d4fa);
-    border: 3px solid #ffffff;
-    box-shadow: 0 0 30px #29b6f6, inset 0 0 20px #4fc3f7;
-    border-radius: 20px 5px 20px 5px;
-    backdrop-filter: blur(2px);
-    color: #01579b;
-    text-shadow: 0 0 5px #b3e5fc;
-}
-.boss-theme-crystal_guardian::before {
-    content: "💎 ";
-    font-size: 24px;
-}
-
-/* Глубинный змей – чешуя (круги) */
-.boss-theme-abyssal_serpent {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='4' fill='%2340e0d0' opacity='0.2'/%3E%3C/svg%3E") repeat,
-        linear-gradient(180deg, #006994, #003366);
-    border: 3px solid #40e0d0;
-    box-shadow: 0 0 30px #40e0d0, inset 0 0 15px #00ced1;
-    border-radius: 50% 20% / 10% 40%;
-    color: #b0e0e6;
-    text-shadow: 0 0 8px #00ffff;
-}
-.boss-theme-abyssal_serpent::before {
-    content: "🐍 ";
-    font-size: 24px;
-}
-
-/* Владыка демонов – трещины (линии) */
-.boss-theme-demon_lord {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M0 0 L40 40 M40 0 L0 40' stroke='%23aa0000' stroke-width='1' opacity='0.2'/%3E%3C/svg%3E") repeat,
-        #330000;
-    border: 3px solid #aa0000;
-    box-shadow: 0 0 40px #ff0000, inset 0 0 20px #8b0000;
-    border-radius: 10px 30px 10px 30px;
-    color: #ffcccc;
-    text-shadow: 0 0 15px #ff4444;
-}
-.boss-theme-demon_lord::before {
-    content: "👹 ";
-    font-size: 28px;
-}
-
-/* Снежная королева – снежинки */
-.boss-theme-ice_queen {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M15 2 L18 10 L15 18 L12 10 Z' fill='white' opacity='0.15'/%3E%3C/svg%3E") repeat,
-        linear-gradient(135deg, #aaddff, #88aaff);
-    border: 3px solid #ffffff;
-    box-shadow: 0 0 30px #aaddff, inset 0 0 20px #ffffff;
-    border-radius: 30px 30px 5px 5px;
-    color: #ffffff;
-    text-shadow: 0 0 10px #88aaff;
-}
-.boss-theme-ice_queen::before {
-    content: "❄️ ";
-    font-size: 24px;
-}
-
-/* Жнец душ – призрачные силуэты (полупрозрачные круги) */
-.boss-theme-void_reaper {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='10' fill='%238800ff' opacity='0.05'/%3E%3C/svg%3E") repeat,
-        #0a0a0a;
-    border: 2px solid #440044;
-    box-shadow: 0 0 30px #8800ff, inset 0 0 15px #220022;
-    border-radius: 5px;
-    color: #cc88ff;
-    text-shadow: 0 0 12px #aa00ff;
-}
-.boss-theme-void_reaper::before {
-    content: "💀 ";
-    font-size: 26px;
-}
-
-/* Каменный колосс – каменная кладка */
-.boss-theme-ancient_colossus {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect x='0' y='0' width='20' height='20' fill='%23665544' opacity='0.2'/%3E%3Crect x='20' y='20' width='20' height='20' fill='%23665544' opacity='0.2'/%3E%3C/svg%3E") repeat,
-        #887766;
-    border: 5px solid #554433;
-    box-shadow: 0 0 30px #aa8866, inset 0 0 15px #665544;
-    border-radius: 10px;
-    color: #eeddcc;
-    text-shadow: 2px 2px 0 #332211;
-}
-.boss-theme-ancient_colossus::before {
-    content: "🪨 ";
-    font-size: 24px;
-}
-
-/* Зверь хаоса – хаотичные пиксели */
-.boss-theme-chaos_beast {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Crect x='0' y='0' width='5' height='5' fill='%23ff00ff' opacity='0.2'/%3E%3Crect x='5' y='5' width='5' height='5' fill='%2300ffff' opacity='0.2'/%3E%3C/svg%3E") repeat,
-        repeating-linear-gradient(45deg, #ff00ff, #00ffff 20px);
-    border: 3px solid #ffaa00;
-    animation: chaosShift 1s infinite alternate;
-    color: #ffffff;
-    text-shadow: 0 0 20px #000000;
-}
-@keyframes chaosShift {
-    0% { filter: hue-rotate(0deg); }
-    100% { filter: hue-rotate(360deg); }
-}
-.boss-theme-chaos_beast::before {
-    content: "👾 ";
-    font-size: 26px;
-}
-
-/* Хроно-дракон – шестерёнки и линии времени */
-.boss-theme-time_wyrm {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='8' fill='none' stroke='%23ccaaff' stroke-width='1' opacity='0.2'/%3E%3Cpath d='M20 5 L20 35 M5 20 L35 20' stroke='%23ccaaff' stroke-width='1' opacity='0.2'/%3E%3C/svg%3E") repeat,
-        #223344;
-    border: 3px solid #ccaaff;
-    box-shadow: 0 0 30px #ccaaff, inset 0 0 15px #99aaff;
-    border-radius: 20px 20px 20px 20px;
-    color: #e0e0ff;
-    text-shadow: 0 0 8px #99aaff;
-    position: relative;
-    overflow: hidden;
-}
-.boss-theme-time_wyrm::before {
-    content: "⏳ ";
-    font-size: 24px;
-    margin-right: 8px;
-}
-.boss-theme-time_wyrm::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: repeating-linear-gradient(90deg, transparent, #ccaaff 10px);
-    animation: scan 4s linear infinite;
-}
-@keyframes scan {
-    from { transform: translateX(-100%); }
-    to { transform: translateX(100%); }
-}
-
-/* Небесный феникс – перья и сияние */
-.boss-theme-celestial_phoenix {
-    background: 
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M15 5 L20 15 L15 25 L10 15 Z' fill='%23ffdd44' opacity='0.15'/%3E%3C/svg%3E") repeat,
-        radial-gradient(circle at 30% 30%, #ffaa44, #aa4400);
-    border: 3px solid #ffdd44;
-    box-shadow: 0 0 50px #ffaa44, inset 0 0 25px #ff8800;
-    border-radius: 40% 10% / 20% 30%;
-    color: #fff5e6;
-    text-shadow: 0 0 20px #ffaa00;
-}
-.boss-theme-celestial_phoenix::before {
-    content: "🐦‍🔥 ";
-    font-size: 26px;
-}
-    </style>
+    /* ===== Тематические стили для тост-уведомлений ===== */
+    .toast-theme-goblin_king {
+        background: #4a2c1a;
+        border: 2px solid #b8860b;
+        color: #ffd700;
+        box-shadow: 0 0 20px #b8860b;
+    }
+    .toast-theme-dragon_lair {
+        background: #aa3300;
+        border: 2px solid #ff8c00;
+        color: #fff5e6;
+        box-shadow: 0 0 20px #ff4500;
+        animation: toastFlame 1s infinite alternate;
+    }
+    @keyframes toastFlame {
+        from { box-shadow: 0 0 10px #ff4500; }
+        to { box-shadow: 0 0 25px #ffaa00; }
+    }
+    .toast-theme-lich_castle {
+        background: #1a0f1f;
+        border: 2px solid #9c27b0;
+        color: #e1bee7;
+        box-shadow: 0 0 20px #9c27b0;
+    }
+    .toast-theme-elemental_core {
+        background: repeating-linear-gradient(45deg, #ff5722, #ff9800);
+        color: #fff;
+        text-shadow: 0 0 5px #000;
+    }
+    .toast-theme-crystal_guardian {
+        background: #1a4a7a;
+        border: 2px solid #88aaff;
+        color: #b3e5fc;
+        box-shadow: 0 0 20px #29b6f6;
+    }
+    .toast-theme-abyssal_serpent {
+        background: #004466;
+        border: 2px solid #40e0d0;
+        color: #b0e0e6;
+        box-shadow: 0 0 20px #40e0d0;
+    }
+    .toast-theme-demon_lord {
+        background: #220000;
+        border: 2px solid #aa0000;
+        color: #ffaaaa;
+        box-shadow: 0 0 25px #ff0000;
+    }
+    .toast-theme-ice_queen {
+        background: #2a5a7a;
+        border: 2px solid #aaddff;
+        color: #ffffff;
+        box-shadow: 0 0 20px #aaddff;
+    }
+    .toast-theme-void_reaper {
+        background: #0a0a0a;
+        border: 2px solid #8800ff;
+        color: #cc88ff;
+        box-shadow: 0 0 25px #8800ff;
+    }
+    .toast-theme-ancient_colossus {
+        background: #554433;
+        border: 3px solid #887766;
+        color: #eeddcc;
+        box-shadow: 0 0 20px #aa8866;
+    }
+    .toast-theme-chaos_beast {
+        background: repeating-linear-gradient(45deg, #ff00ff, #00ffff);
+        color: #fff;
+        text-shadow: 0 0 5px #000;
+        animation: chaosToast 0.5s infinite alternate;
+    }
+    @keyframes chaosToast {
+        from { filter: hue-rotate(0deg); }
+        to { filter: hue-rotate(30deg); }
+    }
+    .toast-theme-time_wyrm {
+        background: #112233;
+        border: 2px solid #ccaaff;
+        color: #e0e0ff;
+        box-shadow: 0 0 20px #ccaaff;
+    }
+    .toast-theme-celestial_phoenix {
+        background: radial-gradient(circle at 30% 30%, #aa4400, #442200);
+        border: 2px solid #ffdd44;
+        color: #fff5e6;
+        box-shadow: 0 0 30px #ffaa44;
+    }
+</style>
     <script type="importmap">
         {
             "imports": {
@@ -691,16 +834,16 @@
         }
 
         function showToast(message, duration = 2000) {
-            toast.textContent = message;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), duration);
-        }
-
-        function hapticFeedback(style = 'light') {
-            if (tg && tg.HapticFeedback) {
-                tg.HapticFeedback.impactOccurred(style);
-            }
-        }
+    toast.textContent = message;
+    // Добавляем класс темы текущего босса
+    toast.classList.add('toast-theme-' + currentBossId);
+    toast.classList.add('show');
+    setTimeout(() => {
+        toast.classList.remove('show');
+        // Удаляем класс темы после скрытия, чтобы не накапливались
+        toast.classList.remove('toast-theme-' + currentBossId);
+    }, duration);
+}
 
         // ==================== ПОДСВЕТКА ОБЪЕКТА ====================
         function flashObject(obj, colorHex, durationMs) {
@@ -3493,6 +3636,7 @@
     </script>
 </body>
 </html>
+
 
 
 
