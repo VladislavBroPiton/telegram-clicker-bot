@@ -2703,8 +2703,9 @@
         bossHealthDiv.style.display = 'block';
         updateBossNavigation();
 
-        // Добавляем тематический класс для панели босса
+        // Тематические классы для панели босса и для HUD
         bossHealthDiv.className = 'boss-theme-' + bid;
+        document.getElementById('hud').className = 'hud-theme-' + bid;
     }
 }
 
@@ -3342,6 +3343,7 @@
     </script>
 </body>
 </html>
+
 
 
 
