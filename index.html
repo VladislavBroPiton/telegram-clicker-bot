@@ -835,6 +835,12 @@
 
             group.scale.set(0.8, 0.8, 0.8);
             group.position.y = 1.5;
+            // Помечаем все меши босса как кликабельные части
+            group.traverse((child) => {
+            if (child.isMesh) {
+            child.userData.isBossPart = true;
+    }
+});
             return group;
         }
 
@@ -2089,6 +2095,7 @@
     </script>
 </body>
 </html>
+
 
 
 
