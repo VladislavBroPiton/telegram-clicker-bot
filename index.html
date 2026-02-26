@@ -2433,24 +2433,33 @@ function createResourceObjectsForBoss(bossId) {
 }
 
         // ==================== ОЧИСТКА ОКРУЖЕНИЯ ====================
-        function clearEnvironment() {
-            torchLights = [];
-            sparkParticles = null;
-            soulParticles = null;
-            floatingBooks = [];
-            ashParticles = null;
-            waterDrops = null;
-            heatDistortion = null;
-            flyingSkulls = [];
-            bubbleParticles = null;
-            runeLights = [];
-            environmentObjects.forEach(obj => scene.remove(obj));
-            environmentObjects = [];
-            stars.forEach(s => scene.remove(s));
-            stars = [];
-            scene.fog = null;
-            scene.background = new THREE.Color(0x0a0a20);
-        }
+function clearEnvironment() {
+    // Удаляем все объекты окружения
+    environmentObjects.forEach(obj => scene.remove(obj));
+    environmentObjects = [];
+
+    // Удаляем звёзды (небо)
+    stars.forEach(s => scene.remove(s));
+    stars = [];
+
+    // Очищаем массивы с частицами и декорациями
+    torchLights = [];
+    sparkParticles = null;
+    soulParticles = null;
+    floatingBooks = [];
+    ashParticles = null;
+    waterDrops = null;
+    heatDistortion = null;
+    flyingSkulls = [];
+    bubbleParticles = null;
+    runeLights = [];
+
+    // Сбрасываем текстуры и фог
+    lavaPlane = null;
+    lavaTexture = null;
+    scene.fog = null;
+    scene.background = new THREE.Color(0x0a0a20);
+}
 
         // ==================== ОКРУЖЕНИЕ ДЛЯ КАЖДОГО БОССА (уникальное) ====================
         function createEnvironmentForBoss(bossId) {
@@ -3789,6 +3798,7 @@ function createResourceObjectsForBoss(bossId) {
     </script>
 </body>
 </html>
+
 
 
 
