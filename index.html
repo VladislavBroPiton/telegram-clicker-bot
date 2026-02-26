@@ -1479,7 +1479,7 @@
                     while(bossGroup.children.length > 0) bossGroup.remove(bossGroup.children[0]);
                     const newVisual = createVisualBossModel(currentBossId);
                     bossGroup.add(newVisual);
-                    const colliderGeom = new THREE.SphereGeometry(4.0, 8);
+                    const colliderGeom = new THREE.SphereGeometry(3.0, 8);
                     const colliderMat = new THREE.MeshBasicMaterial({ visible: false });
                     const collider = new THREE.Mesh(colliderGeom, colliderMat);
                     collider.position.set(0, 2.0, 0);
@@ -1502,7 +1502,7 @@
                     while(bossGroup.children.length > 0) bossGroup.remove(bossGroup.children[0]);
                     const newVisual = createVisualBossModel(currentBossId);
                     bossGroup.add(newVisual);
-                    const colliderGeom = new THREE.SphereGeometry(4.0, 8);
+                    const colliderGeom = new THREE.SphereGeometry(3.0, 8);
                     const colliderMat = new THREE.MeshBasicMaterial({ visible: false });
                     const collider = new THREE.Mesh(colliderGeom, colliderMat);
                     collider.position.set(0, 2.0, 0);
@@ -1759,7 +1759,7 @@
                 const visualBoss = createVisualBossModel(currentBossId);
                 bossGroup.add(visualBoss);
 
-                const colliderGeom = new THREE.SphereGeometry(4.0, 8);
+                const colliderGeom = new THREE.SphereGeometry(3.0, 8);
                 const colliderMat = new THREE.MeshBasicMaterial({ visible: false });
                 const collider = new THREE.Mesh(colliderGeom, colliderMat);
                 collider.position.set(0, 2.0, 0);
@@ -2098,6 +2098,7 @@ renderer.domElement.addEventListener('touchstart', (e) => {
     </script>
 </body>
 </html>
+
 
 
 
