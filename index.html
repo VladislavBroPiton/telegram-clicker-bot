@@ -2244,10 +2244,11 @@ function createResourceObjectsForBoss(bossId) {
     // Вспомогательные функции для создания разных форм
     const createCoal = (color, emissive) => {
         const group = new THREE.Group();
-        const main = new THREE.Mesh(new THREE.SphereGeometry(0.5, 7), new THREE.MeshStandardMaterial({ color, roughness: 0.9 }));
+        const main = new THREE.Mesh(new THREE.SphereGeometry(0.5, 7), new THREE.MeshStandardMaterial({ color, roughness: 0.9, emissive }));
+        main.position.set(0,0,0);
         group.add(main);
         for (let j = 0; j < 4; j++) {
-            const chunk = new THREE.Mesh(new THREE.SphereGeometry(0.2 + Math.random()*0.2, 5), new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 }));
+            const chunk = new THREE.Mesh(new THREE.SphereGeometry(0.2 + Math.random()*0.2, 5), new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8, emissive: 0x000000 }));
             chunk.position.set((Math.random()-0.5)*0.7, (Math.random()-0.5)*0.7, (Math.random()-0.5)*0.7);
             group.add(chunk);
         }
@@ -2290,117 +2291,144 @@ function createResourceObjectsForBoss(bossId) {
         return new THREE.Mesh(geom, mat);
     };
 
-    // Для каждого босса определяем свои цвета и формы
+    // Временный массив для созданных объектов
+    let newObjects = [];
+
+    // Для каждого босса создаём объекты и сразу устанавливаем позицию
     switch (bossId) {
         case 'goblin_king':
-            objects.push(createCoal(0x4a2c1a, 0x221100).translate(...positions[0]));
-            objects.push(createIron(0x8B5A2B, 0.4, 0x332211).translate(...positions[1]));
-            objects.push(createGold(0xcc8800, 0x442200).translate(...positions[2]));
-            objects.push(createDiamond(0x88aaff, 0x112244).translate(...positions[3]));
-            objects.push(createMithril(0x88aaff, 0x112244).translate(...positions[4]));
+            newObjects = [
+                createCoal(0x4a2c1a, 0x221100),
+                createIron(0x8B5A2B, 0.4, 0x332211),
+                createGold(0xcc8800, 0x442200),
+                createDiamond(0x88aaff, 0x112244),
+                createMithril(0x88aaff, 0x112244)
+            ];
             break;
         case 'dragon_lair':
-            objects.push(createCoal(0xaa3300, 0x442200).translate(...positions[0]));
-            objects.push(createIron(0xaa5533, 0.8, 0x331100).translate(...positions[1]));
-            objects.push(createGold(0xffaa00, 0xaa3300).translate(...positions[2]));
-            objects.push(createDiamond(0xff8833, 0xaa3300).translate(...positions[3]));
-            objects.push(createMithril(0xffaa33, 0xaa3300).translate(...positions[4]));
+            newObjects = [
+                createCoal(0xaa3300, 0x442200),
+                createIron(0xaa5533, 0.8, 0x331100),
+                createGold(0xffaa00, 0xaa3300),
+                createDiamond(0xff8833, 0xaa3300),
+                createMithril(0xffaa33, 0xaa3300)
+            ];
             break;
         case 'lich_castle':
-            objects.push(createCoal(0x2a2a3a, 0x220022).translate(...positions[0]));
-            objects.push(createIron(0x557799, 0.3, 0x112233).translate(...positions[1]));
-            objects.push(createGold(0xaa88aa, 0x331144).translate(...positions[2]));
-            objects.push(createDiamond(0xaa88ff, 0x331166).translate(...positions[3]));
-            objects.push(createMithril(0xaa88ff, 0x331166).translate(...positions[4]));
+            newObjects = [
+                createCoal(0x2a2a3a, 0x220022),
+                createIron(0x557799, 0.3, 0x112233),
+                createGold(0xaa88aa, 0x331144),
+                createDiamond(0xaa88ff, 0x331166),
+                createMithril(0xaa88ff, 0x331166)
+            ];
             break;
         case 'elemental_core':
-            objects.push(createCoal(0xff5500, 0xaa3300).translate(...positions[0]));
-            objects.push(createIron(0xff7733, 0.9, 0xaa3300).translate(...positions[1]));
-            objects.push(createGold(0xffaa00, 0xff4400).translate(...positions[2]));
-            objects.push(createDiamond(0xffaa44, 0xaa3300).translate(...positions[3]));
-            objects.push(createMithril(0xffaa22, 0xaa2200).translate(...positions[4]));
+            newObjects = [
+                createCoal(0xff5500, 0xaa3300),
+                createIron(0xff7733, 0.9, 0xaa3300),
+                createGold(0xffaa00, 0xff4400),
+                createDiamond(0xffaa44, 0xaa3300),
+                createMithril(0xffaa22, 0xaa2200)
+            ];
             break;
         case 'crystal_guardian':
-            objects.push(createCrystal(0x88aaff, 0x224466).translate(...positions[0])); // кристалл вместо угля
-            objects.push(createIron(0xaaccff, 0.7, 0x224466).translate(...positions[1]));
-            objects.push(createGold(0xffaa88, 0x442200).translate(...positions[2]));
-            objects.push(createDiamond(0xffffff, 0x88aaff).translate(...positions[3]));
-            objects.push(createMithril(0x88aaff, 0x224466).translate(...positions[4]));
+            newObjects = [
+                createCrystal(0x88aaff, 0x224466),
+                createIron(0xaaccff, 0.7, 0x224466),
+                createGold(0xffaa88, 0x442200),
+                createDiamond(0xffffff, 0x88aaff),
+                createMithril(0x88aaff, 0x224466)
+            ];
             break;
         case 'abyssal_serpent':
-            objects.push(createCoal(0x226688, 0x113355).translate(...positions[0]));
-            objects.push(createIron(0x446688, 0.6, 0x113355).translate(...positions[1]));
-            objects.push(createGold(0x88aadd, 0x224466).translate(...positions[2]));
-            objects.push(createDiamond(0x88aaff, 0x224466).translate(...positions[3]));
-            objects.push(createMithril(0x88aaff, 0x224466).translate(...positions[4]));
+            newObjects = [
+                createCoal(0x226688, 0x113355),
+                createIron(0x446688, 0.6, 0x113355),
+                createGold(0x88aadd, 0x224466),
+                createDiamond(0x88aaff, 0x224466),
+                createMithril(0x88aaff, 0x224466)
+            ];
             break;
         case 'demon_lord':
-            objects.push(createCoal(0xaa2222, 0x440000).translate(...positions[0]));
-            objects.push(createIron(0xaa4444, 0.8, 0x330000).translate(...positions[1]));
-            objects.push(createGold(0xff8844, 0xaa2200).translate(...positions[2]));
-            objects.push(createDiamond(0xff4444, 0xaa0000).translate(...positions[3]));
-            objects.push(createMithril(0xff8844, 0xaa2200).translate(...positions[4]));
+            newObjects = [
+                createCoal(0xaa2222, 0x440000),
+                createIron(0xaa4444, 0.8, 0x330000),
+                createGold(0xff8844, 0xaa2200),
+                createDiamond(0xff4444, 0xaa0000),
+                createMithril(0xff8844, 0xaa2200)
+            ];
             break;
         case 'ice_queen':
-            objects.push(createCrystal(0xaaddff, 0x224466).translate(...positions[0])); // лёд
-            objects.push(createIron(0xaaccff, 0.4, 0x224466).translate(...positions[1]));
-            objects.push(createGold(0xffffcc, 0x88aaff).translate(...positions[2]));
-            objects.push(createDiamond(0xffffff, 0xaaccff).translate(...positions[3]));
-            objects.push(createMithril(0xaaddff, 0x224466).translate(...positions[4]));
+            newObjects = [
+                createCrystal(0xaaddff, 0x224466),
+                createIron(0xaaccff, 0.4, 0x224466),
+                createGold(0xffffcc, 0x88aaff),
+                createDiamond(0xffffff, 0xaaccff),
+                createMithril(0xaaddff, 0x224466)
+            ];
             break;
         case 'void_reaper':
-            objects.push(createCoal(0x222233, 0x440044).translate(...positions[0]));
-            objects.push(createIron(0x334466, 0.3, 0x220022).translate(...positions[1]));
-            objects.push(createGold(0xaa88aa, 0x440044).translate(...positions[2]));
-            objects.push(createDiamond(0xaa88ff, 0x440044).translate(...positions[3]));
-            objects.push(createMithril(0xaa88ff, 0x440044).translate(...positions[4]));
+            newObjects = [
+                createCoal(0x222233, 0x440044),
+                createIron(0x334466, 0.3, 0x220022),
+                createGold(0xaa88aa, 0x440044),
+                createDiamond(0xaa88ff, 0x440044),
+                createMithril(0xaa88ff, 0x440044)
+            ];
             break;
         case 'ancient_colossus':
-            objects.push(createCoal(0x887766, 0x332211).translate(...positions[0]));
-            objects.push(createIron(0xaa8866, 0.5, 0x332211).translate(...positions[1]));
-            objects.push(createGold(0xccaa88, 0x442200).translate(...positions[2]));
-            objects.push(createDiamond(0x88aacc, 0x224466).translate(...positions[3]));
-            objects.push(createMithril(0x88aacc, 0x224466).translate(...positions[4]));
+            newObjects = [
+                createCoal(0x887766, 0x332211),
+                createIron(0xaa8866, 0.5, 0x332211),
+                createGold(0xccaa88, 0x442200),
+                createDiamond(0x88aacc, 0x224466),
+                createMithril(0x88aacc, 0x224466)
+            ];
             break;
         case 'chaos_beast':
-            objects.push(createCoal(0xaa44aa, 0x330033).translate(...positions[0]));
-            objects.push(createIron(0xaa88ff, 0.7, 0x330033).translate(...positions[1]));
-            objects.push(createGold(0xffaa88, 0xaa44aa).translate(...positions[2]));
-            objects.push(createDiamond(0xff88ff, 0xaa00aa).translate(...positions[3]));
-            objects.push(createMithril(0xff88aa, 0xaa44aa).translate(...positions[4]));
+            newObjects = [
+                createCoal(0xaa44aa, 0x330033),
+                createIron(0xaa88ff, 0.7, 0x330033),
+                createGold(0xffaa88, 0xaa44aa),
+                createDiamond(0xff88ff, 0xaa00aa),
+                createMithril(0xff88aa, 0xaa44aa)
+            ];
             break;
         case 'time_wyrm':
-            objects.push(createCoal(0x334466, 0x112233).translate(...positions[0]));
-            objects.push(createIron(0x88aaff, 0.9, 0x224466).translate(...positions[1]));
-            objects.push(createGold(0xffaa88, 0x442200).translate(...positions[2]));
-            objects.push(createDiamond(0x88aaff, 0x224466).translate(...positions[3]));
-            objects.push(createMithril(0x88aaff, 0x224466).translate(...positions[4]));
+            newObjects = [
+                createCoal(0x334466, 0x112233),
+                createIron(0x88aaff, 0.9, 0x224466),
+                createGold(0xffaa88, 0x442200),
+                createDiamond(0x88aaff, 0x224466),
+                createMithril(0x88aaff, 0x224466)
+            ];
             break;
         case 'celestial_phoenix':
-            objects.push(createGold(0xffaa44, 0xaa4400).translate(...positions[0])); // золотой шар
-            objects.push(createIron(0xffaa66, 0.8, 0xaa4400).translate(...positions[1]));
-            objects.push(createGold(0xffdd88, 0xaa4400).translate(...positions[2]));
-            objects.push(createDiamond(0xffdd88, 0xaa4400).translate(...positions[3]));
-            objects.push(createMithril(0xffaa44, 0xaa4400).translate(...positions[4]));
+            newObjects = [
+                createGold(0xffaa44, 0xaa4400), // уголь как золото
+                createIron(0xffaa66, 0.8, 0xaa4400),
+                createGold(0xffdd88, 0xaa4400),
+                createDiamond(0xffdd88, 0xaa4400),
+                createMithril(0xffaa44, 0xaa4400)
+            ];
             break;
         default:
-            // fallback (на всякий случай)
-            for (let i = 0; i < resourceTypes.length; i++) {
-                const type = resourceTypes[i];
-                let mesh;
-                if (type === 'coal') mesh = createCoal(0x333333, 0x111111);
-                else if (type === 'iron') mesh = createIron(0xaaaaaa, 0.8, 0x222222);
-                else if (type === 'gold') mesh = createGold(0xffaa00, 0x442200);
-                else if (type === 'diamond') mesh = createDiamond(0x88ccff, 0x112244);
-                else if (type === 'mithril') mesh = createMithril(0x88aaff, 0x112244);
-                mesh.position.set(positions[i][0], positions[i][1], positions[i][2]);
-                objects.push(mesh);
-            }
+            // fallback
+            newObjects = [
+                createCoal(0x333333, 0x111111),
+                createIron(0xaaaaaa, 0.8, 0x222222),
+                createGold(0xffaa00, 0x442200),
+                createDiamond(0x88ccff, 0x112244),
+                createMithril(0x88aaff, 0x112244)
+            ];
     }
 
-    // Добавляем userData (для кликов)
-    objects.forEach((obj, idx) => {
+    // Устанавливаем позиции и добавляем userData
+    newObjects.forEach((obj, idx) => {
+        obj.position.set(positions[idx][0], positions[idx][1], positions[idx][2]);
         obj.userData = { type: 'resource', id: idx, resourceType: resourceTypes[idx] };
+        objects.push(obj);
     });
 
     return objects;
@@ -3763,4 +3791,5 @@ function createResourceObjectsForBoss(bossId) {
     </script>
 </body>
 </html>
+
 
