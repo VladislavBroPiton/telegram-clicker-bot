@@ -779,6 +779,12 @@
             console.log(msg);
         }
 
+        function hapticFeedback(style = 'light') {
+    if (tg && tg.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred(style);
+    }
+}
+
         // ==================== ТЕЛЕГРАМ ====================
         let tg;
         try {
@@ -3636,6 +3642,7 @@
     </script>
 </body>
 </html>
+
 
 
 
