@@ -780,10 +780,10 @@
         }
 
         function hapticFeedback(style = 'light') {
-    if (tg && tg.HapticFeedback) {
-        tg.HapticFeedback.impactOccurred(style);
-    }
-}
+            if (tg && tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred(style);
+            }
+        }
 
         // ==================== ТЕЛЕГРАМ ====================
         let tg;
@@ -840,16 +840,14 @@
         }
 
         function showToast(message, duration = 2000) {
-    toast.textContent = message;
-    // Добавляем класс темы текущего босса
-    toast.classList.add('toast-theme-' + currentBossId);
-    toast.classList.add('show');
-    setTimeout(() => {
-        toast.classList.remove('show');
-        // Удаляем класс темы после скрытия, чтобы не накапливались
-        toast.classList.remove('toast-theme-' + currentBossId);
-    }, duration);
-}
+            toast.textContent = message;
+            toast.classList.add('toast-theme-' + currentBossId);
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+                toast.classList.remove('toast-theme-' + currentBossId);
+            }, duration);
+        }
 
         // ==================== ПОДСВЕТКА ОБЪЕКТА ====================
         function flashObject(obj, colorHex, durationMs) {
@@ -2237,6 +2235,188 @@
             return group;
         }
 
+        // ==================== УНИКАЛЬНЫЕ РЕСУРСЫ ДЛЯ КАЖДОГО БОССА ====================
+        function createResourceObjectsForBoss(bossId) {
+            const objects = [];
+            const positions = [[-3,0.5,-2], [3,0.5,-2], [0,0.5,2], [-2,0.5,3], [2,0.5,3]];
+            const resourceTypes = ['coal', 'iron', 'gold', 'diamond', 'mithril'];
+
+            for (let i = 0; i < resourceTypes.length; i++) {
+                const type = resourceTypes[i];
+                const pos = positions[i];
+                let mesh;
+
+                // Общие вспомогательные функции
+                const createCrystal = (color, emissive, size = 0.6) => {
+                    const geom = new THREE.OctahedronGeometry(size);
+                    const mat = new THREE.MeshStandardMaterial({ color, emissive, metalness: 0.3, roughness: 0.2 });
+                    const m = new THREE.Mesh(geom, mat);
+                    m.rotation.y = Math.random() * Math.PI;
+                    return m;
+                };
+
+                const createOreChunk = (baseColor, speckColor) => {
+                    const group = new THREE.Group();
+                    const main = new THREE.Mesh(new THREE.SphereGeometry(0.5, 6), new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.8 }));
+                    group.add(main);
+                    for (let j = 0; j < 3; j++) {
+                        const chunk = new THREE.Mesh(new THREE.SphereGeometry(0.2 + Math.random()*0.2, 4), new THREE.MeshStandardMaterial({ color: speckColor, roughness: 0.6 }));
+                        chunk.position.set((Math.random()-0.5)*0.6, (Math.random()-0.5)*0.6, (Math.random()-0.5)*0.6);
+                        group.add(chunk);
+                    }
+                    return group;
+                };
+
+                const createBar = (color, metalness = 0.8) => {
+                    const geom = new THREE.BoxGeometry(0.9, 0.3, 0.5);
+                    const mat = new THREE.MeshStandardMaterial({ color, metalness, roughness: 0.3 });
+                    const m = new THREE.Mesh(geom, mat);
+                    m.rotation.y = Math.random() * Math.PI;
+                    return m;
+                };
+
+                const createGem = (color, emissive) => {
+                    const geom = new THREE.DodecahedronGeometry(0.5);
+                    const mat = new THREE.MeshStandardMaterial({ color, emissive, metalness: 0.1, roughness: 0.1 });
+                    const m = new THREE.Mesh(geom, mat);
+                    m.rotation.y = Math.random() * Math.PI;
+                    return m;
+                };
+
+                const createGlowingSphere = (color, emissive) => {
+                    const geom = new THREE.SphereGeometry(0.6, 16);
+                    const mat = new THREE.MeshStandardMaterial({ color, emissive });
+                    return new THREE.Mesh(geom, mat);
+                };
+
+                switch (bossId) {
+                    case 'goblin_king':
+                        // Грубые, потёртые ресурсы
+                        if (type === 'coal') mesh = createOreChunk(0x333333, 0x111111);
+                        else if (type === 'iron') mesh = createBar(0x886644, 0.5); // ржавое железо
+                        else if (type === 'gold') mesh = createGem(0xcc8800, 0x442200); // тусклое золото
+                        else if (type === 'diamond') mesh = createCrystal(0x88aaff, 0x112244);
+                        else if (type === 'mithril') mesh = createGlowingSphere(0x88aaff, 0x112244);
+                        break;
+                    case 'dragon_lair':
+                        // Обожжённые, огненные
+                        if (type === 'coal') mesh = createOreChunk(0xaa3300, 0xff5500);
+                        else if (type === 'iron') mesh = createBar(0xaa5533, 0.8);
+                        else if (type === 'gold') mesh = createGlowingSphere(0xffaa00, 0xaa2200);
+                        else if (type === 'diamond') mesh = createCrystal(0xffaa44, 0xaa3300);
+                        else if (type === 'mithril') mesh = createGlowingSphere(0xff8833, 0xaa2200);
+                        break;
+                    case 'lich_castle':
+                        // Мёртвые, фиолетовые оттенки
+                        if (type === 'coal') mesh = createOreChunk(0x2a2a3a, 0x441144);
+                        else if (type === 'iron') mesh = createBar(0x557799, 0.3);
+                        else if (type === 'gold') mesh = createGem(0xaa88aa, 0x331144);
+                        else if (type === 'diamond') mesh = createCrystal(0xaa88ff, 0x331166);
+                        else if (type === 'mithril') mesh = createGlowingSphere(0xaa88ff, 0x331166);
+                        break;
+                    case 'elemental_core':
+                        // Пылающие, яркие
+                        if (type === 'coal') mesh = createGlowingSphere(0xff5500, 0xaa3300);
+                        else if (type === 'iron') mesh = createBar(0xff7733, 0.9);
+                        else if (type === 'gold') mesh = createGlowingSphere(0xffaa00, 0xff4400);
+                        else if (type === 'diamond') mesh = createCrystal(0xffaa44, 0xaa3300);
+                        else if (type === 'mithril') mesh = createGlowingSphere(0xffaa22, 0xaa2200);
+                        break;
+                    case 'crystal_guardian':
+                        // Прозрачные, гранёные
+                        if (type === 'coal') mesh = createCrystal(0x88aaff, 0x224466, 0.7);
+                        else if (type === 'iron') mesh = createBar(0xaaccff, 0.7);
+                        else if (type === 'gold') mesh = createGem(0xffaa88, 0x442200);
+                        else if (type === 'diamond') mesh = createCrystal(0xffffff, 0x88aaff, 0.8);
+                        else if (type === 'mithril') mesh = createGlowingSphere(0x88aaff, 0x224466);
+                        break;
+                    case 'abyssal_serpent':
+                        // Водные, тёмные
+                        if (type === 'coal') mesh = createOreChunk(0x226688, 0x004466);
+                        else if (type === 'iron') mesh = createBar(0x446688, 0.6);
+                        else if (type === 'gold') mesh = createGem(0x88aadd, 0x224466);
+                        else if (type === 'diamond') mesh = createCrystal(0x88aaff, 0x224466);
+                        else if (type === 'mithril') mesh = createGlowingSphere(0x88aaff, 0x224466);
+                        break;
+                    case 'demon_lord':
+                        // Кроваво-красные
+                        if (type === 'coal') mesh = createOreChunk(0xaa2222, 0x440000);
+                        else if (type === 'iron') mesh = createBar(0xaa4444, 0.8);
+                        else if (type === 'gold') mesh = createGem(0xff8844, 0xaa2200);
+                        else if (type === 'diamond') mesh = createCrystal(0xff4444, 0xaa0000);
+                        else if (type === 'mithril') mesh = createGlowingSphere(0xff8844, 0xaa2200);
+                        break;
+                    case 'ice_queen':
+                        // Ледяные, бело-голубые
+                        if (type === 'coal') mesh = createCrystal(0xaaddff, 0x224466, 0.7);
+                        else if (type === 'iron') mesh = createBar(0xaaccff, 0.4);
+                        else if (type === 'gold') mesh = createGem(0xffffcc, 0x88aaff);
+                        else if (type === 'diamond') mesh = createCrystal(0xffffff, 0xaaccff, 0.8);
+                        else if (type === 'mithril') mesh = createGlowingSphere(0xaaddff, 0x224466);
+                        break;
+                    case 'void_reaper':
+                        // Тёмные, с фиолетовым отливом
+                        if (type === 'coal') mesh = createOreChunk(0x222233, 0x440044);
+                        else if (type === 'iron') mesh = createBar(0x334466, 0.3);
+                        else if (type === 'gold') mesh = createGem(0xaa88aa, 0x440044);
+                        else if (type === 'diamond') mesh = createCrystal(0xaa88ff, 0x440044);
+                        else if (type === 'mithril') mesh = createGlowingSphere(0xaa88ff, 0x440044);
+                        break;
+                    case 'ancient_colossus':
+                        // Каменные, грубые
+                        if (type === 'coal') mesh = createOreChunk(0x887766, 0x554433);
+                        else if (type === 'iron') mesh = createBar(0xaa8866, 0.5);
+                        else if (type === 'gold') mesh = createGem(0xccaa88, 0x442200);
+                        else if (type === 'diamond') mesh = createCrystal(0x88aacc, 0x224466);
+                        else if (type === 'mithril') mesh = createGlowingSphere(0x88aacc, 0x224466);
+                        break;
+                    case 'chaos_beast':
+                        // Хаотичные, меняющие цвет
+                        const hue = Math.random();
+                        if (type === 'coal') mesh = createOreChunk(0xaa44aa, 0xff00ff);
+                        else if (type === 'iron') mesh = createBar(0xaa88ff, 0.7);
+                        else if (type === 'gold') mesh = createGem(0xffaa88, 0xaa44aa);
+                        else if (type === 'diamond') mesh = createCrystal(0xff88ff, 0xaa00aa);
+                        else if (type === 'mithril') mesh = createGlowingSphere(0xff88aa, 0xaa44aa);
+                        break;
+                    case 'time_wyrm':
+                        // Металлические, с оттенком синего
+                        if (type === 'coal') mesh = createOreChunk(0x334466, 0x112233);
+                        else if (type === 'iron') mesh = createBar(0x88aaff, 0.9);
+                        else if (type === 'gold') mesh = createGem(0xffaa88, 0x442200);
+                        else if (type === 'diamond') mesh = createCrystal(0x88aaff, 0x224466);
+                        else if (type === 'mithril') mesh = createGlowingSphere(0x88aaff, 0x224466);
+                        break;
+                    case 'celestial_phoenix':
+                        // Сияющие, золотые
+                        if (type === 'coal') mesh = createGlowingSphere(0xffaa44, 0xaa4400);
+                        else if (type === 'iron') mesh = createBar(0xffaa66, 0.8);
+                        else if (type === 'gold') mesh = createGem(0xffdd88, 0xaa4400);
+                        else if (type === 'diamond') mesh = createCrystal(0xffdd88, 0xaa4400, 0.8);
+                        else if (type === 'mithril') mesh = createGlowingSphere(0xffaa44, 0xaa4400);
+                        break;
+                    default:
+                        // Стандартные (на всякий случай)
+                        if (type === 'coal') {
+                            const g = new THREE.Group();
+                            g.add(new THREE.Mesh(new THREE.SphereGeometry(0.6, 7), new THREE.MeshStandardMaterial({ color: 0x333333 })));
+                            g.add(new THREE.Mesh(new THREE.SphereGeometry(0.4, 5), new THREE.MeshStandardMaterial({ color: 0x222222 })).translate(0.5,0.3,0.4));
+                            g.add(new THREE.Mesh(new THREE.SphereGeometry(0.3, 5), new THREE.MeshStandardMaterial({ color: 0x444444 })).translate(-0.4,-0.2,0.6));
+                            g.add(new THREE.Mesh(new THREE.SphereGeometry(0.5, 5), new THREE.MeshStandardMaterial({ color: 0x2a2a2a })).translate(0.2,-0.5,-0.3));
+                            mesh = g;
+                        } else if (type === 'iron') mesh = createBar(0xaaaaaa, 0.8);
+                        else if (type === 'gold') mesh = createGlowingSphere(0xffaa00, 0x442200);
+                        else if (type === 'diamond') mesh = createCrystal(0x88ccff, 0x112244);
+                        else if (type === 'mithril') mesh = createGlowingSphere(0x88aaff, 0x112244);
+                }
+
+                mesh.position.set(pos[0], pos[1], pos[2]);
+                mesh.userData = { type: 'resource', id: i, resourceType: type };
+                objects.push(mesh);
+            }
+            return objects;
+        }
+
         // ==================== ОЧИСТКА ОКРУЖЕНИЯ ====================
         function clearEnvironment() {
             torchLights = [];
@@ -2994,19 +3174,30 @@
         }
 
         async function loadBossInfo(bid) {
-    debugLog(`loadBossInfo for ${bid}`);
-    const data = await apiCall(`boss/${bid}`);
-    if (data) {
-        bossNameSpan.textContent = BOSS_NAMES[bid] || bid;
-        updateBossHealth(data.current_health, data.max_health);
-        bossHealthDiv.style.display = 'block';
-        updateBossNavigation();
+            debugLog(`loadBossInfo for ${bid}`);
+            const data = await apiCall(`boss/${bid}`);
+            if (data) {
+                bossNameSpan.textContent = BOSS_NAMES[bid] || bid;
+                updateBossHealth(data.current_health, data.max_health);
+                bossHealthDiv.style.display = 'block';
+                updateBossNavigation();
 
-        // Тематические классы для панели босса и для HUD
-        bossHealthDiv.className = 'boss-theme-' + bid;
-        document.getElementById('hud').className = 'hud-theme-' + bid;
-    }
-}
+                // Тематические классы для панели босса и для HUD
+                bossHealthDiv.className = 'boss-theme-' + bid;
+                document.getElementById('hud').className = 'hud-theme-' + bid;
+
+                // Обновляем ресурсные объекты под нового босса
+                // Удаляем старые ресурсы
+                resourceObjects.forEach(obj => scene.remove(obj));
+                resourceObjects = [];
+                // Создаём новые
+                const newResources = createResourceObjectsForBoss(bid);
+                newResources.forEach(obj => {
+                    scene.add(obj);
+                    resourceObjects.push(obj);
+                });
+            }
+        }
 
         function updateBossNavigation() {
             bossIndexSpan.textContent = `${currentBossIndex+1}/${BOSS_IDS.length}`;
@@ -3233,68 +3424,9 @@
                 light2.position.set(-5, 5, -5);
                 scene.add(light2);
 
-                // --- РЕСУРСНЫЕ ОБЪЕКТЫ ---
-                const positions = [[-3,0.5,-2], [3,0.5,-2], [0,0.5,2], [-2,0.5,3], [2,0.5,3]];
-                const resourceTypes = ['coal', 'iron', 'gold', 'diamond', 'mithril'];
-
-                resourceTypes.forEach((type, i) => {
-                    const pos = positions[i];
-                    let mesh;
-
-                    if (type === 'coal') {
-                        const group = new THREE.Group();
-                        const main = new THREE.Mesh(new THREE.SphereGeometry(0.6, 7), new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9 }));
-                        main.position.set(0, 0, 0);
-                        group.add(main);
-                        const chunk1 = new THREE.Mesh(new THREE.SphereGeometry(0.4, 5), new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 }));
-                        chunk1.position.set(0.5, 0.3, 0.4);
-                        group.add(chunk1);
-                        const chunk2 = new THREE.Mesh(new THREE.SphereGeometry(0.3, 5), new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.7 }));
-                        chunk2.position.set(-0.4, -0.2, 0.6);
-                        group.add(chunk2);
-                        const chunk3 = new THREE.Mesh(new THREE.SphereGeometry(0.5, 5), new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.9 }));
-                        chunk3.position.set(0.2, -0.5, -0.3);
-                        group.add(chunk3);
-                        mesh = group;
-                    } else if (type === 'iron') {
-                        const geometry = new THREE.BoxGeometry(0.9, 0.4, 0.6);
-                        const material = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.8, roughness: 0.3 });
-                        mesh = new THREE.Mesh(geometry, material);
-                        mesh.rotation.y = Math.random() * Math.PI;
-                    } else if (type === 'gold') {
-                        const geometry = new THREE.SphereGeometry(0.6, 8);
-                        const canvas = document.createElement('canvas');
-                        canvas.width = 64;
-                        canvas.height = 64;
-                        const ctx = canvas.getContext('2d');
-                        ctx.fillStyle = '#ffaa00';
-                        ctx.fillRect(0, 0, 64, 64);
-                        for (let j = 0; j < 100; j++) {
-                            ctx.fillStyle = `rgba(255,215,0,${Math.random()*0.3})`;
-                            ctx.beginPath();
-                            ctx.arc(Math.random()*64, Math.random()*64, Math.random()*5+2, 0, 2*Math.PI);
-                            ctx.fill();
-                        }
-                        const texture = new THREE.CanvasTexture(canvas);
-                        const material = new THREE.MeshStandardMaterial({ map: texture, color: 0xffaa00, emissive: 0x442200 });
-                        mesh = new THREE.Mesh(geometry, material);
-                    } else if (type === 'diamond') {
-                        const geometry = new THREE.OctahedronGeometry(0.6);
-                        const material = new THREE.MeshStandardMaterial({ color: 0x88ccff, emissive: 0x112244, metalness: 0.3, roughness: 0.2 });
-                        mesh = new THREE.Mesh(geometry, material);
-                        mesh.rotation.y = Math.PI/4;
-                    } else if (type === 'mithril') {
-                        const geometry = new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8);
-                        const material = new THREE.MeshStandardMaterial({ color: 0x88aaff, emissive: 0x112244, metalness: 0.9, roughness: 0.2 });
-                        mesh = new THREE.Mesh(geometry, material);
-                        mesh.rotation.y = Math.random() * Math.PI;
-                    }
-
-                    mesh.position.set(pos[0], pos[1], pos[2]);
-                    mesh.userData = { type: 'resource', id: i, resourceType: type };
-                    scene.add(mesh);
-                    resourceObjects.push(mesh);
-                });
+                // Создаём ресурсные объекты для текущего босса
+                resourceObjects = createResourceObjectsForBoss(currentBossId);
+                resourceObjects.forEach(obj => scene.add(obj));
 
                 // Группа для босса
                 bossGroup = new THREE.Group();
@@ -3642,10 +3774,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
