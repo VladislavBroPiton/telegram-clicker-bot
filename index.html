@@ -2238,7 +2238,13 @@
         // ==================== УНИКАЛЬНЫЕ РЕСУРСЫ ДЛЯ КАЖДОГО БОССА ====================
 function createResourceObjectsForBoss(bossId) {
     const objects = [];
-    const positions = [[-3,0.5,-2], [3,0.5,-2], [0,0.5,2], [-2,0.5,3], [2,0.5,3]];
+    const positions = [
+    [-2.5, 0.5, -2.5],
+    [2.5, 0.5, -2.5],
+    [-2.5, 0.5, 2.5],
+    [2.5, 0.5, 2.5],
+    [0, 0.5, 3.5]
+];
     const resourceTypes = ['coal', 'iron', 'gold', 'diamond', 'mithril'];
 
     // Вспомогательные функции для создания разных форм
@@ -3783,6 +3789,7 @@ function createResourceObjectsForBoss(bossId) {
     </script>
 </body>
 </html>
+
 
 
 
