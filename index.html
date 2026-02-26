@@ -91,6 +91,156 @@
             white-space: nowrap;
         }
         .toast.show { opacity: 1; }
+
+        /* ===== Тематические стили для верхней панели (HUD) ===== */
+
+/* Король гоблинов */
+.hud-theme-goblin_king {
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='10' cy='10' r='3' fill='%23b8860b' opacity='0.15'/%3E%3Ccircle cx='30' cy='30' r='3' fill='%23b8860b' opacity='0.15'/%3E%3C/svg%3E") repeat,
+        linear-gradient(145deg, #3a2c1a, #1e1b0e);
+    border: 2px solid #b8860b;
+    box-shadow: 0 4px 15px #b8860b;
+    color: #ffd700;
+    text-shadow: 1px 1px 0 #3d2b1a;
+}
+
+/* Огненный дракон */
+.hud-theme-dragon_lair {
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M5 5 L25 25 M25 5 L5 25' stroke='%23ff8c00' stroke-width='2' opacity='0.1'/%3E%3C/svg%3E") repeat,
+        radial-gradient(circle at 30% 30%, #aa3300, #441100);
+    border: 2px solid #ff8c00;
+    box-shadow: 0 4px 20px #ff4500;
+    color: #fff5e6;
+    text-shadow: 0 0 8px #ffa500;
+}
+
+/* Архилич */
+.hud-theme-lich_castle {
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3E%3Cpath d='M25 10 L30 20 L25 30 L20 20 Z' fill='%239c27b0' opacity='0.1'/%3E%3C/svg%3E") repeat,
+        #0a0a1a;
+    border: 2px solid #7b1fa2;
+    box-shadow: 0 4px 20px #9c27b0;
+    color: #e1bee7;
+    text-shadow: 0 0 8px #ba68c8;
+}
+
+/* Пылающий элементаль */
+.hud-theme-elemental_core {
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='2' fill='%23ffaa00' opacity='0.2'/%3E%3C/svg%3E") repeat,
+        repeating-linear-gradient(45deg, #aa3300, #882200 10px);
+    border: 2px solid #ffc107;
+    box-shadow: 0 4px 20px #ff5722;
+    color: #fff3e0;
+    text-shadow: 0 0 10px #ff9800;
+}
+
+/* Кристальный страж */
+.hud-theme-crystal_guardian {
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpolygon points='15,5 25,15 15,25 5,15' fill='%23ffffff' opacity='0.1'/%3E%3C/svg%3E") repeat,
+        linear-gradient(135deg, #1a4a7a, #0a2a4a);
+    border: 2px solid #88aaff;
+    box-shadow: 0 4px 20px #29b6f6;
+    color: #b3e5fc;
+    text-shadow: 0 0 5px #81d4fa;
+}
+
+/* Глубинный змей */
+.hud-theme-abyssal_serpent {
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='4' fill='%2340e0d0' opacity='0.15'/%3E%3C/svg%3E") repeat,
+        linear-gradient(180deg, #004466, #002244);
+    border: 2px solid #40e0d0;
+    box-shadow: 0 4px 20px #40e0d0;
+    color: #b0e0e6;
+    text-shadow: 0 0 8px #00ffff;
+}
+
+/* Владыка демонов */
+.hud-theme-demon_lord {
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M0 0 L40 40 M40 0 L0 40' stroke='%23aa0000' stroke-width='1' opacity='0.15'/%3E%3C/svg%3E") repeat,
+        #220000;
+    border: 2px solid #aa0000;
+    box-shadow: 0 4px 25px #ff0000;
+    color: #ffaaaa;
+    text-shadow: 0 0 10px #ff4444;
+}
+
+/* Снежная королева */
+.hud-theme-ice_queen {
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M15 2 L18 10 L15 18 L12 10 Z' fill='white' opacity='0.15'/%3E%3C/svg%3E") repeat,
+        linear-gradient(135deg, #2a5a7a, #1a3a5a);
+    border: 2px solid #aaddff;
+    box-shadow: 0 4px 20px #aaddff;
+    color: #e0f0ff;
+    text-shadow: 0 0 8px #88aaff;
+}
+
+/* Жнец душ */
+.hud-theme-void_reaper {
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='10' fill='%238800ff' opacity='0.05'/%3E%3C/svg%3E") repeat,
+        #0a0a0a;
+    border: 2px solid #440044;
+    box-shadow: 0 4px 25px #8800ff;
+    color: #cc88ff;
+    text-shadow: 0 0 10px #aa00ff;
+}
+
+/* Каменный колосс */
+.hud-theme-ancient_colossus {
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect x='0' y='0' width='20' height='20' fill='%23665544' opacity='0.2'/%3E%3Crect x='20' y='20' width='20' height='20' fill='%23665544' opacity='0.2'/%3E%3C/svg%3E") repeat,
+        #554433;
+    border: 3px solid #887766;
+    box-shadow: 0 4px 20px #aa8866;
+    color: #eeddcc;
+    text-shadow: 1px 1px 0 #332211;
+}
+
+/* Зверь хаоса */
+.hud-theme-chaos_beast {
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Crect x='0' y='0' width='5' height='5' fill='%23ff00ff' opacity='0.15'/%3E%3Crect x='5' y='5' width='5' height='5' fill='%2300ffff' opacity='0.15'/%3E%3C/svg%3E") repeat,
+        repeating-linear-gradient(45deg, #331133, #224422 20px);
+    border: 2px solid #ffaa00;
+    animation: chaosHudShift 3s infinite alternate;
+    color: #ffffff;
+    text-shadow: 0 0 10px #000000;
+}
+@keyframes chaosHudShift {
+    0% { filter: hue-rotate(0deg); }
+    100% { filter: hue-rotate(30deg); }
+}
+
+/* Хроно-дракон */
+.hud-theme-time_wyrm {
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='8' fill='none' stroke='%23ccaaff' stroke-width='1' opacity='0.15'/%3E%3Cpath d='M20 5 L20 35 M5 20 L35 20' stroke='%23ccaaff' stroke-width='1' opacity='0.15'/%3E%3C/svg%3E") repeat,
+        #112233;
+    border: 2px solid #ccaaff;
+    box-shadow: 0 4px 20px #ccaaff;
+    color: #e0e0ff;
+    text-shadow: 0 0 8px #99aaff;
+}
+
+/* Небесный феникс */
+.hud-theme-celestial_phoenix {
+    background: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath d='M15 5 L20 15 L15 25 L10 15 Z' fill='%23ffdd44' opacity='0.15'/%3E%3C/svg%3E") repeat,
+        radial-gradient(circle at 30% 30%, #aa4400, #442200);
+    border: 2px solid #ffdd44;
+    box-shadow: 0 4px 30px #ffaa44;
+    color: #fff5e6;
+    text-shadow: 0 0 15px #ffaa00;
+}
+        
         /* ===== Тематические стили для панели босса ===== */
 
 /* ===== Тематические стили для панели босса с SVG-текстурами ===== */
@@ -3343,6 +3493,7 @@
     </script>
 </body>
 </html>
+
 
 
 
