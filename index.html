@@ -3787,10 +3787,6 @@ function clearEnvironment() {
                         });
                     }
 
-                    controls.update();
-                    renderer.render(scene, camera);
-                    requestAnimationFrame(animate);
-
                         // Пульсация центрального ресурса
                         if (resourceObjects.length > 0 && resourceObjects[0]) {
                             const scale = 1 + Math.sin(time * 5) * 0.05;
@@ -3857,6 +3853,7 @@ function clearEnvironment() {
     </script>
 </body>
 </html>
+
 
 
 
