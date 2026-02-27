@@ -1948,9 +1948,20 @@ async def show_locations(update_or_query, ctx):
             line += f" (доступна)"
         txt += line + "\n   " + loc['description'] + "\n"
         
-        # Добавляем кнопку перехода, если локация доступна и не текущая
-        if avail and not is_cur:
-            kb.append([InlineKeyboardButton(f"Перейти в {loc['name']}", callback_data=f'goto_{lid}')])
+        # Добавляем кнопки для доступных локаций
+        if avail:
+            if is_cur:
+                # Для текущей локации только кнопка 3D
+                web_app_url = f"https://vladislavbropiton.github.io/telegram-clicker-bot/?loc={lid}"
+                kb.append([InlineKeyboardButton(f"🕶️ Открыть в 3D (текущая)", web_app=WebAppInfo(url=web_app_url))])
+            else:
+                # Две кнопки: сделать текущей и открыть 3D
+                web_app_url = f"https://vladislavbropiton.github.io/telegram-clicker-bot/?loc={lid}"
+                row = [
+                    InlineKeyboardButton(f"📍 Сделать текущей", callback_data=f'goto_{lid}'),
+                    InlineKeyboardButton(f"🕶️ Открыть в 3D", web_app=WebAppInfo(url=web_app_url))
+                ]
+                kb.append(row)
     
     # Босс-локации (информационно, без кнопок перехода)
     txt += "\n⚔️ **Босс-локации**\n\n"
@@ -3318,6 +3329,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
