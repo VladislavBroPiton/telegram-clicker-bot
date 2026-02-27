@@ -607,6 +607,22 @@ async def init_db():
                 last_boss_reset TIMESTAMP
             )
         ''')
+                # Таблица для активных эффектов (зелья и т.п.)
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS active_effects (
+                user_id BIGINT,
+                effect_id TEXT,
+                expires_at TIMESTAMP,
+                effect_data JSONB,
+                PRIMARY KEY (user_id, effect_id)
+            )
+        ''')
+        # Добавляем колонки для постоянных бонусов в таблицу players, если их ещё нет
+        await conn.execute('''
+            ALTER TABLE players
+            ADD COLUMN IF NOT EXISTS perm_tool_power_bonus INTEGER DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS perm_crit_bonus INTEGER DEFAULT 0
+        ''')
         # Инициализация global_state, если нет записи
         await conn.execute('''
             INSERT INTO global_state (id, last_boss_reset)
@@ -3000,4 +3016,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
