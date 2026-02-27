@@ -2238,47 +2238,54 @@
         // ==================== УНИКАЛЬНЫЕ РЕСУРСЫ ДЛЯ КАЖДОГО БОССА ====================
 function createResourceObjectsForBoss(bossId) {
     const objects = [];
-    // Единственная позиция – в центре, немного выше пола
-    const position = [1.0, 0.3, 3.0];
+    // Позиция: чуть впереди камеры, на уровне глаз
+    const position = [0, 1.2, 2.5];
 
-    // Создаём один ресурс – красивый золотой шар (можно изменить под любого босса, если нужно)
-    const geometry = new THREE.SphereGeometry(0.8, 32, 32);
-    // Выбираем цвет в зависимости от босса, чтобы сохранить атмосферу
+    // Яркие, контрастные цвета для каждого босса
     let color, emissive;
     switch (bossId) {
         case 'goblin_king':
-            color = 0xcc8800; emissive = 0x442200; break;
+            color = 0xffaa00; emissive = 0xaa4400; break; // золотой
         case 'dragon_lair':
-            color = 0xffaa00; emissive = 0xaa3300; break;
+            color = 0xff5500; emissive = 0xaa2200; break; // огненно-оранжевый
         case 'lich_castle':
-            color = 0xaa88aa; emissive = 0x331144; break;
+            color = 0xaa44ff; emissive = 0x4400aa; break; // фиолетовый
         case 'elemental_core':
-            color = 0xffaa00; emissive = 0xff4400; break;
+            color = 0xff3300; emissive = 0xaa2200; break; // ярко-красный
         case 'crystal_guardian':
-            color = 0xffaa88; emissive = 0x442200; break;
+            color = 0x44aaff; emissive = 0x004488; break; // небесно-голубой
         case 'abyssal_serpent':
-            color = 0x88aadd; emissive = 0x224466; break;
+            color = 0x00ccff; emissive = 0x006688; break; // бирюзовый
         case 'demon_lord':
-            color = 0xff8844; emissive = 0xaa2200; break;
+            color = 0xcc0000; emissive = 0x660000; break; // кроваво-красный
         case 'ice_queen':
-            color = 0xffffcc; emissive = 0x88aaff; break;
+            color = 0xaaffff; emissive = 0x4488aa; break; // ледяной голубой
         case 'void_reaper':
-            color = 0xaa88aa; emissive = 0x440044; break;
+            color = 0x8800cc; emissive = 0x440066; break; // тёмно-фиолетовый
         case 'ancient_colossus':
-            color = 0xccaa88; emissive = 0x442200; break;
+            color = 0x88aa44; emissive = 0x446622; break; // зеленовато-каменный
         case 'chaos_beast':
-            color = 0xffaa88; emissive = 0xaa44aa; break;
+            color = 0xff44aa; emissive = 0xaa2266; break; // ярко-розовый
         case 'time_wyrm':
-            color = 0xffaa88; emissive = 0x442200; break;
+            color = 0x44aaff; emissive = 0x224488; break; // синий с золотом (эмиссив)
         case 'celestial_phoenix':
-            color = 0xffdd88; emissive = 0xaa4400; break;
+            color = 0xffaa00; emissive = 0xaa4400; break; // золотой
         default:
             color = 0xffaa00; emissive = 0x442200;
     }
-    const material = new THREE.MeshStandardMaterial({ color, emissive, metalness: 0.3, roughness: 0.2 });
+
+    // Создаём сферу побольше (радиус 1.0)
+    const geometry = new THREE.SphereGeometry(1.0, 32, 32);
+    const material = new THREE.MeshStandardMaterial({ 
+        color, 
+        emissive, 
+        metalness: 0.3, 
+        roughness: 0.2,
+        emissiveIntensity: 1.2 // немного усиливаем свечение
+    });
     const sphere = new THREE.Mesh(geometry, material);
     sphere.position.set(position[0], position[1], position[2]);
-    sphere.userData = { type: 'resource', id: 0, resourceType: 'gold' }; // id всегда 0, тип для красоты
+    sphere.userData = { type: 'resource', id: 0, resourceType: 'gold' };
     objects.push(sphere);
 
     return objects;
@@ -3650,5 +3657,6 @@ function clearEnvironment() {
     </script>
 </body>
 </html>
+
 
 
