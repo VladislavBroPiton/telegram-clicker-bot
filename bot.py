@@ -2897,6 +2897,8 @@ async def api_user(request):
         'boss_progress': boss_progress
     })
 
+@app.route('/api/boss/attack', methods=['POST'])
+@rate_limit(BOSS_ATTACK_LIMIT)
 async def api_boss_attack(request):
     init_data = request.headers.get('x-telegram-init-data')
     if not init_data:
@@ -3047,6 +3049,8 @@ async def api_boss_info(request):
         'max_health': BOSS_LOCATIONS[boss_id]['boss']['health']
     })
 
+@app.route('/api/click', methods=['POST'])
+@rate_limit(CLICK_LIMIT)
 async def api_click(request):
     init_data = request.headers.get('x-telegram-init-data')
     if not init_data:
@@ -3314,6 +3318,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
