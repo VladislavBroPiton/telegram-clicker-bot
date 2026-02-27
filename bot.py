@@ -669,12 +669,12 @@ async def get_player(uid: int, username: str = None, conn: asyncpg.Connection = 
 async def get_player_stats(uid: int, conn: asyncpg.Connection = None) -> dict:
     async def _get(conn):
         row = await conn.fetchrow(
-            "SELECT level, exp, gold, total_clicks, total_gold_earned, total_crits, current_crit_streak, max_crit_streak FROM players WHERE user_id = $1",
+            "SELECT level, exp, gold, total_clicks, total_gold_earned, total_crits, current_crit_streak, max_crit_streak, perm_tool_power_bonus, perm_crit_bonus FROM players WHERE user_id = $1",
             uid
         )
         if not row:
             return {}
-        lvl, exp, gold, clicks, tg, crits, cstreak, mstreak = row
+        lvl, exp, gold, clicks, tg, crits, cstreak, mstreak, perm_tool_bonus, perm_crit_bonus = row
         ups = {}
         for up_id in UPGRADES:
             level = await conn.fetchval("SELECT level FROM upgrades WHERE user_id = $1 AND upgrade_id = $2", uid, up_id)
@@ -691,7 +691,9 @@ async def get_player_stats(uid: int, conn: asyncpg.Connection = None) -> dict:
             'total_crits': crits, 
             'current_crit_streak': cstreak,
             'max_crit_streak': mstreak, 
-            'upgrades': ups
+            'upgrades': ups,
+            'perm_tool_power_bonus': perm_tool_bonus,
+            'perm_crit_bonus': perm_crit_bonus
         }
 
     if conn is None:
@@ -3264,3 +3266,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
