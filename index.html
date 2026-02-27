@@ -2351,99 +2351,110 @@ function createResourceObjectsForBoss(bossId) {
     };
 
     // --- Функция для создания страшного монстра ---
-    const createScaryMonster = (bossId) => {
-        const group = new THREE.Group();
+   // --- Функция для создания страшного монстра (с анимируемой челюстью) ---
+const createScaryMonster = (bossId) => {
+    const group = new THREE.Group();
 
-        let bodyColor, spikeColor, eyeColor, glowColor;
-        switch (bossId) {
-            case 'goblin_king':
-                bodyColor = 0x3a2c1a; spikeColor = 0x8b0000; eyeColor = 0xff3300; glowColor = 0x220000; break;
-            case 'dragon_lair':
-                bodyColor = 0x441100; spikeColor = 0xff5500; eyeColor = 0xffaa00; glowColor = 0x331100; break;
-            case 'lich_castle':
-                bodyColor = 0x1a0f1f; spikeColor = 0xaa44ff; eyeColor = 0x00ffff; glowColor = 0x220044; break;
-            case 'elemental_core':
-                bodyColor = 0x442200; spikeColor = 0xff6600; eyeColor = 0xffaa00; glowColor = 0x331100; break;
-            case 'crystal_guardian':
-                bodyColor = 0x224466; spikeColor = 0x88aaff; eyeColor = 0xff88aa; glowColor = 0x112233; break;
-            case 'abyssal_serpent':
-                bodyColor = 0x113355; spikeColor = 0x44aaff; eyeColor = 0x00ccff; glowColor = 0x002244; break;
-            case 'demon_lord':
-                bodyColor = 0x330000; spikeColor = 0xff4444; eyeColor = 0xff0000; glowColor = 0x220000; break;
-            case 'ice_queen':
-                bodyColor = 0x2a5a7a; spikeColor = 0xaaddff; eyeColor = 0xffffff; glowColor = 0x1a3a5a; break;
-            case 'void_reaper':
-                bodyColor = 0x110022; spikeColor = 0x8800ff; eyeColor = 0xff00aa; glowColor = 0x220022; break;
-            case 'ancient_colossus':
-                bodyColor = 0x554433; spikeColor = 0xaa8866; eyeColor = 0xffaa22; glowColor = 0x332211; break;
-            case 'chaos_beast':
-                bodyColor = 0x331133; spikeColor = 0xff88ff; eyeColor = 0xffff00; glowColor = 0x220022; break;
-            case 'time_wyrm':
-                bodyColor = 0x224466; spikeColor = 0xccaaff; eyeColor = 0xffaa88; glowColor = 0x112233; break;
-            case 'celestial_phoenix':
-                bodyColor = 0x442200; spikeColor = 0xffaa44; eyeColor = 0xffdd88; glowColor = 0x331100; break;
-            default:
-                bodyColor = 0x222222; spikeColor = 0xaa0000; eyeColor = 0xff4400; glowColor = 0x110000;
-        }
+    let bodyColor, spikeColor, eyeColor, glowColor;
+    switch (bossId) {
+        case 'goblin_king':
+            bodyColor = 0x3a2c1a; spikeColor = 0x8b0000; eyeColor = 0xff3300; glowColor = 0x220000; break;
+        case 'dragon_lair':
+            bodyColor = 0x441100; spikeColor = 0xff5500; eyeColor = 0xffaa00; glowColor = 0x331100; break;
+        case 'lich_castle':
+            bodyColor = 0x1a0f1f; spikeColor = 0xaa44ff; eyeColor = 0x00ffff; glowColor = 0x220044; break;
+        case 'elemental_core':
+            bodyColor = 0x442200; spikeColor = 0xff6600; eyeColor = 0xffaa00; glowColor = 0x331100; break;
+        case 'crystal_guardian':
+            bodyColor = 0x224466; spikeColor = 0x88aaff; eyeColor = 0xff88aa; glowColor = 0x112233; break;
+        case 'abyssal_serpent':
+            bodyColor = 0x113355; spikeColor = 0x44aaff; eyeColor = 0x00ccff; glowColor = 0x002244; break;
+        case 'demon_lord':
+            bodyColor = 0x330000; spikeColor = 0xff4444; eyeColor = 0xff0000; glowColor = 0x220000; break;
+        case 'ice_queen':
+            bodyColor = 0x2a5a7a; spikeColor = 0xaaddff; eyeColor = 0xffffff; glowColor = 0x1a3a5a; break;
+        case 'void_reaper':
+            bodyColor = 0x110022; spikeColor = 0x8800ff; eyeColor = 0xff00aa; glowColor = 0x220022; break;
+        case 'ancient_colossus':
+            bodyColor = 0x554433; spikeColor = 0xaa8866; eyeColor = 0xffaa22; glowColor = 0x332211; break;
+        case 'chaos_beast':
+            bodyColor = 0x331133; spikeColor = 0xff88ff; eyeColor = 0xffff00; glowColor = 0x220022; break;
+        case 'time_wyrm':
+            bodyColor = 0x224466; spikeColor = 0xccaaff; eyeColor = 0xffaa88; glowColor = 0x112233; break;
+        case 'celestial_phoenix':
+            bodyColor = 0x442200; spikeColor = 0xffaa44; eyeColor = 0xffdd88; glowColor = 0x331100; break;
+        default:
+            bodyColor = 0x222222; spikeColor = 0xaa0000; eyeColor = 0xff4400; glowColor = 0x110000;
+    }
 
-        // Тело (икосаэдр для большей угловатости)
-        const body = new THREE.Mesh(
-            new THREE.IcosahedronGeometry(0.6, 0),
-            new THREE.MeshStandardMaterial({ color: bodyColor, emissive: glowColor })
+    // Тело (икосаэдр)
+    const body = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(0.6, 0),
+        new THREE.MeshStandardMaterial({ color: bodyColor, emissive: glowColor })
+    );
+    body.position.y = 0.6;
+    group.add(body);
+
+    // Шипы на спине
+    const spikeMat = new THREE.MeshStandardMaterial({ color: spikeColor, emissive: 0x220000 });
+    for (let i = 0; i < 5; i++) {
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.5, 4), spikeMat);
+        spike.position.set((i - 2) * 0.3, 1.0, -0.2);
+        spike.rotation.x = 0.3;
+        group.add(spike);
+    }
+
+    // Глаза
+    const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+    eyeWhite.position.set(-0.25, 0.8, 0.6);
+    group.add(eyeWhite);
+    const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6), new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x440000 }));
+    pupilL.position.set(-0.2, 0.83, 0.75);
+    group.add(pupilL);
+    const eyeWhiteR = eyeWhite.clone();
+    eyeWhiteR.position.set(0.25, 0.8, 0.6);
+    group.add(eyeWhiteR);
+    const pupilR = pupilL.clone();
+    pupilR.position.set(0.2, 0.83, 0.75);
+    group.add(pupilR);
+
+    // Челюсть с зубами (отдельная группа для анимации)
+    const jawGroup = new THREE.Group();
+    jawGroup.position.set(0, 0.45, 0.7); // точка крепления челюсти
+
+    // Сама челюсть (нижняя)
+    const jawMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 0.1, 0.2),
+        new THREE.MeshStandardMaterial({ color: 0xaa4444 })
+    );
+    jawMesh.position.set(0, 0, 0);
+    jawGroup.add(jawMesh);
+
+    // Зубы (прикреплены к челюсти)
+    for (let i = 0; i < 4; i++) {
+        const tooth = new THREE.Mesh(
+            new THREE.ConeGeometry(0.05, 0.1, 4),
+            new THREE.MeshStandardMaterial({ color: 0xffffaa })
         );
-        body.position.y = 0.6;
-        group.add(body);
+        tooth.position.set((i - 1.5) * 0.2, 0.1, 0.1);
+        jawGroup.add(tooth);
+    }
 
-        // Шипы на спине
-        const spikeMat = new THREE.MeshStandardMaterial({ color: spikeColor, emissive: 0x220000 });
-        for (let i = 0; i < 5; i++) {
-            const spike = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.5, 4), spikeMat);
-            spike.position.set((i - 2) * 0.3, 1.0, -0.2);
-            spike.rotation.x = 0.3;
-            group.add(spike);
-        }
+    group.add(jawGroup);
+    // Сохраняем ссылку на челюсть для анимации
+    group.userData.jawGroup = jawGroup;
 
-        // Глаза (красные)
-        const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-        eyeWhite.position.set(-0.25, 0.8, 0.6);
-        group.add(eyeWhite);
-        const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6), new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x440000 }));
-        pupilL.position.set(-0.2, 0.83, 0.75);
-        group.add(pupilL);
-        const eyeWhiteR = eyeWhite.clone();
-        eyeWhiteR.position.set(0.25, 0.8, 0.6);
-        group.add(eyeWhiteR);
-        const pupilR = pupilL.clone();
-        pupilR.position.set(0.2, 0.83, 0.75);
-        group.add(pupilR);
+    // Когти (неподвижные)
+    const clawMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+    const clawPositions = [[-0.4, 0.3, 0.5], [0.4, 0.3, 0.5]];
+    clawPositions.forEach(pos => {
+        const claw = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.2, 4), clawMat);
+        claw.position.set(pos[0], pos[1], pos[2]);
+        group.add(claw);
+    });
 
-        // Зубастая пасть
-        const jaw = new THREE.Mesh(
-            new THREE.BoxGeometry(0.5, 0.1, 0.2),
-            new THREE.MeshStandardMaterial({ color: 0xaa4444 })
-        );
-        jaw.position.set(0, 0.5, 0.7);
-        group.add(jaw);
-        for (let i = 0; i < 4; i++) {
-            const tooth = new THREE.Mesh(
-                new THREE.ConeGeometry(0.05, 0.1, 4),
-                new THREE.MeshStandardMaterial({ color: 0xffffaa })
-            );
-            tooth.position.set((i - 1.5) * 0.2, 0.55, 0.8);
-            group.add(tooth);
-        }
-
-        // Когти
-        const clawMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
-        const clawPositions = [[-0.4, 0.3, 0.5], [0.4, 0.3, 0.5]];
-        clawPositions.forEach(pos => {
-            const claw = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.2, 4), clawMat);
-            claw.position.set(pos[0], pos[1], pos[2]);
-            group.add(claw);
-        });
-
-        return group;
-    };
+    return group;
+};
 
     // Создаём обоих монстров
     const cuteMonster = createCuteMonster(bossId);
@@ -3833,6 +3844,7 @@ function clearEnvironment() {
     </script>
 </body>
 </html>
+
 
 
 
