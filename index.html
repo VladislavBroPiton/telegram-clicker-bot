@@ -2238,154 +2238,224 @@
         // ==================== УНИКАЛЬНЫЕ РЕСУРСЫ ДЛЯ КАЖДОГО БОССА ====================
 function createResourceObjectsForBoss(bossId) {
     const objects = [];
-    // Позиция: чуть выше пола, перед камерой
-    const position = [-1.5, 0.3, 5.0];
 
-    // Вспомогательная функция для создания глаза
-    const createEye = (color) => {
-        const eyeGroup = new THREE.Group();
-        const white = new THREE.Mesh(
-            new THREE.SphereGeometry(0.15, 8),
-            new THREE.MeshStandardMaterial({ color: 0xffffff })
+    // Позиции: левый монстр (милый) и правый монстр (страшный)
+    const leftPos = [-1.5, 0.3, 1.5];
+    const rightPos = [1.5, 0.3, 1.5];
+
+    // --- Функция для создания милого монстра (как был) ---
+    const createCuteMonster = (bossId) => {
+        const group = new THREE.Group();
+
+        let bodyColor, hornColor, eyeColor, bodyEmissive;
+        let hasWings = false;
+
+        switch (bossId) {
+            case 'goblin_king':
+                bodyColor = 0x44aa88; hornColor = 0x886644; eyeColor = 0xffaa00; bodyEmissive = 0x112233; break;
+            case 'dragon_lair':
+                bodyColor = 0xaa4422; hornColor = 0x884422; eyeColor = 0xff6600; bodyEmissive = 0x331100;
+                hasWings = true; break;
+            case 'lich_castle':
+                bodyColor = 0x557799; hornColor = 0x8866aa; eyeColor = 0x00ffff; bodyEmissive = 0x113344; break;
+            case 'elemental_core':
+                bodyColor = 0xff5500; hornColor = 0xffaa33; eyeColor = 0xffff00; bodyEmissive = 0xaa3300; break;
+            case 'crystal_guardian':
+                bodyColor = 0x88aaff; hornColor = 0xffffff; eyeColor = 0xffaa88; bodyEmissive = 0x224466; break;
+            case 'abyssal_serpent':
+                bodyColor = 0x226688; hornColor = 0x44aaff; eyeColor = 0x00ccff; bodyEmissive = 0x113355; break;
+            case 'demon_lord':
+                bodyColor = 0xaa2222; hornColor = 0x884422; eyeColor = 0xff4400; bodyEmissive = 0x330000;
+                hasWings = true; break;
+            case 'ice_queen':
+                bodyColor = 0xaaccff; hornColor = 0xffffff; eyeColor = 0xaaffff; bodyEmissive = 0x224466; break;
+            case 'void_reaper':
+                bodyColor = 0x222233; hornColor = 0x8800ff; eyeColor = 0xff00aa; bodyEmissive = 0x220022; break;
+            case 'ancient_colossus':
+                bodyColor = 0x887766; hornColor = 0xaa8866; eyeColor = 0xffaa22; bodyEmissive = 0x332211; break;
+            case 'chaos_beast':
+                bodyColor = 0xaa44aa; hornColor = 0xff88ff; eyeColor = 0xffff00; bodyEmissive = 0x330033; break;
+            case 'time_wyrm':
+                bodyColor = 0x66aaff; hornColor = 0xccaaff; eyeColor = 0xffaa88; bodyEmissive = 0x224466; break;
+            case 'celestial_phoenix':
+                bodyColor = 0xffaa44; hornColor = 0xffdd88; eyeColor = 0xffffff; bodyEmissive = 0xaa4400;
+                hasWings = true; break;
+            default:
+                bodyColor = 0x44aa88; hornColor = 0x886644; eyeColor = 0xffaa00; bodyEmissive = 0x112233;
+        }
+
+        // Тело
+        const body = new THREE.Mesh(
+            new THREE.SphereGeometry(0.6, 16),
+            new THREE.MeshStandardMaterial({ color: bodyColor, emissive: bodyEmissive })
         );
-        white.position.set(0, 0, 0.1);
-        eyeGroup.add(white);
-        const pupil = new THREE.Mesh(
-            new THREE.SphereGeometry(0.08, 6),
-            new THREE.MeshStandardMaterial({ color: 0x000000 })
+        body.position.y = 0.6;
+        group.add(body);
+
+        // Глаза
+        const createEye = (col) => {
+            const e = new THREE.Group();
+            const white = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            white.position.set(0, 0, 0.1);
+            e.add(white);
+            const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+            pupil.position.set(0.03, 0.03, 0.2);
+            e.add(pupil);
+            return e;
+        };
+        const eyeL = createEye(eyeColor);
+        eyeL.position.set(-0.25, 0.8, 0.6);
+        group.add(eyeL);
+        const eyeR = createEye(eyeColor);
+        eyeR.position.set(0.25, 0.8, 0.6);
+        group.add(eyeR);
+
+        // Рожки
+        const hornMat = new THREE.MeshStandardMaterial({ color: hornColor, emissive: 0x332211 });
+        const hornL = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.5, 6), hornMat);
+        hornL.position.set(-0.35, 1.1, 0.4);
+        hornL.rotation.z = 0.2;
+        hornL.rotation.x = -0.2;
+        group.add(hornL);
+        const hornR = hornL.clone();
+        hornR.position.set(0.35, 1.1, 0.4);
+        hornR.rotation.z = -0.2;
+        hornR.rotation.x = -0.2;
+        group.add(hornR);
+
+        // Ротик
+        const mouth = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.1, 0.1, 0.2, 6),
+            new THREE.MeshStandardMaterial({ color: 0xaa4444 })
         );
-        pupil.position.set(0.03, 0.03, 0.2);
-        eyeGroup.add(pupil);
-        return eyeGroup;
+        mouth.position.set(0, 0.55, 0.7);
+        mouth.rotation.x = Math.PI / 2;
+        group.add(mouth);
+
+        // Крылья
+        if (hasWings) {
+            const wingMat = new THREE.MeshStandardMaterial({ color: hornColor, transparent: true, opacity: 0.6 });
+            const wingL = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.8, 5), wingMat);
+            wingL.position.set(-0.7, 0.9, 0.1);
+            wingL.rotation.z = 0.3;
+            wingL.rotation.y = 0.2;
+            group.add(wingL);
+            const wingR = wingL.clone();
+            wingR.position.set(0.7, 0.9, 0.1);
+            wingR.rotation.z = -0.3;
+            wingR.rotation.y = -0.2;
+            group.add(wingR);
+        }
+
+        return group;
     };
 
-    // Создаём группу для монстра
-    const monsterGroup = new THREE.Group();
+    // --- Функция для создания страшного монстра ---
+    const createScaryMonster = (bossId) => {
+        const group = new THREE.Group();
 
-    // Общие параметры
-    let bodyColor, hornColor, eyeColor, bodyEmissive;
-    let hasWings = false, hasHorns = true, hasEars = false;
-
-    switch (bossId) {
-        case 'goblin_king':
-            bodyColor = 0x44aa88; hornColor = 0x886644; eyeColor = 0xffaa00; bodyEmissive = 0x112233;
-            break;
-        case 'dragon_lair':
-            bodyColor = 0xaa4422; hornColor = 0x884422; eyeColor = 0xff6600; bodyEmissive = 0x331100;
-            hasWings = true;
-            break;
-        case 'lich_castle':
-            bodyColor = 0x557799; hornColor = 0x8866aa; eyeColor = 0x00ffff; bodyEmissive = 0x113344;
-            break;
-        case 'elemental_core':
-            bodyColor = 0xff5500; hornColor = 0xffaa33; eyeColor = 0xffff00; bodyEmissive = 0xaa3300;
-            break;
-        case 'crystal_guardian':
-            bodyColor = 0x88aaff; hornColor = 0xffffff; eyeColor = 0xffaa88; bodyEmissive = 0x224466;
-            break;
-        case 'abyssal_serpent':
-            bodyColor = 0x226688; hornColor = 0x44aaff; eyeColor = 0x00ccff; bodyEmissive = 0x113355;
-            break;
-        case 'demon_lord':
-            bodyColor = 0xaa2222; hornColor = 0x884422; eyeColor = 0xff4400; bodyEmissive = 0x330000;
-            hasWings = true;
-            break;
-        case 'ice_queen':
-            bodyColor = 0xaaccff; hornColor = 0xffffff; eyeColor = 0xaaffff; bodyEmissive = 0x224466;
-            break;
-        case 'void_reaper':
-            bodyColor = 0x222233; hornColor = 0x8800ff; eyeColor = 0xff00aa; bodyEmissive = 0x220022;
-            break;
-        case 'ancient_colossus':
-            bodyColor = 0x887766; hornColor = 0xaa8866; eyeColor = 0xffaa22; bodyEmissive = 0x332211;
-            break;
-        case 'chaos_beast':
-            bodyColor = 0xaa44aa; hornColor = 0xff88ff; eyeColor = 0xffff00; bodyEmissive = 0x330033;
-            break;
-        case 'time_wyrm':
-            bodyColor = 0x66aaff; hornColor = 0xccaaff; eyeColor = 0xffaa88; bodyEmissive = 0x224466;
-            break;
-        case 'celestial_phoenix':
-            bodyColor = 0xffaa44; hornColor = 0xffdd88; eyeColor = 0xffffff; bodyEmissive = 0xaa4400;
-            hasWings = true;
-            break;
-        default:
-            bodyColor = 0x44aa88; hornColor = 0x886644; eyeColor = 0xffaa00; bodyEmissive = 0x112233;
-    }
-
-    // Тело (основная сфера)
-    const bodyGeo = new THREE.SphereGeometry(0.6, 16);
-    const bodyMat = new THREE.MeshStandardMaterial({ color: bodyColor, emissive: bodyEmissive });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.y = 0.6; // центр тела на высоте 0.6, тогда низ будет на 0.0 (пол)
-    monsterGroup.add(body);
-
-    // Глаза (два)
-    const eyeL = createEye(eyeColor);
-    eyeL.position.set(-0.25, 0.8, 0.6);
-    monsterGroup.add(eyeL);
-    const eyeR = createEye(eyeColor);
-    eyeR.position.set(0.25, 0.8, 0.6);
-    monsterGroup.add(eyeR);
-
-    // Рога или уши
-    const hornMat = new THREE.MeshStandardMaterial({ color: hornColor, emissive: 0x332211 });
-    const hornL = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.5, 6), hornMat);
-    hornL.position.set(-0.35, 1.1, 0.4);
-    hornL.rotation.z = 0.2;
-    hornL.rotation.x = -0.2;
-    monsterGroup.add(hornL);
-    const hornR = hornL.clone();
-    hornR.position.set(0.35, 1.1, 0.4);
-    hornR.rotation.z = -0.2;
-    hornR.rotation.x = -0.2;
-    monsterGroup.add(hornR);
-
-    // Рот (маленький цилиндр)
-    const mouthGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.2, 6);
-    const mouthMat = new THREE.MeshStandardMaterial({ color: 0xaa4444 });
-    const mouth = new THREE.Mesh(mouthGeo, mouthMat);
-    mouth.position.set(0, 0.55, 0.7);
-    mouth.rotation.x = Math.PI / 2;
-    monsterGroup.add(mouth);
-
-    // Если есть крылья (для дракона, демона, феникса)
-    if (hasWings) {
-        const wingMat = new THREE.MeshStandardMaterial({ color: hornColor, transparent: true, opacity: 0.6 });
-        const wingL = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.8, 5), wingMat);
-        wingL.position.set(-0.7, 0.9, 0.1);
-        wingL.rotation.z = 0.3;
-        wingL.rotation.y = 0.2;
-        monsterGroup.add(wingL);
-        const wingR = wingL.clone();
-        wingR.position.set(0.7, 0.9, 0.1);
-        wingR.rotation.z = -0.3;
-        wingR.rotation.y = -0.2;
-        monsterGroup.add(wingR);
-    }
-
-    // Дополнительные детали для некоторых боссов
-    if (bossId === 'crystal_guardian') {
-        // Кристаллик на голове
-        const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.2), new THREE.MeshStandardMaterial({ color: 0x88aaff, emissive: 0x224466 }));
-        crystal.position.set(0, 1.3, 0.5);
-        monsterGroup.add(crystal);
-    }
-    if (bossId === 'ice_queen') {
-        // Коронка из снежинок (маленькие конусы)
-        for (let i = 0; i < 5; i++) {
-            const spike = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.3, 4), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-            spike.position.set(Math.sin(i*1.2)*0.4, 1.2, 0.4 + Math.cos(i*1.2)*0.2);
-            spike.rotation.x = 0.2;
-            monsterGroup.add(spike);
+        let bodyColor, spikeColor, eyeColor, glowColor;
+        switch (bossId) {
+            case 'goblin_king':
+                bodyColor = 0x3a2c1a; spikeColor = 0x8b0000; eyeColor = 0xff3300; glowColor = 0x220000; break;
+            case 'dragon_lair':
+                bodyColor = 0x441100; spikeColor = 0xff5500; eyeColor = 0xffaa00; glowColor = 0x331100; break;
+            case 'lich_castle':
+                bodyColor = 0x1a0f1f; spikeColor = 0xaa44ff; eyeColor = 0x00ffff; glowColor = 0x220044; break;
+            case 'elemental_core':
+                bodyColor = 0x442200; spikeColor = 0xff6600; eyeColor = 0xffaa00; glowColor = 0x331100; break;
+            case 'crystal_guardian':
+                bodyColor = 0x224466; spikeColor = 0x88aaff; eyeColor = 0xff88aa; glowColor = 0x112233; break;
+            case 'abyssal_serpent':
+                bodyColor = 0x113355; spikeColor = 0x44aaff; eyeColor = 0x00ccff; glowColor = 0x002244; break;
+            case 'demon_lord':
+                bodyColor = 0x330000; spikeColor = 0xff4444; eyeColor = 0xff0000; glowColor = 0x220000; break;
+            case 'ice_queen':
+                bodyColor = 0x2a5a7a; spikeColor = 0xaaddff; eyeColor = 0xffffff; glowColor = 0x1a3a5a; break;
+            case 'void_reaper':
+                bodyColor = 0x110022; spikeColor = 0x8800ff; eyeColor = 0xff00aa; glowColor = 0x220022; break;
+            case 'ancient_colossus':
+                bodyColor = 0x554433; spikeColor = 0xaa8866; eyeColor = 0xffaa22; glowColor = 0x332211; break;
+            case 'chaos_beast':
+                bodyColor = 0x331133; spikeColor = 0xff88ff; eyeColor = 0xffff00; glowColor = 0x220022; break;
+            case 'time_wyrm':
+                bodyColor = 0x224466; spikeColor = 0xccaaff; eyeColor = 0xffaa88; glowColor = 0x112233; break;
+            case 'celestial_phoenix':
+                bodyColor = 0x442200; spikeColor = 0xffaa44; eyeColor = 0xffdd88; glowColor = 0x331100; break;
+            default:
+                bodyColor = 0x222222; spikeColor = 0xaa0000; eyeColor = 0xff4400; glowColor = 0x110000;
         }
-    }
 
-    // Устанавливаем позицию всей группы
-    monsterGroup.position.set(position[0], position[1], position[2]);
-    monsterGroup.userData = { type: 'resource', id: 0, resourceType: 'monster' };
+        // Тело (икосаэдр для большей угловатости)
+        const body = new THREE.Mesh(
+            new THREE.IcosahedronGeometry(0.6, 0),
+            new THREE.MeshStandardMaterial({ color: bodyColor, emissive: glowColor })
+        );
+        body.position.y = 0.6;
+        group.add(body);
 
-    objects.push(monsterGroup);
+        // Шипы на спине
+        const spikeMat = new THREE.MeshStandardMaterial({ color: spikeColor, emissive: 0x220000 });
+        for (let i = 0; i < 5; i++) {
+            const spike = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.5, 4), spikeMat);
+            spike.position.set((i - 2) * 0.3, 1.0, -0.2);
+            spike.rotation.x = 0.3;
+            group.add(spike);
+        }
+
+        // Глаза (красные)
+        const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+        eyeWhite.position.set(-0.25, 0.8, 0.6);
+        group.add(eyeWhite);
+        const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6), new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x440000 }));
+        pupilL.position.set(-0.2, 0.83, 0.75);
+        group.add(pupilL);
+        const eyeWhiteR = eyeWhite.clone();
+        eyeWhiteR.position.set(0.25, 0.8, 0.6);
+        group.add(eyeWhiteR);
+        const pupilR = pupilL.clone();
+        pupilR.position.set(0.2, 0.83, 0.75);
+        group.add(pupilR);
+
+        // Зубастая пасть
+        const jaw = new THREE.Mesh(
+            new THREE.BoxGeometry(0.5, 0.1, 0.2),
+            new THREE.MeshStandardMaterial({ color: 0xaa4444 })
+        );
+        jaw.position.set(0, 0.5, 0.7);
+        group.add(jaw);
+        for (let i = 0; i < 4; i++) {
+            const tooth = new THREE.Mesh(
+                new THREE.ConeGeometry(0.05, 0.1, 4),
+                new THREE.MeshStandardMaterial({ color: 0xffffaa })
+            );
+            tooth.position.set((i - 1.5) * 0.2, 0.55, 0.8);
+            group.add(tooth);
+        }
+
+        // Когти
+        const clawMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+        const clawPositions = [[-0.4, 0.3, 0.5], [0.4, 0.3, 0.5]];
+        clawPositions.forEach(pos => {
+            const claw = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.2, 4), clawMat);
+            claw.position.set(pos[0], pos[1], pos[2]);
+            group.add(claw);
+        });
+
+        return group;
+    };
+
+    // Создаём обоих монстров
+    const cuteMonster = createCuteMonster(bossId);
+    cuteMonster.position.set(leftPos[0], leftPos[1], leftPos[2]);
+    cuteMonster.userData = { type: 'resource', id: 0, resourceType: 'cute' };
+    objects.push(cuteMonster);
+
+    const scaryMonster = createScaryMonster(bossId);
+    scaryMonster.position.set(rightPos[0], rightPos[1], rightPos[2]);
+    scaryMonster.userData = { type: 'resource', id: 0, resourceType: 'scary' }; // тот же id для совместимости
+    objects.push(scaryMonster);
+
     return objects;
 }
         
@@ -3763,6 +3833,7 @@ function clearEnvironment() {
     </script>
 </body>
 </html>
+
 
 
 
