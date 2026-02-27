@@ -1450,6 +1450,41 @@ async def craft_item(uid: int, recipe_id: str, conn: asyncpg.Connection = None) 
             async with conn.transaction():
                 return await _craft(conn)
 
+# ==================== ЭФФЕКТЫ (БАФФЫ) ====================
+
+async def apply_effect(uid: int, effect_id: str, effect_data: dict, duration: int, conn: asyncpg.Connection = None):
+    """Добавляет временный эффект игроку."""
+    expires_at = datetime.datetime.now() + datetime.timedelta(seconds=duration)
+    async def _apply(conn):
+        await conn.execute("""
+            INSERT INTO active_effects (user_id, effect_id, expires_at, effect_data)
+            VALUES ($1, $2, $3, $4::jsonb)
+            ON CONFLICT (user_id, effect_id) DO UPDATE
+            SET expires_at = $3, effect_data = $4::jsonb
+        """, uid, effect_id, expires_at, json.dumps(effect_data))
+    if conn:
+        await _apply(conn)
+    else:
+        async with db_pool.acquire() as conn:
+            await _apply(conn)
+
+async def get_active_effects(uid: int, conn: asyncpg.Connection = None) -> dict:
+    """Возвращает словарь активных эффектов игрока."""
+    async def _get(conn):
+        rows = await conn.fetch(
+            "SELECT effect_id, effect_data FROM active_effects WHERE user_id = $1 AND expires_at > NOW()",
+            uid
+        )
+        effects = {}
+        for row in rows:
+            effects[row['effect_id']] = json.loads(row['effect_data'])
+        return effects
+    if conn:
+        return await _get(conn)
+    else:
+        async with db_pool.acquire() as conn:
+            return await _get(conn)
+
 # ==================== ОБЩАЯ ЛОГИКА КЛИКА ====================
 
 async def process_click(uid: int, conn: asyncpg.Connection = None) -> dict:
@@ -3016,5 +3051,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
