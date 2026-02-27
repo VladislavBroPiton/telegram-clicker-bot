@@ -12,9 +12,6 @@ import os
 import hashlib
 import hmac
 import json
-import time
-from collections import defaultdict
-from typing import Dict, List
 from typing import Dict, Tuple, Optional, Any, List
 from contextlib import asynccontextmanager
 from urllib.parse import parse_qsl
@@ -30,6 +27,9 @@ from starlette.requests import Request
 from starlette.middleware.cors import CORSMiddleware
 import uvicorn
 import asyncpg
+import time
+from collections import defaultdict
+from typing import Dict, List
 
 # ==================== КОНФИГУРАЦИЯ ====================
 
@@ -3269,6 +3269,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
