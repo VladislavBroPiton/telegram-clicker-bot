@@ -3052,6 +3052,174 @@ async def healthcheck(request):
         logger.error(f"Healthcheck DB error: {e}")
         return JSONResponse({"status": "alive", "db": "error"}, status_code=500)
 
+async def api_craft_recipes(request):
+    init_data = request.headers.get('x-telegram-init-data')
+    if not init_data:
+        return JSONResponse({'error': 'Missing init data'}, status_code=401)
+    user = verify_telegram_data(TOKEN, init_data)
+    if not user:
+        return JSONResponse({'error': 'Invalid init data'}, status_code=403)
+
+    uid = user['id']
+    async with db_pool.acquire() as conn:
+        inv = await get_inventory(uid, conn)
+    recipes = []
+    for rid, recipe in CRAFT_RECIPES.items():
+        recipe_copy = recipe.copy()
+        recipe_copy['id'] = rid
+        recipe_copy['can_craft'] = all(inv.get(res, 0) >= need for res, need in recipe['resources'].items())
+        recipe_copy['resources_available'] = {res: inv.get(res, 0) for res in recipe['resources']}
+        recipes.append(recipe_copy)
+    return JSONResponse({'recipes': recipes})
+
+async def api_craft(request):
+    init_data = request.headers.get('x-telegram-init-data')
+    if not init_data:
+        return JSONResponse({'error': 'Missing init data'}, status_code=401)
+    user = verify_telegram_data(TOKEN, init_data)
+    if not user:
+        return JSONResponse({'error': 'Invalid init data'}, status_code=403)
+
+    uid = user['id']
+    body = await request.json()
+    recipe_id = body.get('recipe_id')
+    if not recipe_id or recipe_id not in CRAFT_RECIPES:
+        return JSONResponse({'error': 'Invalid recipe_id'}, status_code=400)
+
+    success, message = await craft_item(uid, recipe_id)
+    if success:
+        async with db_pool.acquire() as conn:
+            new_inv = await get_inventory(uid, conn)
+            new_items = await get_player_items(uid, conn)
+            new_stats = await get_player_stats(uid, conn)
+        return JSONResponse({
+            'success': True,
+            'message': message,
+            'inventory': new_inv,
+            'items': new_items,
+            'gold': new_stats['gold'],
+            'exp': new_stats['exp']
+        })
+    else:
+        return JSONResponse({'success': False, 'message': message}, status_code=400)
+
+async def api_items(request):
+    init_data = request.headers.get('x-telegram-init-data')
+    if not init_data:
+        return JSONResponse({'error': 'Missing init data'}, status_code=401)
+    user = verify_telegram_data(TOKEN, init_data)
+    if not user:
+        return JSONResponse({'error': 'Invalid init data'}, status_code=403)
+
+    uid = user['id']
+    async with db_pool.acquire() as conn:
+        items_dict = await get_player_items(uid, conn)
+        items_list = []
+        for item_id, qty in items_dict.items():
+            # Ищем рецепт по result_item_id
+            recipe = next((r for r in CRAFT_RECIPES.values() if r['result_item_id'] == item_id), None)
+            if recipe:
+                items_list.append({
+                    'id': item_id,
+                    'name': recipe['name'],
+                    'description': recipe['description'],
+                    'quantity': qty,
+                    'type': recipe['result_type'],
+                    'effect': recipe.get('effect'),
+                    'duration': recipe.get('duration')
+                })
+            else:
+                # Если предмет не из рецептов (например, legacy)
+                items_list.append({'id': item_id, 'quantity': qty, 'name': item_id})
+    return JSONResponse({'items': items_list})
+
+async def api_use_item(request):
+    init_data = request.headers.get('x-telegram-init-data')
+    if not init_data:
+        return JSONResponse({'error': 'Missing init data'}, status_code=401)
+    user = verify_telegram_data(TOKEN, init_data)
+    if not user:
+        return JSONResponse({'error': 'Invalid init data'}, status_code=403)
+
+    uid = user['id']
+    body = await request.json()
+    item_id = body.get('item_id')
+    quantity = body.get('quantity', 1)
+
+    if not item_id:
+        return JSONResponse({'error': 'Missing item_id'}, status_code=400)
+
+    async with db_pool.acquire() as conn:
+        async with conn.transaction():
+            cur_qty = await conn.fetchval(
+                "SELECT quantity FROM player_items WHERE user_id = $1 AND item_id = $2",
+                uid, item_id
+            )
+            if not cur_qty or cur_qty < quantity:
+                return JSONResponse({'error': 'Not enough items'}, status_code=400)
+
+            recipe = next((r for r in CRAFT_RECIPES.values() if r['result_item_id'] == item_id), None)
+            if not recipe:
+                return JSONResponse({'error': 'Unknown item'}, status_code=400)
+
+            result_type = recipe.get('result_type')
+            effect = recipe.get('effect', {})
+            message = ""
+
+            if result_type == 'key':
+                boss_id = effect.get('boss_id')
+                if boss_id and boss_id in BOSS_LOCATIONS:
+                    max_hp = BOSS_LOCATIONS[boss_id]['boss']['health']
+                    await conn.execute("""
+                        UPDATE boss_progress
+                        SET defeated = FALSE, current_health = $1
+                        WHERE user_id = $2 AND boss_id = $3
+                    """, max_hp, uid, boss_id)
+                    message = f"🔑 Ключ использован, босс {BOSS_LOCATIONS[boss_id]['name']} снова доступен!"
+                else:
+                    return JSONResponse({'error': 'Invalid key effect'}, status_code=400)
+
+            elif result_type == 'consumable':
+                duration = recipe.get('duration', 0)
+                if duration > 0:
+                    await apply_effect(uid, item_id, effect, duration, conn)
+                    message = f"⚗️ Использовано: {recipe['name']}"
+                else:
+                    # Если длительность не задана, считаем мгновенным эффектом (например, зелье лечения)
+                    # Здесь можно добавить логику
+                    message = f"⚗️ Использовано: {recipe['name']} (эффект применён)"
+
+            elif result_type == 'permanent':
+                if 'tool_power_bonus' in effect:
+                    await conn.execute(
+                        "UPDATE players SET perm_tool_power_bonus = perm_tool_power_bonus + $1 WHERE user_id = $2",
+                        effect['tool_power_bonus'], uid
+                    )
+                if 'crit_chance_bonus_permanent' in effect:
+                    await conn.execute(
+                        "UPDATE players SET perm_crit_bonus = perm_crit_bonus + $1 WHERE user_id = $2",
+                        effect['crit_chance_bonus_permanent'], uid
+                    )
+                message = f"⚔️ Модификатор {recipe['name']} применён постоянно."
+
+            else:
+                return JSONResponse({'error': 'Item type not usable'}, status_code=400)
+
+            # Удаляем использованный предмет
+            new_qty = cur_qty - quantity
+            if new_qty == 0:
+                await conn.execute(
+                    "DELETE FROM player_items WHERE user_id = $1 AND item_id = $2",
+                    uid, item_id
+                )
+            else:
+                await conn.execute(
+                    "UPDATE player_items SET quantity = $1 WHERE user_id = $2 AND item_id = $3",
+                    new_qty, uid, item_id
+                )
+
+    return JSONResponse({'success': True, 'message': message})
+
 async def startup_event():
     logger.info("Starting up...")
     global db_pool
@@ -3092,6 +3260,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
