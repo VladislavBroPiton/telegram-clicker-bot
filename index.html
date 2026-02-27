@@ -3399,224 +3399,232 @@ function clearEnvironment() {
                     handleClick(e.touches[0]);
                 }, { passive: false });
 
-                // Анимация
-                let time = 0;
-                function animate() {
-                    time += 0.01;
+                                    // Анимация
+                    let time = 0;
+                    function animate() {
+                        time += 0.01;
 
-                    // Ресурсы неподвижны
+                        // Ресурсы неподвижны
 
-                    if (bossGroup && bossGroup.children.length > 0) {
-                        bossGroup.rotation.y += 0.005;
-                    }
+                        if (bossGroup && bossGroup.children.length > 0) {
+                            bossGroup.rotation.y += 0.005;
+                        }
 
-                    // Анимации боссов
-                    if (currentBossId === 'goblin_king' && bossGroup.userData && bossGroup.userData.axe) {
-                        const axe = bossGroup.userData.axe;
-                        axe.rotation.z = 0.2 + Math.sin(time * 5) * 0.1;
-                        if (isAttacking) {
-                            axe.rotation.x = Math.sin(time * 20) * 0.3;
-                        }
-                    }
-                    if (currentBossId === 'dragon_lair' && bossGroup.userData) {
-                        const { wings, head, tail, eyes } = bossGroup.userData;
-                        if (wings) {
-                            wings.forEach((wing, idx) => {
-                                if (wing) wing.rotation.z = (idx === 0 ? -0.2 : 0.2) + Math.sin(time * 3) * 0.15;
-                            });
-                        }
-                        if (head) {
-                            head.rotation.y = Math.sin(time * 2) * 0.1;
-                            head.rotation.x = 0.2 + Math.sin(time * 2.5) * 0.05;
-                        }
-                        if (tail) {
-                            tail.forEach((seg, i) => {
-                                seg.rotation.x = 0.2 * i + Math.sin(time * 2 + i) * 0.15;
-                            });
-                        }
-                        if (eyes) {
-                            eyes.forEach(eye => {
-                                eye.material.emissiveIntensity = 0.5 + Math.sin(time * 5) * 0.3;
-                            });
-                        }
-                    }
-                    if (currentBossId === 'lich_castle' && bossGroup.userData) {
-                        const { staff, mantle, soulParticles, eyes, crystal } = bossGroup.userData;
-                        if (staff) {
-                            staff.rotation.y += 0.01;
-                            if (crystal) {
-                                const hue = (time * 0.1) % 1;
-                                crystal.material.color.setHSL(hue, 1, 0.5);
-                                crystal.material.emissive.setHSL(hue, 1, 0.2);
+                        // Анимации боссов
+                        if (currentBossId === 'goblin_king' && bossGroup.userData && bossGroup.userData.axe) {
+                            const axe = bossGroup.userData.axe;
+                            axe.rotation.z = 0.2 + Math.sin(time * 5) * 0.1;
+                            if (isAttacking) {
+                                axe.rotation.x = Math.sin(time * 20) * 0.3;
                             }
                         }
-                        if (mantle) {
-                            mantle.rotation.x = 0.1 + Math.sin(time * 1.5) * 0.02;
+                        if (currentBossId === 'dragon_lair' && bossGroup.userData) {
+                            const { wings, head, tail, eyes } = bossGroup.userData;
+                            if (wings) {
+                                wings.forEach((wing, idx) => {
+                                    if (wing) wing.rotation.z = (idx === 0 ? -0.2 : 0.2) + Math.sin(time * 3) * 0.15;
+                                });
+                            }
+                            if (head) {
+                                head.rotation.y = Math.sin(time * 2) * 0.1;
+                                head.rotation.x = 0.2 + Math.sin(time * 2.5) * 0.05;
+                            }
+                            if (tail) {
+                                tail.forEach((seg, i) => {
+                                    seg.rotation.x = 0.2 * i + Math.sin(time * 2 + i) * 0.15;
+                                });
+                            }
+                            if (eyes) {
+                                eyes.forEach(eye => {
+                                    eye.material.emissiveIntensity = 0.5 + Math.sin(time * 5) * 0.3;
+                                });
+                            }
                         }
+                        if (currentBossId === 'lich_castle' && bossGroup.userData) {
+                            const { staff, mantle, soulParticles, eyes, crystal } = bossGroup.userData;
+                            if (staff) {
+                                staff.rotation.y += 0.01;
+                                if (crystal) {
+                                    const hue = (time * 0.1) % 1;
+                                    crystal.material.color.setHSL(hue, 1, 0.5);
+                                    crystal.material.emissive.setHSL(hue, 1, 0.2);
+                                }
+                            }
+                            if (mantle) {
+                                mantle.rotation.x = 0.1 + Math.sin(time * 1.5) * 0.02;
+                            }
+                            if (soulParticles) {
+                                const positions = soulParticles.geometry.attributes.position.array;
+                                for (let i = 0; i < positions.length; i += 3) {
+                                    const angle = Math.atan2(positions[i], positions[i+2]) + 0.01;
+                                    const radius = Math.hypot(positions[i], positions[i+2]);
+                                    positions[i] = Math.cos(angle) * radius;
+                                    positions[i+2] = Math.sin(angle) * radius;
+                                }
+                                soulParticles.geometry.attributes.position.needsUpdate = true;
+                            }
+                            if (eyes) {
+                                eyes.forEach(eye => {
+                                    eye.material.emissiveIntensity = 0.5 + Math.sin(time * 4) * 0.3;
+                                });
+                            }
+                        }
+
+                        // Анимации окружения (факелы, лава, частицы)
+                        torchLights.forEach(item => {
+                            if (item.light) {
+                                const intensity = item.baseIntensity + Math.sin(time * 10 + item.light.position.x) * 0.2;
+                                item.light.intensity = Math.max(0.5, intensity);
+                            }
+                            if (item.flame) {
+                                const scale = 1 + Math.sin(time * 15 + item.flame.position.x) * 0.1;
+                                item.flame.scale.set(scale, scale, scale);
+                            }
+                        });
+
+                        if (lavaTexture && lavaPlane) {
+                            const canvas = lavaTexture.image;
+                            if (canvas) {
+                                const ctx = canvas.getContext('2d');
+                                ctx.fillStyle = '#ff4400';
+                                ctx.fillRect(0, 0, 256, 256);
+                                ctx.strokeStyle = 'rgba(255,170,0,0.2)';
+                                ctx.lineWidth = 2;
+                                for (let j = 0; j < 8; j++) {
+                                    const x1 = (Math.sin(j * 2 + time * 0.0002) * 40 + 128) % 256;
+                                    const y1 = (Math.cos(j * 3 + time * 0.0003) * 40 + 128) % 256;
+                                    const x2 = (Math.sin(j * 2 + 1 + time * 0.0002) * 40 + 128) % 256;
+                                    const y2 = (Math.cos(j * 3 + 1 + time * 0.0003) * 40 + 128) % 256;
+                                    ctx.beginPath();
+                                    ctx.moveTo(x1, y1);
+                                    ctx.lineTo(x2, y2);
+                                    ctx.stroke();
+                                }
+                                ctx.fillStyle = 'rgba(255,200,100,0.03)';
+                                for (let j = 0; j < 6; j++) {
+                                    const x = (Math.sin(j * 5 + time * 0.0001) * 50 + 128) % 256;
+                                    const y = (Math.cos(j * 7 + time * 0.00015) * 50 + 128) % 256;
+                                    const r = Math.random() * 10 + 5;
+                                    ctx.beginPath();
+                                    ctx.arc(x, y, r, 0, 2 * Math.PI);
+                                    ctx.fill();
+                                }
+                                lavaTexture.needsUpdate = true;
+                            }
+                        }
+
+                        if (bubbleParticles) {
+                            const positions = bubbleParticles.geometry.attributes.position.array;
+                            for (let i = 1; i < positions.length; i += 3) {
+                                positions[i] += 0.0002;
+                                if (positions[i] > 0.5) {
+                                    positions[i] = -0.4;
+                                    positions[i-1] = (Math.random() - 0.5) * 12;
+                                    positions[i+1] = (Math.random() - 0.5) * 12;
+                                }
+                            }
+                            bubbleParticles.geometry.attributes.position.needsUpdate = true;
+                        }
+
+                        if (sparkParticles) {
+                            const positions = sparkParticles.geometry.attributes.position.array;
+                            for (let i = 1; i < positions.length; i += 3) {
+                                positions[i] += 0.02;
+                                if (positions[i] > 2.5) {
+                                    positions[i] = -0.5;
+                                    positions[i-1] = (Math.random() - 0.5) * 12;
+                                    positions[i+1] = (Math.random() - 0.5) * 12;
+                                }
+                            }
+                            sparkParticles.geometry.attributes.position.needsUpdate = true;
+                        }
+
+                        if (ashParticles) {
+                            const positions = ashParticles.geometry.attributes.position.array;
+                            for (let i = 1; i < positions.length; i += 3) {
+                                positions[i] -= 0.005;
+                                if (positions[i] < 0) {
+                                    positions[i] = 4;
+                                    positions[i-1] = (Math.random() - 0.5) * 12;
+                                    positions[i+1] = (Math.random() - 0.5) * 12;
+                                }
+                            }
+                            ashParticles.geometry.attributes.position.needsUpdate = true;
+                        }
+
                         if (soulParticles) {
                             const positions = soulParticles.geometry.attributes.position.array;
-                            for (let i = 0; i < positions.length; i += 3) {
-                                const angle = Math.atan2(positions[i], positions[i+2]) + 0.01;
-                                const radius = Math.hypot(positions[i], positions[i+2]);
-                                positions[i] = Math.cos(angle) * radius;
-                                positions[i+2] = Math.sin(angle) * radius;
+                            for (let i = 1; i < positions.length; i += 3) {
+                                positions[i] += 0.005;
+                                if (positions[i] > 6) {
+                                    positions[i] = 0;
+                                    positions[i-1] = (Math.random() - 0.5) * 12;
+                                    positions[i+1] = (Math.random() - 0.5) * 12;
+                                }
                             }
                             soulParticles.geometry.attributes.position.needsUpdate = true;
                         }
-                        if (eyes) {
-                            eyes.forEach(eye => {
-                                eye.material.emissiveIntensity = 0.5 + Math.sin(time * 4) * 0.3;
-                            });
-                        }
-                    }
 
-                    // Анимации окружения (факелы, лава, частицы)
-                    torchLights.forEach(item => {
-                        if (item.light) {
-                            const intensity = item.baseIntensity + Math.sin(time * 10 + item.light.position.x) * 0.2;
-                            item.light.intensity = Math.max(0.5, intensity);
+                        if (waterDrops) {
+                            const positions = waterDrops.geometry.attributes.position.array;
+                            for (let i = 1; i < positions.length; i += 3) {
+                                positions[i] -= 0.03;
+                                if (positions[i] < 0) {
+                                    positions[i] = 5;
+                                    positions[i-1] = (Math.random() - 0.5) * 8;
+                                    positions[i+1] = (Math.random() - 0.5) * 8;
+                                }
+                            }
+                            waterDrops.geometry.attributes.position.needsUpdate = true;
                         }
-                        if (item.flame) {
-                            const scale = 1 + Math.sin(time * 15 + item.flame.position.x) * 0.1;
-                            item.flame.scale.set(scale, scale, scale);
+
+                        floatingBooks.forEach((book, idx) => {
+                            book.rotation.y += 0.01;
+                            book.position.y = 3.5 + Math.sin(time * 2 + idx) * 0.3;
+                        });
+
+                        flyingSkulls.forEach((skull, idx) => {
+                            skull.userData.angle += skull.userData.speed;
+                            skull.position.x = Math.sin(skull.userData.angle) * skull.userData.radius;
+                            skull.position.z = Math.cos(skull.userData.angle) * skull.userData.radius;
+                            skull.position.y = 3 + Math.sin(time * 2 + idx) * 1.5;
+                            skull.rotation.y += 0.02;
+                            skull.rotation.x = Math.sin(time + idx) * 0.2;
+                        });
+
+                        runeLights.forEach((item, idx) => {
+                            const intensity = item.baseIntensity + Math.sin(time * 3 + idx) * 0.2;
+                            item.light.intensity = Math.max(0.2, intensity);
+                        });
+
+                        stars.forEach(s => s.rotation.y += 0.0001);
+
+                        // Пульсация центрального ресурса
+                        if (resourceObjects.length > 0 && resourceObjects[0]) {
+                            const scale = 1 + Math.sin(time * 5) * 0.05;
+                            resourceObjects[0].scale.set(scale, scale, scale);
                         }
+
+                        controls.update();
+                        renderer.render(scene, camera);
+                        requestAnimationFrame(animate);
+                    }
+                    animate();
+
+                    window.addEventListener('resize', () => {
+                        camera.aspect = innerWidth/innerHeight;
+                        camera.updateProjectionMatrix();
+                        renderer.setSize(innerWidth, innerHeight);
                     });
 
-                    if (lavaTexture && lavaPlane) {
-                        const canvas = lavaTexture.image;
-                        if (canvas) {
-                            const ctx = canvas.getContext('2d');
-                            ctx.fillStyle = '#ff4400';
-                            ctx.fillRect(0, 0, 256, 256);
-                            ctx.strokeStyle = 'rgba(255,170,0,0.2)';
-                            ctx.lineWidth = 2;
-                            for (let j = 0; j < 8; j++) {
-                                const x1 = (Math.sin(j * 2 + time * 0.0002) * 40 + 128) % 256;
-                                const y1 = (Math.cos(j * 3 + time * 0.0003) * 40 + 128) % 256;
-                                const x2 = (Math.sin(j * 2 + 1 + time * 0.0002) * 40 + 128) % 256;
-                                const y2 = (Math.cos(j * 3 + 1 + time * 0.0003) * 40 + 128) % 256;
-                                ctx.beginPath();
-                                ctx.moveTo(x1, y1);
-                                ctx.lineTo(x2, y2);
-                                ctx.stroke();
-                            }
-                            ctx.fillStyle = 'rgba(255,200,100,0.03)';
-                            for (let j = 0; j < 6; j++) {
-                                const x = (Math.sin(j * 5 + time * 0.0001) * 50 + 128) % 256;
-                                const y = (Math.cos(j * 7 + time * 0.00015) * 50 + 128) % 256;
-                                const r = Math.random() * 10 + 5;
-                                ctx.beginPath();
-                                ctx.arc(x, y, r, 0, 2 * Math.PI);
-                                ctx.fill();
-                            }
-                            lavaTexture.needsUpdate = true;
-                        }
-                    }
+                    loadUser();
 
-                    if (bubbleParticles) {
-                        const positions = bubbleParticles.geometry.attributes.position.array;
-                        for (let i = 1; i < positions.length; i += 3) {
-                            positions[i] += 0.0002;
-                            if (positions[i] > 0.5) {
-                                positions[i] = -0.4;
-                                positions[i-1] = (Math.random() - 0.5) * 12;
-                                positions[i+1] = (Math.random() - 0.5) * 12;
-                            }
-                        }
-                        bubbleParticles.geometry.attributes.position.needsUpdate = true;
-                    }
-
-                    if (sparkParticles) {
-                        const positions = sparkParticles.geometry.attributes.position.array;
-                        for (let i = 1; i < positions.length; i += 3) {
-                            positions[i] += 0.02;
-                            if (positions[i] > 2.5) {
-                                positions[i] = -0.5;
-                                positions[i-1] = (Math.random() - 0.5) * 12;
-                                positions[i+1] = (Math.random() - 0.5) * 12;
-                            }
-                        }
-                        sparkParticles.geometry.attributes.position.needsUpdate = true;
-                    }
-
-                    if (ashParticles) {
-                        const positions = ashParticles.geometry.attributes.position.array;
-                        for (let i = 1; i < positions.length; i += 3) {
-                            positions[i] -= 0.005;
-                            if (positions[i] < 0) {
-                                positions[i] = 4;
-                                positions[i-1] = (Math.random() - 0.5) * 12;
-                                positions[i+1] = (Math.random() - 0.5) * 12;
-                            }
-                        }
-                        ashParticles.geometry.attributes.position.needsUpdate = true;
-                    }
-
-                    if (soulParticles) {
-                        const positions = soulParticles.geometry.attributes.position.array;
-                        for (let i = 1; i < positions.length; i += 3) {
-                            positions[i] += 0.005;
-                            if (positions[i] > 6) {
-                                positions[i] = 0;
-                                positions[i-1] = (Math.random() - 0.5) * 12;
-                                positions[i+1] = (Math.random() - 0.5) * 12;
-                            }
-                        }
-                        soulParticles.geometry.attributes.position.needsUpdate = true;
-                    }
-
-                    if (waterDrops) {
-                        const positions = waterDrops.geometry.attributes.position.array;
-                        for (let i = 1; i < positions.length; i += 3) {
-                            positions[i] -= 0.03;
-                            if (positions[i] < 0) {
-                                positions[i] = 5;
-                                positions[i-1] = (Math.random() - 0.5) * 8;
-                                positions[i+1] = (Math.random() - 0.5) * 8;
-                            }
-                        }
-                        waterDrops.geometry.attributes.position.needsUpdate = true;
-                    }
-
-                    floatingBooks.forEach((book, idx) => {
-                        book.rotation.y += 0.01;
-                        book.position.y = 3.5 + Math.sin(time * 2 + idx) * 0.3;
-                    });
-
-                    flyingSkulls.forEach((skull, idx) => {
-                        skull.userData.angle += skull.userData.speed;
-                        skull.position.x = Math.sin(skull.userData.angle) * skull.userData.radius;
-                        skull.position.z = Math.cos(skull.userData.angle) * skull.userData.radius;
-                        skull.position.y = 3 + Math.sin(time * 2 + idx) * 1.5;
-                        skull.rotation.y += 0.02;
-                        skull.rotation.x = Math.sin(time + idx) * 0.2;
-                    });
-
-                    runeLights.forEach((item, idx) => {
-                        const intensity = item.baseIntensity + Math.sin(time * 3 + idx) * 0.2;
-                        item.light.intensity = Math.max(0.2, intensity);
-                    });
-
-                    stars.forEach(s => s.rotation.y += 0.0001);
-
-                    controls.update();
-                    renderer.render(scene, camera);
-                    requestAnimationFrame(animate);
+                } catch (e) {
+                    debugLog(`❌ Ошибка в init3D: ${e.message}`);
                 }
-                animate();
-
-                window.addEventListener('resize', () => {
-                    camera.aspect = innerWidth/innerHeight;
-                    camera.updateProjectionMatrix();
-                    renderer.setSize(innerWidth, innerHeight);
-                });
-
-                loadUser();
-
-            } catch (e) {
-                debugLog(`❌ Ошибка в init3D: ${e.message}`);
             }
-        }
+
+                    
 
         // ==================== КРАФТ (МОК) ====================
         function openCraftMenu() {
@@ -3657,6 +3665,7 @@ function clearEnvironment() {
     </script>
 </body>
 </html>
+
 
 
 
