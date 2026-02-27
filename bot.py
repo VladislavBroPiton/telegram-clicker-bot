@@ -3244,6 +3244,10 @@ app.router.routes.extend([
     Route('/api/click', api_click, methods=['POST']),
     Route('/api/boss/attack', api_boss_attack, methods=['POST']),
     Route('/api/boss/{boss_id}', api_boss_info, methods=['GET']),
+    Route('/api/craft/recipes', api_craft_recipes, methods=['GET']),
+    Route('/api/craft', api_craft, methods=['POST']),
+    Route('/api/items', api_items, methods=['GET']),
+    Route('/api/items/use', api_use_item, methods=['POST']),
 ])
 
 # Добавляем CORS middleware
@@ -3260,9 +3264,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
