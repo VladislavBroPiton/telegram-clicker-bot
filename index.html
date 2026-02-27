@@ -656,7 +656,7 @@
         <div class="health-bar"><div class="health-fill" id="boss-health-fill"></div></div>
         <div class="boss-navigation">
             <button class="boss-nav-btn" id="prev-boss">←</button>
-            <span style="font-size: 14px;" id="boss-index">1/3</span>
+            <span style="font-size: 14px;" id="boss-index">1/13</span>
             <button class="boss-nav-btn" id="next-boss">→</button>
         </div>
     </div>
@@ -765,6 +765,10 @@
         let flyingSkulls = [];
         let bubbleParticles = null;
         let runeLights = [];
+
+        // ===== ЗАЩИТА ОТ АВТОКЛИКЕРА =====
+        let canClick = true;          // для кликов по ресурсам
+        // throttle для атаки босса определим после функции attackBoss
 
         // Элементы DOM
         const hudLevel = document.getElementById('level');
@@ -3491,6 +3495,21 @@
             isAttacking = false;
         }
 
+        // ===== ЗАЩИТА ОТ АВТОКЛИКЕРА: создаём throttled-версию attackBoss =====
+        function throttle(func, limit) {
+            let inThrottle;
+            return function() {
+                const args = arguments;
+                const context = this;
+                if (!inThrottle) {
+                    func.apply(context, args);
+                    inThrottle = true;
+                    setTimeout(() => inThrottle = false, limit);
+                }
+            };
+        }
+        const throttledAttackBoss = throttle(attackBoss, 300); // не чаще 1 раза в 300 мс
+
         // ==================== ИНИЦИАЛИЗАЦИЯ 3D ====================
         async function init3D() {
             debugLog('init3D started');
@@ -3570,6 +3589,11 @@
                         }
                         if (hit) {
                             if (hit.userData.type === 'resource') {
+                                // ===== ЗАЩИТА ОТ АВТОКЛИКЕРА: проверка canClick =====
+                                if (!canClick) return;
+                                canClick = false;
+                                setTimeout(() => canClick = true, 200); // разрешить через 200 мс
+
                                 hapticFeedback('light');
                                 const originalScale = hit.scale.clone();
                                 hit.scale.set(0.8, 0.8, 0.8);
@@ -3600,7 +3624,8 @@
                                 });
                             } else if (hit.userData.isBossPart) {
                                 debugLog('✅ Это часть босса!');
-                                attackBoss();
+                                // ===== ЗАЩИТА ОТ АВТОКЛИКЕРА: используем throttled версию =====
+                                throttledAttackBoss();
                             } else {
                                 debugLog('Неизвестный объект');
                             }
