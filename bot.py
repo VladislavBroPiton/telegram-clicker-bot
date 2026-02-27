@@ -472,7 +472,7 @@ def get_tool_power(uid: int, tid: str, level: int) -> int:
 
 def get_click_reward(stats: dict) -> Tuple[int, int, bool]:
     cpl = stats['upgrades']['click_power']
-    ccl = stats['upgrades']['crit_chance']
+    ccl = stats['upgrades']['crit_chance'] + stats.get('perm_crit_bonus', 0)  # добавляем постоянный бонус
     bg = random.randint(*BASE_CLICK_REWARD)
     be = random.randint(*BASE_EXP_REWARD)
     gold = bg + cpl * 2
@@ -3266,4 +3266,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
