@@ -2441,8 +2441,8 @@ const createScaryMonster = (bossId) => {
     }
 
     group.add(jawGroup);
-    // Сохраняем ссылку на челюсть для анимации
-    group.userData.jawGroup = jawGroup;
+    // Сохраняем ссылку на челюсть для анимации (как свойство группы, не в userData)
+    group.jawGroup = jawGroup;
 
     // Когти (неподвижные)
     const clawMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
@@ -3778,14 +3778,14 @@ function clearEnvironment() {
 
                         stars.forEach(s => s.rotation.y += 0.0001);
 
-                          // Анимация рта страшного монстра (вставьте сюда)
-                    if (resourceObjects.length > 0) {
-                        resourceObjects.forEach(obj => {
-                            if (obj.userData && obj.userData.resourceType === 'scary' && obj.userData.jawGroup) {
-                                obj.userData.jawGroup.rotation.x = 0.3 + Math.sin(time * 8) * 0.3;
-                            }
-                        });
-                    }
+                         // Анимация рта страшного монстра
+if (resourceObjects.length > 0) {
+    resourceObjects.forEach(obj => {
+        if (obj.userData && obj.userData.resourceType === 'scary' && obj.jawGroup) {
+            obj.jawGroup.rotation.x = 0.3 + Math.sin(time * 8) * 0.3;
+        }
+    });
+}
 
                         // Пульсация центрального ресурса
                         if (resourceObjects.length > 0 && resourceObjects[0]) {
@@ -3853,6 +3853,7 @@ function clearEnvironment() {
     </script>
 </body>
 </html>
+
 
 
 
