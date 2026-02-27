@@ -2895,7 +2895,27 @@ async def api_boss_attack(request):
             if current_health <= 0:
                 return JSONResponse({'error': 'Boss already dead'}, status_code=400)
 
+            # ----- НАЧАЛО НОВОГО КОДА (ЭФФЕКТЫ) -----
+            effects = await get_active_effects(uid, conn)
+            exp_multiplier = 1.0
+            crit_bonus = 0
+            for eff in effects.values():
+                if 'exp_multiplier' in eff:
+                    exp_multiplier *= eff['exp_multiplier']
+                if 'crit_chance_bonus' in eff:
+                    crit_bonus += eff['crit_chance_bonus']
+            # ----- КОНЕЦ НОВОГО КОДА -----
+
             gold_damage, exp, is_crit = get_click_reward(stats)
+            # Применяем эффекты
+            exp = int(exp * exp_multiplier)
+            if crit_bonus:
+                extra_crit = random.random() < crit_bonus / 100
+                if extra_crit and not is_crit:
+                    is_crit = True
+                    gold_damage *= 2
+                    exp *= 2
+
             damage = gold_damage
             if is_crit:
                 damage *= 2
@@ -3072,6 +3092,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
