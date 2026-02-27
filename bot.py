@@ -31,6 +31,13 @@ import time
 from collections import defaultdict
 from typing import Dict, List
 
+# Хранилище для rate limiting: user_id -> list of timestamps
+request_history: Dict[int, List[float]] = defaultdict(list)
+
+# Лимиты: максимальное количество запросов в секунду
+CLICK_LIMIT = 5          # для обычных кликов
+BOSS_ATTACK_LIMIT = 3    # для атак на босса
+
 # ==================== КОНФИГУРАЦИЯ ====================
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -3269,6 +3276,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
