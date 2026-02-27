@@ -1493,6 +1493,18 @@ async def process_click(uid: int, conn: asyncpg.Connection = None) -> dict:
     Возвращает словарь с результатами.
     """
     async def _execute(conn):
+        # ----- НАЧАЛО НОВОГО КОДА (ЭФФЕКТЫ) -----
+        # Получаем активные эффекты
+        effects = await get_active_effects(uid, conn)
+        exp_multiplier = 1.0
+        crit_bonus = 0
+        for eff in effects.values():
+            if 'exp_multiplier' in eff:
+                exp_multiplier *= eff['exp_multiplier']
+            if 'crit_chance_bonus' in eff:
+                crit_bonus += eff['crit_chance_bonus']
+        # ----- КОНЕЦ НОВОГО КОДА -----
+
         # Получаем текущую локацию
         loc_id = await get_player_current_location(uid, conn)
         loc = LOCATIONS.get(loc_id, LOCATIONS['coal_mine'])
@@ -1513,11 +1525,21 @@ async def process_click(uid: int, conn: asyncpg.Connection = None) -> dict:
         stats = await get_player_stats(uid, conn)
         gold, exp, is_crit = get_click_reward(stats)
 
+        # ----- ПРИМЕНЯЕМ ЭФФЕКТЫ К НАГРАДЕ -----
+        exp = int(exp * exp_multiplier)
+        if crit_bonus:
+            extra_crit = random.random() < crit_bonus / 100
+            if extra_crit and not is_crit:
+                is_crit = True
+                gold *= 2
+                exp *= 2
+
         # Модификатор от инструмента
         if found:
             active_tool = await get_active_tool(uid, conn)
             tool_level = await get_tool_level(uid, active_tool, conn)
-            tool_power = get_tool_power(uid, active_tool, tool_level)
+            # Учитываем постоянный бонус от модификаторов
+            tool_power = get_tool_power(uid, active_tool, tool_level) + stats.get('perm_tool_power_bonus', 0)
             if tool_power > 0:
                 multiplier = 1 + (tool_power - 1) * 0.2
                 amt = int(amt * multiplier)
@@ -1548,7 +1570,6 @@ async def process_click(uid: int, conn: asyncpg.Connection = None) -> dict:
             await update_daily_task_progress(uid, 'Везунчик', 1, conn)
         if found:
             await update_daily_task_progress(uid, 'Рудокоп', amt, conn)
-        if found:
             await update_daily_task_progress(uid, 'Горняк', amt, conn)
 
         await update_weekly_task_progress(uid, 'Шахтёр', 1, conn)
@@ -3051,6 +3072,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
