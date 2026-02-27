@@ -2821,6 +2821,44 @@ def verify_telegram_data(bot_token: str, init_data: str) -> dict | None:
         logger.error(f"Verification error: {e}")
         return None
 
+def rate_limit(max_requests: int, window: float = 1.0):
+    """
+    Декоратор для ограничения частоты запросов.
+    max_requests – максимальное количество запросов в окне window (секунд).
+    """
+    def decorator(func):
+        async def wrapper(request):
+            # Извлекаем пользователя из initData
+            init_data = request.headers.get('x-telegram-init-data')
+            if not init_data:
+                return JSONResponse({'error': 'Missing init data'}, status_code=401)
+            user = verify_telegram_data(TOKEN, init_data)
+            if not user:
+                return JSONResponse({'error': 'Invalid init data'}, status_code=403)
+            uid = user['id']
+
+            now = time.time()
+            # Получаем историю для этого пользователя
+            history = request_history[uid]
+            # Оставляем только запросы, попавшие в окно
+            # Используем срез, чтобы не создавать новый список
+            history[:] = [t for t in history if now - t < window]
+
+            if len(history) >= max_requests:
+                return JSONResponse({
+                    'error': 'Too many requests. Please slow down.'
+                }, status_code=429)
+
+            # Добавляем текущий запрос
+            history.append(now)
+            # Ограничиваем размер истории (чтобы она не росла бесконечно)
+            if len(history) > max_requests * 2:
+                history[:] = history[-max_requests:]
+
+            return await func(request)
+        return wrapper
+    return decorator
+
 async def api_user(request):
     init_data = request.headers.get('x-telegram-init-data')
     if not init_data:
@@ -3276,6 +3314,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
