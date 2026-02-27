@@ -94,7 +94,6 @@
     .toast.show { opacity: 1; }
 
     /* ===== Тематические стили для панели босса, полоски здоровья и тостов ===== */
-
     /* --- Король гоблинов --- */
     .boss-theme-goblin_king {
         background: 
@@ -701,12 +700,12 @@
         };
 
         const TOOL_NAMES = {
-            'wooden': 'Деревянная кирка',
-            'stone': 'Каменная кирка',
-            'iron': 'Железная кирка',
-            'gold': 'Золотая кирка',
-            'diamond': 'Алмазная кирка',
-            'mithril': 'Мифриловая кирка'
+            'wooden_pickaxe': 'Деревянная кирка',
+            'stone_pickaxe': 'Каменная кирка',
+            'iron_pickaxe': 'Железная кирка',
+            'golden_pickaxe': 'Золотая кирка',
+            'diamond_pickaxe': 'Алмазная кирка',
+            'mithril_pickaxe': 'Мифриловая кирка'
         };
 
         const RESOURCE_ICONS = {
@@ -718,6 +717,17 @@
             'soul_shard': '💀',
             'dragon_scale': '🐉',
             'magic_essence': '✨'
+        };
+
+        const RESOURCE_NAMES = {
+            'coal': 'Уголь',
+            'iron': 'Железо',
+            'gold': 'Золотая руда',
+            'diamond': 'Алмаз',
+            'mithril': 'Мифрил',
+            'soul_shard': 'Осколок души',
+            'dragon_scale': 'Чешуя дракона',
+            'magic_essence': 'Эссенция магии'
         };
 
         const CRIT_PHRASES = ["💥 КРИТ!", "⚡ СВЕРХУДАР!", "🔥 ОГОНЬ!", "✨ УДАЧА!"];
@@ -814,6 +824,34 @@
             }
         }
 
+        // ==================== ФУНКЦИИ КРАФТА ====================
+        async function loadCraftRecipes() {
+            const data = await apiCall('craft/recipes');
+            if (data && data.recipes) {
+                return data.recipes;
+            }
+            return [];
+        }
+
+        async function craftItem(recipeId) {
+            const data = await apiCall('craft', 'POST', { recipe_id: recipeId });
+            return data;
+        }
+
+        async function loadPlayerItems() {
+            const data = await apiCall('items');
+            if (data && data.items) {
+                return data.items;
+            }
+            return [];
+        }
+
+        async function useItem(itemId, quantity = 1) {
+            const data = await apiCall('items/use', 'POST', { item_id: itemId, quantity });
+            return data;
+        }
+
+        // ==================== ОБНОВЛЕНИЕ ИНТЕРФЕЙСА ====================
         function updateExpBar(level, exp) {
             hudLevel.textContent = level;
             hudExp.textContent = exp;
@@ -2237,268 +2275,267 @@
         }
 
         // ==================== УНИКАЛЬНЫЕ РЕСУРСЫ ДЛЯ КАЖДОГО БОССА ====================
-function createResourceObjectsForBoss(bossId) {
-    const objects = [];
+        function createResourceObjectsForBoss(bossId) {
+            const objects = [];
 
-    // Позиции: левый монстр (милый) и правый монстр (страшный)
-    const leftPos = [-2.5, 0.3, 5.1];
-    const rightPos = [2.5, 0.3, 5.1];
+            // Позиции: левый монстр (милый) и правый монстр (страшный)
+            const leftPos = [-2.5, 0.3, 5.1];
+            const rightPos = [2.5, 0.3, 5.1];
 
-    // --- Функция для создания милого монстра (как был) ---
-    const createCuteMonster = (bossId) => {
-        const group = new THREE.Group();
+            // --- Функция для создания милого монстра (как был) ---
+            const createCuteMonster = (bossId) => {
+                const group = new THREE.Group();
 
-        let bodyColor, hornColor, eyeColor, bodyEmissive;
-        let hasWings = false;
+                let bodyColor, hornColor, eyeColor, bodyEmissive;
+                let hasWings = false;
 
-        switch (bossId) {
-            case 'goblin_king':
-                bodyColor = 0x44aa88; hornColor = 0x886644; eyeColor = 0xffaa00; bodyEmissive = 0x112233; break;
-            case 'dragon_lair':
-                bodyColor = 0xaa4422; hornColor = 0x884422; eyeColor = 0xff6600; bodyEmissive = 0x331100;
-                hasWings = true; break;
-            case 'lich_castle':
-                bodyColor = 0x557799; hornColor = 0x8866aa; eyeColor = 0x00ffff; bodyEmissive = 0x113344; break;
-            case 'elemental_core':
-                bodyColor = 0xff5500; hornColor = 0xffaa33; eyeColor = 0xffff00; bodyEmissive = 0xaa3300; break;
-            case 'crystal_guardian':
-                bodyColor = 0x88aaff; hornColor = 0xffffff; eyeColor = 0xffaa88; bodyEmissive = 0x224466; break;
-            case 'abyssal_serpent':
-                bodyColor = 0x226688; hornColor = 0x44aaff; eyeColor = 0x00ccff; bodyEmissive = 0x113355; break;
-            case 'demon_lord':
-                bodyColor = 0xaa2222; hornColor = 0x884422; eyeColor = 0xff4400; bodyEmissive = 0x330000;
-                hasWings = true; break;
-            case 'ice_queen':
-                bodyColor = 0xaaccff; hornColor = 0xffffff; eyeColor = 0xaaffff; bodyEmissive = 0x224466; break;
-            case 'void_reaper':
-                bodyColor = 0x222233; hornColor = 0x8800ff; eyeColor = 0xff00aa; bodyEmissive = 0x220022; break;
-            case 'ancient_colossus':
-                bodyColor = 0x887766; hornColor = 0xaa8866; eyeColor = 0xffaa22; bodyEmissive = 0x332211; break;
-            case 'chaos_beast':
-                bodyColor = 0xaa44aa; hornColor = 0xff88ff; eyeColor = 0xffff00; bodyEmissive = 0x330033; break;
-            case 'time_wyrm':
-                bodyColor = 0x66aaff; hornColor = 0xccaaff; eyeColor = 0xffaa88; bodyEmissive = 0x224466; break;
-            case 'celestial_phoenix':
-                bodyColor = 0xffaa44; hornColor = 0xffdd88; eyeColor = 0xffffff; bodyEmissive = 0xaa4400;
-                hasWings = true; break;
-            default:
-                bodyColor = 0x44aa88; hornColor = 0x886644; eyeColor = 0xffaa00; bodyEmissive = 0x112233;
+                switch (bossId) {
+                    case 'goblin_king':
+                        bodyColor = 0x44aa88; hornColor = 0x886644; eyeColor = 0xffaa00; bodyEmissive = 0x112233; break;
+                    case 'dragon_lair':
+                        bodyColor = 0xaa4422; hornColor = 0x884422; eyeColor = 0xff6600; bodyEmissive = 0x331100;
+                        hasWings = true; break;
+                    case 'lich_castle':
+                        bodyColor = 0x557799; hornColor = 0x8866aa; eyeColor = 0x00ffff; bodyEmissive = 0x113344; break;
+                    case 'elemental_core':
+                        bodyColor = 0xff5500; hornColor = 0xffaa33; eyeColor = 0xffff00; bodyEmissive = 0xaa3300; break;
+                    case 'crystal_guardian':
+                        bodyColor = 0x88aaff; hornColor = 0xffffff; eyeColor = 0xffaa88; bodyEmissive = 0x224466; break;
+                    case 'abyssal_serpent':
+                        bodyColor = 0x226688; hornColor = 0x44aaff; eyeColor = 0x00ccff; bodyEmissive = 0x113355; break;
+                    case 'demon_lord':
+                        bodyColor = 0xaa2222; hornColor = 0x884422; eyeColor = 0xff4400; bodyEmissive = 0x330000;
+                        hasWings = true; break;
+                    case 'ice_queen':
+                        bodyColor = 0xaaccff; hornColor = 0xffffff; eyeColor = 0xaaffff; bodyEmissive = 0x224466; break;
+                    case 'void_reaper':
+                        bodyColor = 0x222233; hornColor = 0x8800ff; eyeColor = 0xff00aa; bodyEmissive = 0x220022; break;
+                    case 'ancient_colossus':
+                        bodyColor = 0x887766; hornColor = 0xaa8866; eyeColor = 0xffaa22; bodyEmissive = 0x332211; break;
+                    case 'chaos_beast':
+                        bodyColor = 0xaa44aa; hornColor = 0xff88ff; eyeColor = 0xffff00; bodyEmissive = 0x330033; break;
+                    case 'time_wyrm':
+                        bodyColor = 0x66aaff; hornColor = 0xccaaff; eyeColor = 0xffaa88; bodyEmissive = 0x224466; break;
+                    case 'celestial_phoenix':
+                        bodyColor = 0xffaa44; hornColor = 0xffdd88; eyeColor = 0xffffff; bodyEmissive = 0xaa4400;
+                        hasWings = true; break;
+                    default:
+                        bodyColor = 0x44aa88; hornColor = 0x886644; eyeColor = 0xffaa00; bodyEmissive = 0x112233;
+                }
+
+                // Тело
+                const body = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.6, 16),
+                    new THREE.MeshStandardMaterial({ color: bodyColor, emissive: bodyEmissive })
+                );
+                body.position.y = 0.6;
+                group.add(body);
+
+                // Глаза
+                const createEye = (col) => {
+                    const e = new THREE.Group();
+                    const white = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+                    white.position.set(0, 0, 0.1);
+                    e.add(white);
+                    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+                    pupil.position.set(0.03, 0.03, 0.2);
+                    e.add(pupil);
+                    return e;
+                };
+                const eyeL = createEye(eyeColor);
+                eyeL.position.set(-0.25, 0.8, 0.6);
+                group.add(eyeL);
+                const eyeR = createEye(eyeColor);
+                eyeR.position.set(0.25, 0.8, 0.6);
+                group.add(eyeR);
+
+                // Рожки
+                const hornMat = new THREE.MeshStandardMaterial({ color: hornColor, emissive: 0x332211 });
+                const hornL = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.5, 6), hornMat);
+                hornL.position.set(-0.35, 1.1, 0.4);
+                hornL.rotation.z = 0.2;
+                hornL.rotation.x = -0.2;
+                group.add(hornL);
+                const hornR = hornL.clone();
+                hornR.position.set(0.35, 1.1, 0.4);
+                hornR.rotation.z = -0.2;
+                hornR.rotation.x = -0.2;
+                group.add(hornR);
+
+                // Ротик
+                const mouth = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.1, 0.1, 0.2, 6),
+                    new THREE.MeshStandardMaterial({ color: 0xaa4444 })
+                );
+                mouth.position.set(0, 0.55, 0.7);
+                mouth.rotation.x = Math.PI / 2;
+                group.add(mouth);
+
+                // Крылья
+                if (hasWings) {
+                    const wingMat = new THREE.MeshStandardMaterial({ color: hornColor, transparent: true, opacity: 0.6 });
+                    const wingL = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.8, 5), wingMat);
+                    wingL.position.set(-0.7, 0.9, 0.1);
+                    wingL.rotation.z = 0.3;
+                    wingL.rotation.y = 0.2;
+                    group.add(wingL);
+                    const wingR = wingL.clone();
+                    wingR.position.set(0.7, 0.9, 0.1);
+                    wingR.rotation.z = -0.3;
+                    wingR.rotation.y = -0.2;
+                    group.add(wingR);
+                }
+
+                return group;
+            };
+
+            // --- Функция для создания страшного монстра (с анимируемой челюстью) ---
+            const createScaryMonster = (bossId) => {
+                const group = new THREE.Group();
+
+                let bodyColor, spikeColor, eyeColor, glowColor;
+                switch (bossId) {
+                    case 'goblin_king':
+                        bodyColor = 0x3a2c1a; spikeColor = 0x8b0000; eyeColor = 0xff3300; glowColor = 0x220000; break;
+                    case 'dragon_lair':
+                        bodyColor = 0x441100; spikeColor = 0xff5500; eyeColor = 0xffaa00; glowColor = 0x331100; break;
+                    case 'lich_castle':
+                        bodyColor = 0x1a0f1f; spikeColor = 0xaa44ff; eyeColor = 0x00ffff; glowColor = 0x220044; break;
+                    case 'elemental_core':
+                        bodyColor = 0x442200; spikeColor = 0xff6600; eyeColor = 0xffaa00; glowColor = 0x331100; break;
+                    case 'crystal_guardian':
+                        bodyColor = 0x224466; spikeColor = 0x88aaff; eyeColor = 0xff88aa; glowColor = 0x112233; break;
+                    case 'abyssal_serpent':
+                        bodyColor = 0x113355; spikeColor = 0x44aaff; eyeColor = 0x00ccff; glowColor = 0x002244; break;
+                    case 'demon_lord':
+                        bodyColor = 0x330000; spikeColor = 0xff4444; eyeColor = 0xff0000; glowColor = 0x220000; break;
+                    case 'ice_queen':
+                        bodyColor = 0x2a5a7a; spikeColor = 0xaaddff; eyeColor = 0xffffff; glowColor = 0x1a3a5a; break;
+                    case 'void_reaper':
+                        bodyColor = 0x110022; spikeColor = 0x8800ff; eyeColor = 0xff00aa; glowColor = 0x220022; break;
+                    case 'ancient_colossus':
+                        bodyColor = 0x554433; spikeColor = 0xaa8866; eyeColor = 0xffaa22; glowColor = 0x332211; break;
+                    case 'chaos_beast':
+                        bodyColor = 0x331133; spikeColor = 0xff88ff; eyeColor = 0xffff00; glowColor = 0x220022; break;
+                    case 'time_wyrm':
+                        bodyColor = 0x224466; spikeColor = 0xccaaff; eyeColor = 0xffaa88; glowColor = 0x112233; break;
+                    case 'celestial_phoenix':
+                        bodyColor = 0x442200; spikeColor = 0xffaa44; eyeColor = 0xffdd88; glowColor = 0x331100; break;
+                    default:
+                        bodyColor = 0x222222; spikeColor = 0xaa0000; eyeColor = 0xff4400; glowColor = 0x110000;
+                }
+
+                // Тело (икосаэдр)
+                const body = new THREE.Mesh(
+                    new THREE.IcosahedronGeometry(0.6, 0),
+                    new THREE.MeshStandardMaterial({ color: bodyColor, emissive: glowColor })
+                );
+                body.position.y = 0.6;
+                group.add(body);
+
+                // Шипы на спине
+                const spikeMat = new THREE.MeshStandardMaterial({ color: spikeColor, emissive: 0x220000 });
+                for (let i = 0; i < 5; i++) {
+                    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.5, 4), spikeMat);
+                    spike.position.set((i - 2) * 0.3, 1.0, -0.2);
+                    spike.rotation.x = 0.3;
+                    group.add(spike);
+                }
+
+                // Глаза
+                const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+                eyeWhite.position.set(-0.25, 0.8, 0.6);
+                group.add(eyeWhite);
+                const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6), new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x440000 }));
+                pupilL.position.set(-0.2, 0.83, 0.75);
+                group.add(pupilL);
+                const eyeWhiteR = eyeWhite.clone();
+                eyeWhiteR.position.set(0.25, 0.8, 0.6);
+                group.add(eyeWhiteR);
+                const pupilR = pupilL.clone();
+                pupilR.position.set(0.2, 0.83, 0.75);
+                group.add(pupilR);
+
+                // Челюсть с зубами (отдельная группа для анимации)
+                const jawGroup = new THREE.Group();
+                jawGroup.position.set(0, 0.45, 0.7); // точка крепления челюсти
+
+                // Сама челюсть (нижняя)
+                const jawMesh = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.5, 0.1, 0.2),
+                    new THREE.MeshStandardMaterial({ color: 0xaa4444 })
+                );
+                jawMesh.position.set(0, 0, 0);
+                jawGroup.add(jawMesh);
+
+                // Зубы (прикреплены к челюсти)
+                for (let i = 0; i < 4; i++) {
+                    const tooth = new THREE.Mesh(
+                        new THREE.ConeGeometry(0.05, 0.1, 4),
+                        new THREE.MeshStandardMaterial({ color: 0xffffaa })
+                    );
+                    tooth.position.set((i - 1.5) * 0.2, 0.1, 0.1);
+                    jawGroup.add(tooth);
+                }
+
+                group.add(jawGroup);
+                // Сохраняем ссылку на челюсть для анимации (как свойство группы, не в userData)
+                group.jawGroup = jawGroup;
+
+                // Когти (неподвижные)
+                const clawMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+                const clawPositions = [[-0.4, 0.3, 0.5], [0.4, 0.3, 0.5]];
+                clawPositions.forEach(pos => {
+                    const claw = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.2, 4), clawMat);
+                    claw.position.set(pos[0], pos[1], pos[2]);
+                    group.add(claw);
+                });
+
+                return group;
+            };
+
+            // Создаём обоих монстров
+            const cuteMonster = createCuteMonster(bossId);
+            cuteMonster.position.set(leftPos[0], leftPos[1], leftPos[2]);
+            cuteMonster.userData = { type: 'resource', id: 0, resourceType: 'cute' };
+            objects.push(cuteMonster);
+
+            const scaryMonster = createScaryMonster(bossId);
+            scaryMonster.position.set(rightPos[0], rightPos[1], rightPos[2]);
+            scaryMonster.userData = { type: 'resource', id: 0, resourceType: 'scary' }; // тот же id для совместимости
+            objects.push(scaryMonster);
+
+            return objects;
         }
 
-        // Тело
-        const body = new THREE.Mesh(
-            new THREE.SphereGeometry(0.6, 16),
-            new THREE.MeshStandardMaterial({ color: bodyColor, emissive: bodyEmissive })
-        );
-        body.position.y = 0.6;
-        group.add(body);
-
-        // Глаза
-        const createEye = (col) => {
-            const e = new THREE.Group();
-            const white = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-            white.position.set(0, 0, 0.1);
-            e.add(white);
-            const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6), new THREE.MeshStandardMaterial({ color: 0x000000 }));
-            pupil.position.set(0.03, 0.03, 0.2);
-            e.add(pupil);
-            return e;
-        };
-        const eyeL = createEye(eyeColor);
-        eyeL.position.set(-0.25, 0.8, 0.6);
-        group.add(eyeL);
-        const eyeR = createEye(eyeColor);
-        eyeR.position.set(0.25, 0.8, 0.6);
-        group.add(eyeR);
-
-        // Рожки
-        const hornMat = new THREE.MeshStandardMaterial({ color: hornColor, emissive: 0x332211 });
-        const hornL = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.5, 6), hornMat);
-        hornL.position.set(-0.35, 1.1, 0.4);
-        hornL.rotation.z = 0.2;
-        hornL.rotation.x = -0.2;
-        group.add(hornL);
-        const hornR = hornL.clone();
-        hornR.position.set(0.35, 1.1, 0.4);
-        hornR.rotation.z = -0.2;
-        hornR.rotation.x = -0.2;
-        group.add(hornR);
-
-        // Ротик
-        const mouth = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.1, 0.1, 0.2, 6),
-            new THREE.MeshStandardMaterial({ color: 0xaa4444 })
-        );
-        mouth.position.set(0, 0.55, 0.7);
-        mouth.rotation.x = Math.PI / 2;
-        group.add(mouth);
-
-        // Крылья
-        if (hasWings) {
-            const wingMat = new THREE.MeshStandardMaterial({ color: hornColor, transparent: true, opacity: 0.6 });
-            const wingL = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.8, 5), wingMat);
-            wingL.position.set(-0.7, 0.9, 0.1);
-            wingL.rotation.z = 0.3;
-            wingL.rotation.y = 0.2;
-            group.add(wingL);
-            const wingR = wingL.clone();
-            wingR.position.set(0.7, 0.9, 0.1);
-            wingR.rotation.z = -0.3;
-            wingR.rotation.y = -0.2;
-            group.add(wingR);
-        }
-
-        return group;
-    };
-
-    // --- Функция для создания страшного монстра ---
-   // --- Функция для создания страшного монстра (с анимируемой челюстью) ---
-const createScaryMonster = (bossId) => {
-    const group = new THREE.Group();
-
-    let bodyColor, spikeColor, eyeColor, glowColor;
-    switch (bossId) {
-        case 'goblin_king':
-            bodyColor = 0x3a2c1a; spikeColor = 0x8b0000; eyeColor = 0xff3300; glowColor = 0x220000; break;
-        case 'dragon_lair':
-            bodyColor = 0x441100; spikeColor = 0xff5500; eyeColor = 0xffaa00; glowColor = 0x331100; break;
-        case 'lich_castle':
-            bodyColor = 0x1a0f1f; spikeColor = 0xaa44ff; eyeColor = 0x00ffff; glowColor = 0x220044; break;
-        case 'elemental_core':
-            bodyColor = 0x442200; spikeColor = 0xff6600; eyeColor = 0xffaa00; glowColor = 0x331100; break;
-        case 'crystal_guardian':
-            bodyColor = 0x224466; spikeColor = 0x88aaff; eyeColor = 0xff88aa; glowColor = 0x112233; break;
-        case 'abyssal_serpent':
-            bodyColor = 0x113355; spikeColor = 0x44aaff; eyeColor = 0x00ccff; glowColor = 0x002244; break;
-        case 'demon_lord':
-            bodyColor = 0x330000; spikeColor = 0xff4444; eyeColor = 0xff0000; glowColor = 0x220000; break;
-        case 'ice_queen':
-            bodyColor = 0x2a5a7a; spikeColor = 0xaaddff; eyeColor = 0xffffff; glowColor = 0x1a3a5a; break;
-        case 'void_reaper':
-            bodyColor = 0x110022; spikeColor = 0x8800ff; eyeColor = 0xff00aa; glowColor = 0x220022; break;
-        case 'ancient_colossus':
-            bodyColor = 0x554433; spikeColor = 0xaa8866; eyeColor = 0xffaa22; glowColor = 0x332211; break;
-        case 'chaos_beast':
-            bodyColor = 0x331133; spikeColor = 0xff88ff; eyeColor = 0xffff00; glowColor = 0x220022; break;
-        case 'time_wyrm':
-            bodyColor = 0x224466; spikeColor = 0xccaaff; eyeColor = 0xffaa88; glowColor = 0x112233; break;
-        case 'celestial_phoenix':
-            bodyColor = 0x442200; spikeColor = 0xffaa44; eyeColor = 0xffdd88; glowColor = 0x331100; break;
-        default:
-            bodyColor = 0x222222; spikeColor = 0xaa0000; eyeColor = 0xff4400; glowColor = 0x110000;
-    }
-
-    // Тело (икосаэдр)
-    const body = new THREE.Mesh(
-        new THREE.IcosahedronGeometry(0.6, 0),
-        new THREE.MeshStandardMaterial({ color: bodyColor, emissive: glowColor })
-    );
-    body.position.y = 0.6;
-    group.add(body);
-
-    // Шипы на спине
-    const spikeMat = new THREE.MeshStandardMaterial({ color: spikeColor, emissive: 0x220000 });
-    for (let i = 0; i < 5; i++) {
-        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.5, 4), spikeMat);
-        spike.position.set((i - 2) * 0.3, 1.0, -0.2);
-        spike.rotation.x = 0.3;
-        group.add(spike);
-    }
-
-    // Глаза
-    const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-    eyeWhite.position.set(-0.25, 0.8, 0.6);
-    group.add(eyeWhite);
-    const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6), new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x440000 }));
-    pupilL.position.set(-0.2, 0.83, 0.75);
-    group.add(pupilL);
-    const eyeWhiteR = eyeWhite.clone();
-    eyeWhiteR.position.set(0.25, 0.8, 0.6);
-    group.add(eyeWhiteR);
-    const pupilR = pupilL.clone();
-    pupilR.position.set(0.2, 0.83, 0.75);
-    group.add(pupilR);
-
-    // Челюсть с зубами (отдельная группа для анимации)
-    const jawGroup = new THREE.Group();
-    jawGroup.position.set(0, 0.45, 0.7); // точка крепления челюсти
-
-    // Сама челюсть (нижняя)
-    const jawMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5, 0.1, 0.2),
-        new THREE.MeshStandardMaterial({ color: 0xaa4444 })
-    );
-    jawMesh.position.set(0, 0, 0);
-    jawGroup.add(jawMesh);
-
-    // Зубы (прикреплены к челюсти)
-    for (let i = 0; i < 4; i++) {
-        const tooth = new THREE.Mesh(
-            new THREE.ConeGeometry(0.05, 0.1, 4),
-            new THREE.MeshStandardMaterial({ color: 0xffffaa })
-        );
-        tooth.position.set((i - 1.5) * 0.2, 0.1, 0.1);
-        jawGroup.add(tooth);
-    }
-
-    group.add(jawGroup);
-    // Сохраняем ссылку на челюсть для анимации (как свойство группы, не в userData)
-    group.jawGroup = jawGroup;
-
-    // Когти (неподвижные)
-    const clawMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
-    const clawPositions = [[-0.4, 0.3, 0.5], [0.4, 0.3, 0.5]];
-    clawPositions.forEach(pos => {
-        const claw = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.2, 4), clawMat);
-        claw.position.set(pos[0], pos[1], pos[2]);
-        group.add(claw);
-    });
-
-    return group;
-};
-
-    // Создаём обоих монстров
-    const cuteMonster = createCuteMonster(bossId);
-    cuteMonster.position.set(leftPos[0], leftPos[1], leftPos[2]);
-    cuteMonster.userData = { type: 'resource', id: 0, resourceType: 'cute' };
-    objects.push(cuteMonster);
-
-    const scaryMonster = createScaryMonster(bossId);
-    scaryMonster.position.set(rightPos[0], rightPos[1], rightPos[2]);
-    scaryMonster.userData = { type: 'resource', id: 0, resourceType: 'scary' }; // тот же id для совместимости
-    objects.push(scaryMonster);
-
-    return objects;
-}
-        
         // ==================== ОЧИСТКА ОКРУЖЕНИЯ ====================
-function clearEnvironment() {
-    // Удаляем все объекты окружения
-    environmentObjects.forEach(obj => scene.remove(obj));
-    environmentObjects = [];
+        function clearEnvironment() {
+            // Удаляем все объекты окружения
+            environmentObjects.forEach(obj => scene.remove(obj));
+            environmentObjects = [];
 
-    // Удаляем звёзды (небо)
-    stars.forEach(s => scene.remove(s));
-    stars = [];
+            // Удаляем звёзды (небо)
+            stars.forEach(s => scene.remove(s));
+            stars = [];
 
-    // Очищаем массивы с частицами и декорациями
-    torchLights = [];
-    sparkParticles = null;
-    soulParticles = null;
-    floatingBooks = [];
-    ashParticles = null;
-    waterDrops = null;
-    heatDistortion = null;
-    flyingSkulls = [];
-    bubbleParticles = null;
-    runeLights = [];
+            // Очищаем массивы с частицами и декорациями
+            torchLights = [];
+            sparkParticles = null;
+            soulParticles = null;
+            floatingBooks = [];
+            ashParticles = null;
+            waterDrops = null;
+            heatDistortion = null;
+            flyingSkulls = [];
+            bubbleParticles = null;
+            runeLights = [];
 
-    // Сбрасываем текстуры и фог
-    lavaPlane = null;
-    lavaTexture = null;
-    scene.fog = null;
-    scene.background = new THREE.Color(0x0a0a20);
-}
+            // Сбрасываем текстуры и фог
+            lavaPlane = null;
+            lavaTexture = null;
+            scene.fog = null;
+            scene.background = new THREE.Color(0x0a0a20);
+        }
 
         // ==================== ОКРУЖЕНИЕ ДЛЯ КАЖДОГО БОССА (уникальное) ====================
         function createEnvironmentForBoss(bossId) {
@@ -3237,30 +3274,30 @@ function clearEnvironment() {
         }
 
         async function loadBossInfo(bid) {
-    debugLog(`loadBossInfo for ${bid}`);
-    const data = await apiCall(`boss/${bid}`);
-    if (data) {
-        bossNameSpan.textContent = BOSS_NAMES[bid] || bid;
-        updateBossHealth(data.current_health, data.max_health);
-        bossHealthDiv.style.display = 'block';
-        updateBossNavigation();
+            debugLog(`loadBossInfo for ${bid}`);
+            const data = await apiCall(`boss/${bid}`);
+            if (data) {
+                bossNameSpan.textContent = BOSS_NAMES[bid] || bid;
+                updateBossHealth(data.current_health, data.max_health);
+                bossHealthDiv.style.display = 'block';
+                updateBossNavigation();
 
-        // Тематические классы для панели босса и для HUD
-        bossHealthDiv.className = 'boss-theme-' + bid;
-        document.getElementById('hud').className = 'hud-theme-' + bid;
+                // Тематические классы для панели босса и для HUD
+                bossHealthDiv.className = 'boss-theme-' + bid;
+                document.getElementById('hud').className = 'hud-theme-' + bid;
 
-        // Удаляем старые ресурсы
-        resourceObjects.forEach(obj => scene.remove(obj));
-        resourceObjects = [];
+                // Удаляем старые ресурсы
+                resourceObjects.forEach(obj => scene.remove(obj));
+                resourceObjects = [];
 
-        // Создаём новые ресурсы для текущего босса
-        const newResources = createResourceObjectsForBoss(bid);
-        newResources.forEach(obj => {
-            scene.add(obj);
-            resourceObjects.push(obj);
-        });
-    }
-}
+                // Создаём новые ресурсы для текущего босса
+                const newResources = createResourceObjectsForBoss(bid);
+                newResources.forEach(obj => {
+                    scene.add(obj);
+                    resourceObjects.push(obj);
+                });
+            }
+        }
 
         function updateBossNavigation() {
             bossIndexSpan.textContent = `${currentBossIndex+1}/${BOSS_IDS.length}`;
@@ -3579,295 +3616,242 @@ function clearEnvironment() {
                     handleClick(e.touches[0]);
                 }, { passive: false });
 
-                                    // Анимация
-                    let time = 0;
-                    function animate() {
-                        time += 0.01;
+                // Анимация
+                let time = 0;
+                function animate() {
+                    time += 0.01;
 
-                        // Ресурсы неподвижны
+                    // Ресурсы неподвижны
 
-                        if (bossGroup && bossGroup.children.length > 0) {
-                            bossGroup.rotation.y += 0.005;
-                        }
+                    if (bossGroup && bossGroup.children.length > 0) {
+                        bossGroup.rotation.y += 0.005;
+                    }
 
-                        // Анимации боссов
-                        if (currentBossId === 'goblin_king' && bossGroup.userData && bossGroup.userData.axe) {
-                            const axe = bossGroup.userData.axe;
-                            axe.rotation.z = 0.2 + Math.sin(time * 5) * 0.1;
-                            if (isAttacking) {
-                                axe.rotation.x = Math.sin(time * 20) * 0.3;
-                            }
+                    // Анимации боссов
+                    if (currentBossId === 'goblin_king' && bossGroup.userData && bossGroup.userData.axe) {
+                        const axe = bossGroup.userData.axe;
+                        axe.rotation.z = 0.2 + Math.sin(time * 5) * 0.1;
+                        if (isAttacking) {
+                            axe.rotation.x = Math.sin(time * 20) * 0.3;
                         }
-                        if (currentBossId === 'dragon_lair' && bossGroup.userData) {
-                            const { wings, head, tail, eyes } = bossGroup.userData;
-                            if (wings) {
-                                wings.forEach((wing, idx) => {
-                                    if (wing) wing.rotation.z = (idx === 0 ? -0.2 : 0.2) + Math.sin(time * 3) * 0.15;
-                                });
-                            }
-                            if (head) {
-                                head.rotation.y = Math.sin(time * 2) * 0.1;
-                                head.rotation.x = 0.2 + Math.sin(time * 2.5) * 0.05;
-                            }
-                            if (tail) {
-                                tail.forEach((seg, i) => {
-                                    seg.rotation.x = 0.2 * i + Math.sin(time * 2 + i) * 0.15;
-                                });
-                            }
-                            if (eyes) {
-                                eyes.forEach(eye => {
-                                    eye.material.emissiveIntensity = 0.5 + Math.sin(time * 5) * 0.3;
-                                });
-                            }
+                    }
+                    if (currentBossId === 'dragon_lair' && bossGroup.userData) {
+                        const { wings, head, tail, eyes } = bossGroup.userData;
+                        if (wings) {
+                            wings.forEach((wing, idx) => {
+                                if (wing) wing.rotation.z = (idx === 0 ? -0.2 : 0.2) + Math.sin(time * 3) * 0.15;
+                            });
                         }
-                        if (currentBossId === 'lich_castle' && bossGroup.userData) {
-                            const { staff, mantle, soulParticles, eyes, crystal } = bossGroup.userData;
-                            if (staff) {
-                                staff.rotation.y += 0.01;
-                                if (crystal) {
-                                    const hue = (time * 0.1) % 1;
-                                    crystal.material.color.setHSL(hue, 1, 0.5);
-                                    crystal.material.emissive.setHSL(hue, 1, 0.2);
-                                }
-                            }
-                            if (mantle) {
-                                mantle.rotation.x = 0.1 + Math.sin(time * 1.5) * 0.02;
-                            }
-                            if (soulParticles) {
-                                const positions = soulParticles.geometry.attributes.position.array;
-                                for (let i = 0; i < positions.length; i += 3) {
-                                    const angle = Math.atan2(positions[i], positions[i+2]) + 0.01;
-                                    const radius = Math.hypot(positions[i], positions[i+2]);
-                                    positions[i] = Math.cos(angle) * radius;
-                                    positions[i+2] = Math.sin(angle) * radius;
-                                }
-                                soulParticles.geometry.attributes.position.needsUpdate = true;
-                            }
-                            if (eyes) {
-                                eyes.forEach(eye => {
-                                    eye.material.emissiveIntensity = 0.5 + Math.sin(time * 4) * 0.3;
-                                });
+                        if (head) {
+                            head.rotation.y = Math.sin(time * 2) * 0.1;
+                            head.rotation.x = 0.2 + Math.sin(time * 2.5) * 0.05;
+                        }
+                        if (tail) {
+                            tail.forEach((seg, i) => {
+                                seg.rotation.x = 0.2 * i + Math.sin(time * 2 + i) * 0.15;
+                            });
+                        }
+                        if (eyes) {
+                            eyes.forEach(eye => {
+                                eye.material.emissiveIntensity = 0.5 + Math.sin(time * 5) * 0.3;
+                            });
+                        }
+                    }
+                    if (currentBossId === 'lich_castle' && bossGroup.userData) {
+                        const { staff, mantle, soulParticles, eyes, crystal } = bossGroup.userData;
+                        if (staff) {
+                            staff.rotation.y += 0.01;
+                            if (crystal) {
+                                const hue = (time * 0.1) % 1;
+                                crystal.material.color.setHSL(hue, 1, 0.5);
+                                crystal.material.emissive.setHSL(hue, 1, 0.2);
                             }
                         }
-
-                        // Анимации окружения (факелы, лава, частицы)
-                        torchLights.forEach(item => {
-                            if (item.light) {
-                                const intensity = item.baseIntensity + Math.sin(time * 10 + item.light.position.x) * 0.2;
-                                item.light.intensity = Math.max(0.5, intensity);
-                            }
-                            if (item.flame) {
-                                const scale = 1 + Math.sin(time * 15 + item.flame.position.x) * 0.1;
-                                item.flame.scale.set(scale, scale, scale);
-                            }
-                        });
-
-                        if (lavaTexture && lavaPlane) {
-                            const canvas = lavaTexture.image;
-                            if (canvas) {
-                                const ctx = canvas.getContext('2d');
-                                ctx.fillStyle = '#ff4400';
-                                ctx.fillRect(0, 0, 256, 256);
-                                ctx.strokeStyle = 'rgba(255,170,0,0.2)';
-                                ctx.lineWidth = 2;
-                                for (let j = 0; j < 8; j++) {
-                                    const x1 = (Math.sin(j * 2 + time * 0.0002) * 40 + 128) % 256;
-                                    const y1 = (Math.cos(j * 3 + time * 0.0003) * 40 + 128) % 256;
-                                    const x2 = (Math.sin(j * 2 + 1 + time * 0.0002) * 40 + 128) % 256;
-                                    const y2 = (Math.cos(j * 3 + 1 + time * 0.0003) * 40 + 128) % 256;
-                                    ctx.beginPath();
-                                    ctx.moveTo(x1, y1);
-                                    ctx.lineTo(x2, y2);
-                                    ctx.stroke();
-                                }
-                                ctx.fillStyle = 'rgba(255,200,100,0.03)';
-                                for (let j = 0; j < 6; j++) {
-                                    const x = (Math.sin(j * 5 + time * 0.0001) * 50 + 128) % 256;
-                                    const y = (Math.cos(j * 7 + time * 0.00015) * 50 + 128) % 256;
-                                    const r = Math.random() * 10 + 5;
-                                    ctx.beginPath();
-                                    ctx.arc(x, y, r, 0, 2 * Math.PI);
-                                    ctx.fill();
-                                }
-                                lavaTexture.needsUpdate = true;
-                            }
+                        if (mantle) {
+                            mantle.rotation.x = 0.1 + Math.sin(time * 1.5) * 0.02;
                         }
-
-                        if (bubbleParticles) {
-                            const positions = bubbleParticles.geometry.attributes.position.array;
-                            for (let i = 1; i < positions.length; i += 3) {
-                                positions[i] += 0.0002;
-                                if (positions[i] > 0.5) {
-                                    positions[i] = -0.4;
-                                    positions[i-1] = (Math.random() - 0.5) * 12;
-                                    positions[i+1] = (Math.random() - 0.5) * 12;
-                                }
-                            }
-                            bubbleParticles.geometry.attributes.position.needsUpdate = true;
-                        }
-
-                        if (sparkParticles) {
-                            const positions = sparkParticles.geometry.attributes.position.array;
-                            for (let i = 1; i < positions.length; i += 3) {
-                                positions[i] += 0.02;
-                                if (positions[i] > 2.5) {
-                                    positions[i] = -0.5;
-                                    positions[i-1] = (Math.random() - 0.5) * 12;
-                                    positions[i+1] = (Math.random() - 0.5) * 12;
-                                }
-                            }
-                            sparkParticles.geometry.attributes.position.needsUpdate = true;
-                        }
-
-                        if (ashParticles) {
-                            const positions = ashParticles.geometry.attributes.position.array;
-                            for (let i = 1; i < positions.length; i += 3) {
-                                positions[i] -= 0.005;
-                                if (positions[i] < 0) {
-                                    positions[i] = 4;
-                                    positions[i-1] = (Math.random() - 0.5) * 12;
-                                    positions[i+1] = (Math.random() - 0.5) * 12;
-                                }
-                            }
-                            ashParticles.geometry.attributes.position.needsUpdate = true;
-                        }
-
                         if (soulParticles) {
                             const positions = soulParticles.geometry.attributes.position.array;
-                            for (let i = 1; i < positions.length; i += 3) {
-                                positions[i] += 0.005;
-                                if (positions[i] > 6) {
-                                    positions[i] = 0;
-                                    positions[i-1] = (Math.random() - 0.5) * 12;
-                                    positions[i+1] = (Math.random() - 0.5) * 12;
-                                }
+                            for (let i = 0; i < positions.length; i += 3) {
+                                const angle = Math.atan2(positions[i], positions[i+2]) + 0.01;
+                                const radius = Math.hypot(positions[i], positions[i+2]);
+                                positions[i] = Math.cos(angle) * radius;
+                                positions[i+2] = Math.sin(angle) * radius;
                             }
                             soulParticles.geometry.attributes.position.needsUpdate = true;
                         }
-
-                        if (waterDrops) {
-                            const positions = waterDrops.geometry.attributes.position.array;
-                            for (let i = 1; i < positions.length; i += 3) {
-                                positions[i] -= 0.03;
-                                if (positions[i] < 0) {
-                                    positions[i] = 5;
-                                    positions[i-1] = (Math.random() - 0.5) * 8;
-                                    positions[i+1] = (Math.random() - 0.5) * 8;
-                                }
-                            }
-                            waterDrops.geometry.attributes.position.needsUpdate = true;
+                        if (eyes) {
+                            eyes.forEach(eye => {
+                                eye.material.emissiveIntensity = 0.5 + Math.sin(time * 4) * 0.3;
+                            });
                         }
-
-                        floatingBooks.forEach((book, idx) => {
-                            book.rotation.y += 0.01;
-                            book.position.y = 3.5 + Math.sin(time * 2 + idx) * 0.3;
-                        });
-
-                        flyingSkulls.forEach((skull, idx) => {
-                            skull.userData.angle += skull.userData.speed;
-                            skull.position.x = Math.sin(skull.userData.angle) * skull.userData.radius;
-                            skull.position.z = Math.cos(skull.userData.angle) * skull.userData.radius;
-                            skull.position.y = 3 + Math.sin(time * 2 + idx) * 1.5;
-                            skull.rotation.y += 0.02;
-                            skull.rotation.x = Math.sin(time + idx) * 0.2;
-                        });
-
-                        runeLights.forEach((item, idx) => {
-                            const intensity = item.baseIntensity + Math.sin(time * 3 + idx) * 0.2;
-                            item.light.intensity = Math.max(0.2, intensity);
-                        });
-
-                        stars.forEach(s => s.rotation.y += 0.0001);
-
-                         // Анимация рта страшного монстра
-if (resourceObjects.length > 0) {
-    resourceObjects.forEach(obj => {
-        if (obj.userData && obj.userData.resourceType === 'scary' && obj.jawGroup) {
-            obj.jawGroup.rotation.x = 0.3 + Math.sin(time * 8) * 0.3;
-        }
-    });
-}
-
-                        // Пульсация центрального ресурса
-                        if (resourceObjects.length > 0 && resourceObjects[0]) {
-                            const scale = 1 + Math.sin(time * 5) * 0.05;
-                            resourceObjects[0].scale.set(scale, scale, scale);
-                        }
-
-                        controls.update();
-                        renderer.render(scene, camera);
-                        requestAnimationFrame(animate);
                     }
-                    animate();
 
-                    window.addEventListener('resize', () => {
-                        camera.aspect = innerWidth/innerHeight;
-                        camera.updateProjectionMatrix();
-                        renderer.setSize(innerWidth, innerHeight);
+                    // Анимации окружения (факелы, лава, частицы)
+                    torchLights.forEach(item => {
+                        if (item.light) {
+                            const intensity = item.baseIntensity + Math.sin(time * 10 + item.light.position.x) * 0.2;
+                            item.light.intensity = Math.max(0.5, intensity);
+                        }
+                        if (item.flame) {
+                            const scale = 1 + Math.sin(time * 15 + item.flame.position.x) * 0.1;
+                            item.flame.scale.set(scale, scale, scale);
+                        }
                     });
 
-                    loadUser();
+                    if (lavaTexture && lavaPlane) {
+                        const canvas = lavaTexture.image;
+                        if (canvas) {
+                            const ctx = canvas.getContext('2d');
+                            ctx.fillStyle = '#ff4400';
+                            ctx.fillRect(0, 0, 256, 256);
+                            ctx.strokeStyle = 'rgba(255,170,0,0.2)';
+                            ctx.lineWidth = 2;
+                            for (let j = 0; j < 8; j++) {
+                                const x1 = (Math.sin(j * 2 + time * 0.0002) * 40 + 128) % 256;
+                                const y1 = (Math.cos(j * 3 + time * 0.0003) * 40 + 128) % 256;
+                                const x2 = (Math.sin(j * 2 + 1 + time * 0.0002) * 40 + 128) % 256;
+                                const y2 = (Math.cos(j * 3 + 1 + time * 0.0003) * 40 + 128) % 256;
+                                ctx.beginPath();
+                                ctx.moveTo(x1, y1);
+                                ctx.lineTo(x2, y2);
+                                ctx.stroke();
+                            }
+                            ctx.fillStyle = 'rgba(255,200,100,0.03)';
+                            for (let j = 0; j < 6; j++) {
+                                const x = (Math.sin(j * 5 + time * 0.0001) * 50 + 128) % 256;
+                                const y = (Math.cos(j * 7 + time * 0.00015) * 50 + 128) % 256;
+                                const r = Math.random() * 10 + 5;
+                                ctx.beginPath();
+                                ctx.arc(x, y, r, 0, 2 * Math.PI);
+                                ctx.fill();
+                            }
+                            lavaTexture.needsUpdate = true;
+                        }
+                    }
 
-                } catch (e) {
-                    debugLog(`❌ Ошибка в init3D: ${e.message}`);
+                    if (bubbleParticles) {
+                        const positions = bubbleParticles.geometry.attributes.position.array;
+                        for (let i = 1; i < positions.length; i += 3) {
+                            positions[i] += 0.0002;
+                            if (positions[i] > 0.5) {
+                                positions[i] = -0.4;
+                                positions[i-1] = (Math.random() - 0.5) * 12;
+                                positions[i+1] = (Math.random() - 0.5) * 12;
+                            }
+                        }
+                        bubbleParticles.geometry.attributes.position.needsUpdate = true;
+                    }
+
+                    if (sparkParticles) {
+                        const positions = sparkParticles.geometry.attributes.position.array;
+                        for (let i = 1; i < positions.length; i += 3) {
+                            positions[i] += 0.02;
+                            if (positions[i] > 2.5) {
+                                positions[i] = -0.5;
+                                positions[i-1] = (Math.random() - 0.5) * 12;
+                                positions[i+1] = (Math.random() - 0.5) * 12;
+                            }
+                        }
+                        sparkParticles.geometry.attributes.position.needsUpdate = true;
+                    }
+
+                    if (ashParticles) {
+                        const positions = ashParticles.geometry.attributes.position.array;
+                        for (let i = 1; i < positions.length; i += 3) {
+                            positions[i] -= 0.005;
+                            if (positions[i] < 0) {
+                                positions[i] = 4;
+                                positions[i-1] = (Math.random() - 0.5) * 12;
+                                positions[i+1] = (Math.random() - 0.5) * 12;
+                            }
+                        }
+                        ashParticles.geometry.attributes.position.needsUpdate = true;
+                    }
+
+                    if (soulParticles) {
+                        const positions = soulParticles.geometry.attributes.position.array;
+                        for (let i = 1; i < positions.length; i += 3) {
+                            positions[i] += 0.005;
+                            if (positions[i] > 6) {
+                                positions[i] = 0;
+                                positions[i-1] = (Math.random() - 0.5) * 12;
+                                positions[i+1] = (Math.random() - 0.5) * 12;
+                            }
+                        }
+                        soulParticles.geometry.attributes.position.needsUpdate = true;
+                    }
+
+                    if (waterDrops) {
+                        const positions = waterDrops.geometry.attributes.position.array;
+                        for (let i = 1; i < positions.length; i += 3) {
+                            positions[i] -= 0.03;
+                            if (positions[i] < 0) {
+                                positions[i] = 5;
+                                positions[i-1] = (Math.random() - 0.5) * 8;
+                                positions[i+1] = (Math.random() - 0.5) * 8;
+                            }
+                        }
+                        waterDrops.geometry.attributes.position.needsUpdate = true;
+                    }
+
+                    floatingBooks.forEach((book, idx) => {
+                        book.rotation.y += 0.01;
+                        book.position.y = 3.5 + Math.sin(time * 2 + idx) * 0.3;
+                    });
+
+                    flyingSkulls.forEach((skull, idx) => {
+                        skull.userData.angle += skull.userData.speed;
+                        skull.position.x = Math.sin(skull.userData.angle) * skull.userData.radius;
+                        skull.position.z = Math.cos(skull.userData.angle) * skull.userData.radius;
+                        skull.position.y = 3 + Math.sin(time * 2 + idx) * 1.5;
+                        skull.rotation.y += 0.02;
+                        skull.rotation.x = Math.sin(time + idx) * 0.2;
+                    });
+
+                    runeLights.forEach((item, idx) => {
+                        const intensity = item.baseIntensity + Math.sin(time * 3 + idx) * 0.2;
+                        item.light.intensity = Math.max(0.2, intensity);
+                    });
+
+                    stars.forEach(s => s.rotation.y += 0.0001);
+
+                    // Анимация рта страшного монстра
+                    if (resourceObjects.length > 0) {
+                        resourceObjects.forEach(obj => {
+                            if (obj.userData && obj.userData.resourceType === 'scary' && obj.jawGroup) {
+                                obj.jawGroup.rotation.x = 0.3 + Math.sin(time * 8) * 0.3;
+                            }
+                        });
+                    }
+
+                    // Пульсация центрального ресурса
+                    if (resourceObjects.length > 0 && resourceObjects[0]) {
+                        const scale = 1 + Math.sin(time * 5) * 0.05;
+                        resourceObjects[0].scale.set(scale, scale, scale);
+                    }
+
+                    controls.update();
+                    renderer.render(scene, camera);
+                    requestAnimationFrame(animate);
                 }
+                animate();
+
+                window.addEventListener('resize', () => {
+                    camera.aspect = innerWidth/innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(innerWidth, innerHeight);
+                });
+
+                loadUser();
+
+            } catch (e) {
+                debugLog(`❌ Ошибка в init3D: ${e.message}`);
             }
-
-                    
-
-        // ==================== КРАФТ (МОК) ====================
-        function openCraftMenu() {
-            const recipes = [
-                { name: '⚗️ Зелье скорости', desc: '+50% опыта на 30 мин', resources: '⚫5, ⚙️2, ✨1' },
-                { name: '🔑 Ключ от логова', desc: 'Повторный бой с боссом', resources: '⚫50, ⚙️20, 🪙5' },
-                { name: '⚔️ Острые зубья', desc: '+2 силы инструмента', resources: '⚙️20, 🪙10, 💎5' }
-            ];
-            let html = '';
-            recipes.forEach(r => {
-                html += `<div class="craft-item" onclick="window.craftItem('${r.name}')">
-                    <div class="name">${r.name}</div>
-                    <div class="desc">${r.desc}</div>
-                    <div class="resources">${r.resources}</div>
-                </div>`;
-            });
-            craftContent.innerHTML = html;
-            craftMenu.style.display = 'block';
         }
 
-        window.craftItem = function(itemName) {
-            const items = document.querySelectorAll('.craft-item');
-            items.forEach(item => {
-                if (item.querySelector('.name')?.textContent === itemName) {
-                    item.style.transform = 'scale(0.95)';
-                    setTimeout(() => item.style.transform = '', 200);
-                }
-            });
-            hapticFeedback('light');
-            showToast(`🔨 Создано: ${itemName}`, 1500);
-        };
-
-        closeCraft.addEventListener('click', () => craftMenu.style.display = 'none');
-        craftBtn.addEventListener('click', openCraftMenu);
-
-        // ==================== СТАРТ ====================
+        // Запускаем 3D
         init3D();
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
