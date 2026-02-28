@@ -4224,16 +4224,6 @@
                 light2.shadow.bias = -0.0001;
                 scene.add(light2);
 
-                // Настройка пост-обработки
-                const renderScene = new RenderPass(scene, camera);
-                const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.5, 0.4, 0.85);
-                bloomPass.threshold = 0.6;
-                bloomPass.strength = 0.5;
-                bloomPass.radius = 0.3;
-
-                composer = new EffectComposer(renderer);
-                composer.addPass(renderScene);
-                composer.addPass(bloomPass);
 
                 if (currentLocationId) {
                     // Загружаем окружение и ресурсы для обычной локации
@@ -4436,7 +4426,7 @@
                     });
 
                     controls.update();
-                    composer.render();
+                    renderer.render(scene, camera);
                     requestAnimationFrame(animate);
                 }
                 animate();
@@ -4460,4 +4450,5 @@
     </script>
 </body>
 </html>
+
 
