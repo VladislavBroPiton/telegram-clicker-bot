@@ -4510,33 +4510,39 @@ for (let i = 0; i < count; i++) {
                 const mouse = new THREE.Vector2();
 
                 function handleClick(event) {
-                    console.log('handleClick', event);
-console.log('resourceObjects length:', resourceObjects.length);
+    // Для отладки
+    console.log('Клик!');
+    console.log('Количество ресурсных объектов:', resourceObjects.length);
+
     const rect = renderer.domElement.getBoundingClientRect();
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
     raycaster.setFromCamera(mouse, camera);
-    let allObjects = resourceObjects;
-    if (bossGroup) allObjects = allObjects.concat(bossGroup.children);
-    const intersects = raycaster.intersectObjects(allObjects, true);
-                    console.log('intersects length:', intersects.length);
-for (let i = 0; i < Math.min(intersects.length, 5); i++) {
-    console.log('intersect', i, intersects[i].object);
-}
+
+    // Собираем все объекты для проверки (включая те, что не в resourceObjects, например декорации)
+    let allObjects = [];
+    scene.traverse(obj => {
+        if (obj.isMesh) allObjects.push(obj);
+    });
+    console.log('Всего мешей в сцене:', allObjects.length);
+
+    const intersects = raycaster.intersectObjects(allObjects, false);
+    console.log('Найдено пересечений:', intersects.length);
 
     if (intersects.length === 0) {
-        debugLog('No intersection');
+        console.log('Нет пересечений');
         return;
     }
 
-    // Перебираем все пересечения, ищем первое с нужным userData
+    // Ищем первый объект с нужным userData
     let hit = null;
     for (let i = 0; i < intersects.length; i++) {
         let obj = intersects[i].object;
         while (obj) {
             if (obj.userData && (obj.userData.type === 'resource' || obj.userData.isBossPart || obj.userData.type === 'lever')) {
                 hit = obj;
+                console.log('Найден объект с type:', obj.userData.type);
                 break;
             }
             obj = obj.parent;
@@ -4545,24 +4551,29 @@ for (let i = 0; i < Math.min(intersects.length, 5); i++) {
     }
 
     if (!hit) {
-        debugLog('No valid hit');
+        console.log('Ни у одного объекта нет нужного userData');
         return;
     }
 
+    // Обработка ресурса
     if (hit.userData.type === 'resource') {
         if (!canClick) return;
         canClick = false;
         setTimeout(() => canClick = true, 200);
 
         hapticFeedback('light');
+
+        // Анимация сжатия
         if (hit.scale) {
             const originalScale = hit.scale.clone();
             hit.scale.set(0.8, 0.8, 0.8);
             setTimeout(() => hit.scale.copy(originalScale), 100);
         }
+
         createHitParticles(hit.position.clone());
         flashObject(hit, 0xffaa22, 150);
 
+        // Отправка клика на сервер
         apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
             if (data) {
                 goldSpan.textContent = data.new_gold;
@@ -4584,10 +4595,14 @@ for (let i = 0; i < Math.min(intersects.length, 5); i++) {
                 if (phrase) showToast(phrase, 1000);
             }
         });
-    } else if (hit.userData.isBossPart && !currentLocationId) {
-        debugLog('✅ Это часть босса!');
+    }
+    // Обработка босса
+    else if (hit.userData.isBossPart && !currentLocationId) {
+        console.log('Это часть босса');
         throttledAttackBoss();
-    } else if (hit.userData.type === 'lever') {
+    }
+    // Обработка рычага
+    else if (hit.userData.type === 'lever') {
         hit.userData.isOn = !hit.userData.isOn;
         if (hit.children[1]) hit.children[1].rotation.z = hit.userData.isOn ? -0.3 : 0.3;
         showToast('Рычаг переключён', 1000);
@@ -4706,6 +4721,7 @@ loadUser();
     </script>
 </body>
 </html>
+
 
 
 
