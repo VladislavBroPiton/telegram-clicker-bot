@@ -4524,7 +4524,7 @@ for (let i = 0; i < count; i++) {
         return;
     }
 
-    // Перебираем все пересечения, ищем первое, у которого есть подходящий userData
+    // Перебираем все пересечения, ищем первое с нужным userData
     let hit = null;
     for (let i = 0; i < intersects.length; i++) {
         let obj = intersects[i].object;
@@ -4585,12 +4585,6 @@ for (let i = 0; i < count; i++) {
         hit.userData.isOn = !hit.userData.isOn;
         if (hit.children[1]) hit.children[1].rotation.z = hit.userData.isOn ? -0.3 : 0.3;
         showToast('Рычаг переключён', 1000);
-    }
-} else {
-            debugLog('No intersection with known object');
-        }
-    } else {
-        debugLog('No intersection');
     }
 }
 
@@ -4669,7 +4663,7 @@ function animate() {
         }
     });
 
-    // Анимация северного сияния для мифрила (если skySphere активна)
+    // Анимация северного сияния для мифрила
     if (skySphere && currentLocationId === 'mithril_mine') {
         skySphere.material.map.offset.x += 0.0002;
     }
@@ -4691,8 +4685,7 @@ window.addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
-    // если composer всё же используется, его нужно проверить:
-    // if (composer) composer.setSize(innerWidth, innerHeight);
+    // если composer используется, добавьте проверку: if (composer) composer.setSize(...)
 });
 
 loadUser();
@@ -4707,6 +4700,7 @@ loadUser();
     </script>
 </body>
 </html>
+
 
 
 
