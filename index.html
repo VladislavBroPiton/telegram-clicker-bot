@@ -4572,115 +4572,116 @@ for (let i = 0; i < count; i++) {
                 if (hit.children[1]) hit.children[1].rotation.z = hit.userData.isOn ? -0.3 : 0.3;
                 showToast('Рычаг переключён', 1000);
             }
+        } else {
+            debugLog('No intersection with known object');
         }
+    } else {
+        debugLog('No intersection');
     }
-} else {
-                        debugLog('No intersection');
-                    }
-                }
+}
 
-                renderer.domElement.addEventListener('click', handleClick);
-                renderer.domElement.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    handleClick(e.touches[0]);
-                }, { passive: false });
+renderer.domElement.addEventListener('click', handleClick);
+renderer.domElement.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    handleClick(e.touches[0]);
+}, { passive: false });
 
-                // Анимация
-                let time = 0;
-                function animate() {
-                    time += 0.01;
+// Анимация
+let time = 0;
+function animate() {
+    time += 0.01;
 
-                    if (bossGroup && bossGroup.children.length > 0) {
-                        bossGroup.rotation.y += 0.005;
-                    }
+    if (bossGroup && bossGroup.children.length > 0) {
+        bossGroup.rotation.y += 0.005;
+    }
 
-                    // Анимации боссов (здесь мог быть код)
+    // Анимации окружения (факелы, лава, частицы)
+    torchLights.forEach(item => {
+        if (item.light) {
+            const flicker = Math.sin(time * 15) * 0.2 + Math.sin(time * 23) * 0.1;
+            item.light.intensity = item.baseIntensity + flicker;
+        }
+        if (item.flame) {
+            const scale = 1 + Math.sin(time * 20) * 0.1;
+            item.flame.scale.set(scale, scale, scale);
+        }
+    });
 
-                    // Анимации окружения (факелы, лава, частицы)
-                    torchLights.forEach(item => {
-                        if (item.light) {
-                            const flicker = Math.sin(time * 15) * 0.2 + Math.sin(time * 23) * 0.1;
-                            item.light.intensity = item.baseIntensity + flicker;
-                        }
-                        if (item.flame) {
-                            const scale = 1 + Math.sin(time * 20) * 0.1;
-                            item.flame.scale.set(scale, scale, scale);
-                        }
-                    });
+    if (dustParticles) {
+        dustParticles.rotation.y += 0.001;
+        const positions = dustParticles.geometry.attributes.position.array;
+        for (let i = 1; i < positions.length; i += 3) {
+            positions[i-1] += (Math.random() - 0.5) * 0.01;
+            positions[i]   += (Math.random() - 0.5) * 0.01;
+            positions[i+1] += (Math.random() - 0.5) * 0.01;
+            if (Math.abs(positions[i-1]) > 7) positions[i-1] *= 0.99;
+            if (positions[i] < 0.2) positions[i] = 4.5;
+            if (positions[i] > 4.5) positions[i] = 0.2;
+            if (Math.abs(positions[i+1]) > 7) positions[i+1] *= 0.99;
+        }
+        dustParticles.geometry.attributes.position.needsUpdate = true;
+    }
 
-                    if (dustParticles) {
-                        dustParticles.rotation.y += 0.001;
-                        const positions = dustParticles.geometry.attributes.position.array;
-                        for (let i = 1; i < positions.length; i += 3) {
-                            positions[i-1] += (Math.random() - 0.5) * 0.01;
-                            positions[i]   += (Math.random() - 0.5) * 0.01;
-                            positions[i+1] += (Math.random() - 0.5) * 0.01;
-                            if (Math.abs(positions[i-1]) > 7) positions[i-1] *= 0.99;
-                            if (positions[i] < 0.2) positions[i] = 4.5;
-                            if (positions[i] > 4.5) positions[i] = 0.2;
-                            if (Math.abs(positions[i+1]) > 7) positions[i+1] *= 0.99;
-                        }
-                        dustParticles.geometry.attributes.position.needsUpdate = true;
-                    }
+    if (sparkParticles) {
+        const positions = sparkParticles.geometry.attributes.position.array;
+        for (let i = 1; i < positions.length; i += 3) {
+            positions[i] += 0.05;
+            if (positions[i] > 3) {
+                positions[i] = 0.2;
+                positions[i-1] = (Math.random() - 0.5) * 10;
+                positions[i+1] = (Math.random() - 0.5) * 10;
+            }
+        }
+        sparkParticles.geometry.attributes.position.needsUpdate = true;
+    }
 
-                    if (sparkParticles) {
-                        const positions = sparkParticles.geometry.attributes.position.array;
-                        for (let i = 1; i < positions.length; i += 3) {
-                            positions[i] += 0.05;
-                            if (positions[i] > 3) {
-                                positions[i] = 0.2;
-                                positions[i-1] = (Math.random() - 0.5) * 10;
-                                positions[i+1] = (Math.random() - 0.5) * 10;
-                            }
-                        }
-                        sparkParticles.geometry.attributes.position.needsUpdate = true;
-                    }
+    if (waterPlane && waterPlane.material.map) {
+        waterPlane.material.map.offset.x += 0.001;
+        waterPlane.material.map.offset.y += 0.001;
+    }
 
-                    if (waterPlane && waterPlane.material.map) {
-                        waterPlane.material.map.offset.x += 0.001;
-                        waterPlane.material.map.offset.y += 0.001;
-                    }
+    // Анимация шестерён
+    gears.forEach(gear => {
+        gear.group.rotation.y += gear.speed;
+        gear.group.rotation.x += Math.sin(time) * 0.005;
+    });
 
-                    // Анимация шестерён
-                    gears.forEach(gear => {
-                        gear.group.rotation.y += gear.speed;
-                        gear.group.rotation.x += Math.sin(time) * 0.005;
-                    });
+    // Парение кристаллов и изменение цвета
+    floatingCrystals.forEach((crystal, idx) => {
+        crystal.position.y += Math.sin(time * 2 + idx) * 0.002;
+        if (currentLocationId === 'mithril_mine') {
+            const hue = (time * 0.1 + idx * 0.1) % 1;
+            crystal.material.color.setHSL(hue, 1, 0.5);
+        }
+    });
 
-                    // Парение кристаллов и изменение цвета
-                    floatingCrystals.forEach((crystal, idx) => {
-                        crystal.position.y += Math.sin(time * 2 + idx) * 0.002;
-                        if (currentLocationId === 'mithril_mine') {
-                            // Для магических кристаллов меняем цвет
-                            const hue = (time * 0.1 + idx * 0.1) % 1;
-                            crystal.material.color.setHSL(hue, 1, 0.5);
-                        }
-                        if (skySphere && currentLocationId === 'mithril_mine') {
-                            skySphere.material.map.offset.x += 0.0002;
-                        }
-                    });
+    // Анимация северного сияния для мифрила (если skySphere активна)
+    if (skySphere && currentLocationId === 'mithril_mine') {
+        skySphere.material.map.offset.x += 0.0002;
+    }
 
-                    // Обновление uniform времени для шейдерных рун
-                    environmentObjects.forEach(obj => {
-                        if (obj.userData && obj.userData.material) {
-                            obj.userData.material.uniforms.time.value = time;
-                        }
-                    });
+    // Обновление uniform времени для шейдерных рун
+    environmentObjects.forEach(obj => {
+        if (obj.userData && obj.userData.material) {
+            obj.userData.material.uniforms.time.value = time;
+        }
+    });
 
-                    controls.update();
-                    renderer.render(scene, camera);
-                    requestAnimationFrame(animate);
-                }
-                animate();
+    controls.update();
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+}
+animate();
 
-                window.addEventListener('resize', () => {
-                    camera.aspect = innerWidth/innerHeight;
-                    camera.updateProjectionMatrix();
-                    renderer.setSize(innerWidth, innerHeight);
-                    composer.setSize(innerWidth, innerHeight);
-                });
+window.addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+    // если composer всё же используется, его нужно проверить:
+    // if (composer) composer.setSize(innerWidth, innerHeight);
+});
 
-                loadUser();
+loadUser();
 
             } catch (e) {
                 debugLog(`❌ Ошибка в init3D: ${e.message}`);
@@ -4692,5 +4693,6 @@ for (let i = 0; i < count; i++) {
     </script>
 </body>
 </html>
+
 
 
