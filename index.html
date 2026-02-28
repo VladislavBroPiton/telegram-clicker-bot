@@ -4510,70 +4510,71 @@ for (let i = 0; i < count; i++) {
                 const mouse = new THREE.Vector2();
 
                 function handleClick(event) {
-                    const rect = renderer.domElement.getBoundingClientRect();
-                    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-                    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-                    raycaster.setFromCamera(mouse, camera);
-                    let allObjects = resourceObjects;
-                    if (bossGroup) allObjects = allObjects.concat(bossGroup.children);
-                    const intersects = raycaster.intersectObjects(allObjects, true);
+    raycaster.setFromCamera(mouse, camera);
+    let allObjects = resourceObjects;
+    if (bossGroup) allObjects = allObjects.concat(bossGroup.children);
+    const intersects = raycaster.intersectObjects(allObjects, true);
 
-                    if (intersects.length > 0) {
-                        let hit = intersects[0].object;
-                        // Поднимаемся по иерархии, пока не найдём объект с нужным userData
-                        while (hit && !hit.userData?.type && !hit.userData?.isBossPart && !hit.userData?.type === 'lever') {
-                            hit = hit.parent;
-                        }
-                        if (hit) {
-                            if (hit.userData.type === 'resource') {
-                                // ===== ЗАЩИТА ОТ АВТОКЛИКЕРА: проверка canClick =====
-                                if (!canClick) return;
-                                canClick = false;
-                                setTimeout(() => canClick = true, 200); // разрешить через 200 мс
+    if (intersects.length > 0) {
+        let hit = intersects[0].object;
+        // Поднимаемся по иерархии в поисках объекта с нужным userData
+        while (hit) {
+            if (hit.userData && (hit.userData.type === 'resource' || hit.userData.isBossPart || hit.userData.type === 'lever')) {
+                break;
+            }
+            hit = hit.parent;
+        }
+        if (hit) {
+            if (hit.userData.type === 'resource') {
+                if (!canClick) return;
+                canClick = false;
+                setTimeout(() => canClick = true, 200);
 
-                                hapticFeedback('light');
-                                const originalScale = hit.scale.clone();
-                                hit.scale.set(0.8, 0.8, 0.8);
-                                setTimeout(() => hit.scale.copy(originalScale), 100);
-                                createHitParticles(hit.position.clone());
-                                flashObject(hit, 0xffaa22, 150);
+                hapticFeedback('light');
+                if (hit.scale) {
+                    const originalScale = hit.scale.clone();
+                    hit.scale.set(0.8, 0.8, 0.8);
+                    setTimeout(() => hit.scale.copy(originalScale), 100);
+                }
+                createHitParticles(hit.position.clone());
+                flashObject(hit, 0xffaa22, 150);
 
-                                apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
-                                    if (data) {
-                                        goldSpan.textContent = data.new_gold;
-                                        hudExp.textContent = data.new_exp;
-                                        updateInventoryDisplay(data.inventory);
-                                        loadUser();
+                apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
+                    if (data) {
+                        goldSpan.textContent = data.new_gold;
+                        hudExp.textContent = data.new_exp;
+                        updateInventoryDisplay(data.inventory);
+                        loadUser();
 
-                                        let phrase = '';
-                                        if (data.is_crit) {
-                                            phrase = CRIT_PHRASES[Math.floor(Math.random() * CRIT_PHRASES.length)];
-                                            flashObject(hit, 0xffdd44, 400);
-                                        } else if (data.found_resource && RARE_FIND_PHRASES[data.found_resource]) {
-                                            const arr = RARE_FIND_PHRASES[data.found_resource];
-                                            phrase = arr[Math.floor(Math.random() * arr.length)];
-                                            if (RARE_RESOURCES.includes(data.found_resource)) {
-                                                flashObject(hit, 0xaa88ff, 400);
-                                            }
-                                        }
-                                        if (phrase) showToast(phrase, 1000);
-                                    }
-                                });
-                            } else if (hit.userData.isBossPart && !currentLocationId) {
-                                debugLog('✅ Это часть босса!');
-                                throttledAttackBoss();
-                            } else if (hit.userData.type === 'lever') {
-                                hit.userData.isOn = !hit.userData.isOn;
-                                // анимация рычага
-                                hit.children[1].rotation.z = hit.userData.isOn ? -0.3 : 0.3;
-                                // можно включить дополнительный свет и т.д.
-                                showToast('Рычаг переключён', 1000);
-                            } else {
-                                debugLog('Неизвестный объект');
+                        let phrase = '';
+                        if (data.is_crit) {
+                            phrase = CRIT_PHRASES[Math.floor(Math.random() * CRIT_PHRASES.length)];
+                            flashObject(hit, 0xffdd44, 400);
+                        } else if (data.found_resource && RARE_FIND_PHRASES[data.found_resource]) {
+                            const arr = RARE_FIND_PHRASES[data.found_resource];
+                            phrase = arr[Math.floor(Math.random() * arr.length)];
+                            if (RARE_RESOURCES.includes(data.found_resource)) {
+                                flashObject(hit, 0xaa88ff, 400);
                             }
                         }
-                    } else {
+                        if (phrase) showToast(phrase, 1000);
+                    }
+                });
+            } else if (hit.userData.isBossPart && !currentLocationId) {
+                debugLog('✅ Это часть босса!');
+                throttledAttackBoss();
+            } else if (hit.userData.type === 'lever') {
+                hit.userData.isOn = !hit.userData.isOn;
+                if (hit.children[1]) hit.children[1].rotation.z = hit.userData.isOn ? -0.3 : 0.3;
+                showToast('Рычаг переключён', 1000);
+            }
+        }
+    }
+} else {
                         debugLog('No intersection');
                     }
                 }
@@ -4691,4 +4692,5 @@ for (let i = 0; i < count; i++) {
     </script>
 </body>
 </html>
+
 
