@@ -3225,132 +3225,132 @@
 
         // ==================== ОКРУЖЕНИЕ ДЛЯ ОБЫЧНЫХ ЛОКАЦИЙ ====================
         function createEnvironmentForLocation(locId) {
-    if (!scene || !THREE) return;
-    clearEnvironment();
+            if (!scene || !THREE) return;
+            clearEnvironment();
 
-    // Базовый пол для всех локаций
-    const floorGeometry = new THREE.CircleGeometry(15, 32);
-    const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -0.1;
-    scene.add(floor);
-    environmentObjects.push(floor);
+            // Базовый пол для всех локаций
+            const floorGeometry = new THREE.CircleGeometry(15, 32);
+            const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -0.1;
+            scene.add(floor);
+            environmentObjects.push(floor);
 
-    // Простые локации: угольная шахта и железный рудник
-    if (locId === 'coal_mine' || locId === 'iron_mine') {
-        // Угольная шахта: тёмный фон
-        if (locId === 'coal_mine') {
-            scene.background = new THREE.Color(0x111111);
-            scene.fog = new THREE.FogExp2(0x111111, 0.03);
-        }
-        // Железный рудник: рыжеватый фон
-        else if (locId === 'iron_mine') {
-            scene.background = new THREE.Color(0x442211);
-            scene.fog = new THREE.FogExp2(0x442211, 0.02);
-        }
-        // Добавим несколько простых камней для атмосферы
-        const rockMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
-        for (let i = 0; i < 5; i++) {
-            const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2 + Math.random()*0.3), rockMat);
-            rock.position.set((Math.random()-0.5)*10, 0.2, (Math.random()-0.5)*10);
-            rock.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
-            scene.add(rock);
-            environmentObjects.push(rock);
-        }
-        return; // для простых локаций на этом всё
-    }
+            // Простые локации: угольная шахта и железный рудник
+            if (locId === 'coal_mine' || locId === 'iron_mine') {
+                // Угольная шахта: тёмный фон
+                if (locId === 'coal_mine') {
+                    scene.background = new THREE.Color(0x111111);
+                    scene.fog = new THREE.FogExp2(0x111111, 0.03);
+                }
+                // Железный рудник: рыжеватый фон
+                else if (locId === 'iron_mine') {
+                    scene.background = new THREE.Color(0x442211);
+                    scene.fog = new THREE.FogExp2(0x442211, 0.02);
+                }
+                // Добавим несколько простых камней для атмосферы
+                const rockMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
+                for (let i = 0; i < 5; i++) {
+                    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2 + Math.random()*0.3), rockMat);
+                    rock.position.set((Math.random()-0.5)*10, 0.2, (Math.random()-0.5)*10);
+                    rock.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+                    scene.add(rock);
+                    environmentObjects.push(rock);
+                }
+                return; // для простых локаций на этом всё
+            }
 
-    // Улучшенные локации: золотая жила, алмазная пещера, мифриловые копи
-    if (locId === 'gold_mine') {
-        scene.background = new THREE.Color(0x332211);
-        scene.fog = new THREE.FogExp2(0x332211, 0.01);
-        // Золотые прожилки
-        const veinMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
-        for (let i = 0; i < 10; i++) {
-            const vein = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.5 + Math.random(), 0.2), veinMat);
-            vein.position.set((Math.random()-0.5)*8, 1 + Math.random()*3, (Math.random()-0.5)*8);
-            scene.add(vein);
-            environmentObjects.push(vein);
+            // Улучшенные локации: золотая жила, алмазная пещера, мифриловые копи
+            if (locId === 'gold_mine') {
+                scene.background = new THREE.Color(0x332211);
+                scene.fog = new THREE.FogExp2(0x332211, 0.01);
+                // Золотые прожилки
+                const veinMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
+                for (let i = 0; i < 10; i++) {
+                    const vein = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.5 + Math.random(), 0.2), veinMat);
+                    vein.position.set((Math.random()-0.5)*8, 1 + Math.random()*3, (Math.random()-0.5)*8);
+                    scene.add(vein);
+                    environmentObjects.push(vein);
+                }
+                // Светящиеся кристаллы
+                const crystalMat = new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0x442200 });
+                for (let i = 0; i < 8; i++) {
+                    const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.4), crystalMat);
+                    crystal.position.set((Math.random()-0.5)*7, 0.5 + Math.random()*2, (Math.random()-0.5)*7);
+                    scene.add(crystal);
+                    environmentObjects.push(crystal);
+                    floatingCrystals.push(crystal);
+                }
+                // Яркое освещение
+                const pointLight = new THREE.PointLight(0xffaa33, 2, 15);
+                pointLight.position.set(0, 5, 0);
+                scene.add(pointLight);
+                environmentObjects.push(pointLight);
+            }
+            else if (locId === 'diamond_cave') {
+                scene.background = new THREE.Color(0x113355);
+                scene.fog = new THREE.FogExp2(0x113355, 0.01);
+                // Сталактиты и сталагмиты
+                const iceMat = new THREE.MeshStandardMaterial({ color: 0xaaccff, emissive: 0x224466 });
+                for (let i = 0; i < 15; i++) {
+                    const stalactite = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1.5, 6), iceMat);
+                    stalactite.position.set((Math.random()-0.5)*8, 4.5, (Math.random()-0.5)*8);
+                    stalactite.rotation.x = Math.PI;
+                    scene.add(stalactite);
+                    environmentObjects.push(stalactite);
+                    const stalagmite = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1.5, 6), iceMat);
+                    stalagmite.position.set((Math.random()-0.5)*8, 0.2, (Math.random()-0.5)*8);
+                    scene.add(stalagmite);
+                    environmentObjects.push(stalagmite);
+                }
+                // Кристаллы
+                const crystalMat = new THREE.MeshStandardMaterial({ color: 0x88aaff, emissive: 0x224466 });
+                for (let i = 0; i < 10; i++) {
+                    const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.5), crystalMat);
+                    crystal.position.set((Math.random()-0.5)*7, 0.5 + Math.random()*3, (Math.random()-0.5)*7);
+                    scene.add(crystal);
+                    environmentObjects.push(crystal);
+                }
+            }
+            else if (locId === 'mithril_mine') {
+                scene.background = new THREE.Color(0x221133);
+                scene.fog = new THREE.FogExp2(0x221133, 0.01);
+                // Магические руны
+                const runeMat = new THREE.MeshStandardMaterial({ color: 0xaa88ff, emissive: 0x442288 });
+                for (let i = 0; i < 8; i++) {
+                    const rune = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.1, 8, 16), runeMat);
+                    rune.position.set((Math.random()-0.5)*6, 1.5 + Math.random()*2, (Math.random()-0.5)*6);
+                    rune.rotation.x = Math.PI/2;
+                    rune.rotation.z = Math.random() * Math.PI;
+                    scene.add(rune);
+                    environmentObjects.push(rune);
+                }
+                // Парящие камни
+                const floatingMat = new THREE.MeshStandardMaterial({ color: 0x8866aa, emissive: 0x331166 });
+                for (let i = 0; i < 5; i++) {
+                    const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4), floatingMat);
+                    stone.position.set((Math.random()-0.5)*5, 1.5 + Math.random()*2, (Math.random()-0.5)*5);
+                    scene.add(stone);
+                    environmentObjects.push(stone);
+                    floatingCrystals.push(stone);
+                }
+                // Звёздное небо сквозь трещины (частицы)
+                const starGeom = new THREE.BufferGeometry();
+                const starCount = 200;
+                const starPositions = new Float32Array(starCount * 3);
+                for (let i = 0; i < starCount; i++) {
+                    starPositions[i*3] = (Math.random() - 0.5) * 20;
+                    starPositions[i*3+1] = 8 + Math.random() * 5;
+                    starPositions[i*3+2] = (Math.random() - 0.5) * 20;
+                }
+                starGeom.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+                const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1 });
+                const starsSky = new THREE.Points(starGeom, starMat);
+                scene.add(starsSky);
+                environmentObjects.push(starsSky);
+            }
         }
-        // Светящиеся кристаллы
-        const crystalMat = new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0x442200 });
-        for (let i = 0; i < 8; i++) {
-            const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.4), crystalMat);
-            crystal.position.set((Math.random()-0.5)*7, 0.5 + Math.random()*2, (Math.random()-0.5)*7);
-            scene.add(crystal);
-            environmentObjects.push(crystal);
-            floatingCrystals.push(crystal);
-        }
-        // Яркое освещение
-        const pointLight = new THREE.PointLight(0xffaa33, 2, 15);
-        pointLight.position.set(0, 5, 0);
-        scene.add(pointLight);
-        environmentObjects.push(pointLight);
-    }
-    else if (locId === 'diamond_cave') {
-        scene.background = new THREE.Color(0x113355);
-        scene.fog = new THREE.FogExp2(0x113355, 0.01);
-        // Сталактиты и сталагмиты
-        const iceMat = new THREE.MeshStandardMaterial({ color: 0xaaccff, emissive: 0x224466 });
-        for (let i = 0; i < 15; i++) {
-            const stalactite = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1.5, 6), iceMat);
-            stalactite.position.set((Math.random()-0.5)*8, 4.5, (Math.random()-0.5)*8);
-            stalactite.rotation.x = Math.PI;
-            scene.add(stalactite);
-            environmentObjects.push(stalactite);
-            const stalagmite = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1.5, 6), iceMat);
-            stalagmite.position.set((Math.random()-0.5)*8, 0.2, (Math.random()-0.5)*8);
-            scene.add(stalagmite);
-            environmentObjects.push(stalagmite);
-        }
-        // Кристаллы
-        const crystalMat = new THREE.MeshStandardMaterial({ color: 0x88aaff, emissive: 0x224466 });
-        for (let i = 0; i < 10; i++) {
-            const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.5), crystalMat);
-            crystal.position.set((Math.random()-0.5)*7, 0.5 + Math.random()*3, (Math.random()-0.5)*7);
-            scene.add(crystal);
-            environmentObjects.push(crystal);
-        }
-    }
-    else if (locId === 'mithril_mine') {
-        scene.background = new THREE.Color(0x221133);
-        scene.fog = new THREE.FogExp2(0x221133, 0.01);
-        // Магические руны
-        const runeMat = new THREE.MeshStandardMaterial({ color: 0xaa88ff, emissive: 0x442288 });
-        for (let i = 0; i < 8; i++) {
-            const rune = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.1, 8, 16), runeMat);
-            rune.position.set((Math.random()-0.5)*6, 1.5 + Math.random()*2, (Math.random()-0.5)*6);
-            rune.rotation.x = Math.PI/2;
-            rune.rotation.z = Math.random() * Math.PI;
-            scene.add(rune);
-            environmentObjects.push(rune);
-        }
-        // Парящие камни
-        const floatingMat = new THREE.MeshStandardMaterial({ color: 0x8866aa, emissive: 0x331166 });
-        for (let i = 0; i < 5; i++) {
-            const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4), floatingMat);
-            stone.position.set((Math.random()-0.5)*5, 1.5 + Math.random()*2, (Math.random()-0.5)*5);
-            scene.add(stone);
-            environmentObjects.push(stone);
-            floatingCrystals.push(stone);
-        }
-        // Звёздное небо сквозь трещины (частицы)
-        const starGeom = new THREE.BufferGeometry();
-        const starCount = 200;
-        const starPositions = new Float32Array(starCount * 3);
-        for (let i = 0; i < starCount; i++) {
-            starPositions[i*3] = (Math.random() - 0.5) * 20;
-            starPositions[i*3+1] = 8 + Math.random() * 5;
-            starPositions[i*3+2] = (Math.random() - 0.5) * 20;
-        }
-        starGeom.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-        const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1 });
-        const starsSky = new THREE.Points(starGeom, starMat);
-        scene.add(starsSky);
-        environmentObjects.push(starsSky);
-    }
-}
 
         // ==================== РЕСУРСНЫЕ ОБЪЕКТЫ ДЛЯ ОБЫЧНЫХ ЛОКАЦИЙ ====================
         function createResourceObjectsForLocation(locId) {
@@ -3405,8 +3405,8 @@
             for (let i = 0; i < count; i++) {
                 const material = new THREE.MeshStandardMaterial({ color, emissive });
                 const mesh = new THREE.Mesh(geometry, material);
-                // Размещаем в случайном месте в пределах арены
-                mesh.position.set((Math.random() - 0.5) * 8, 0.5 + Math.random() * 2, (Math.random() - 0.5) * 8);
+                // Размещаем почти на полу, с небольшим разбросом по высоте
+                mesh.position.set((Math.random() - 0.5) * 8, 0.2 + Math.random() * 0.3, (Math.random() - 0.5) * 8);
                 mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
                 mesh.userData = { type: 'resource', id: 0, resourceType: resourceType };
                 objects.push(mesh);
@@ -4093,8 +4093,8 @@
                         });
                     }
 
-                    // Пульсация центрального ресурса
-                    if (resourceObjects.length > 0 && resourceObjects[0]) {
+                    // Пульсация только для первого ресурса в режиме боссов
+                    if (bossGroup && resourceObjects.length > 0 && resourceObjects[0]) {
                         const scale = 1 + Math.sin(time * 5) * 0.05;
                         resourceObjects[0].scale.set(scale, scale, scale);
                     }
@@ -4138,5 +4138,3 @@
     </script>
 </body>
 </html>
-
-
