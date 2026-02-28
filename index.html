@@ -3484,6 +3484,118 @@ function createMithrilMineSky() {
     }
     return new THREE.CanvasTexture(canvas);
 }
+        // ==================== ФУНКЦИИ ДЛЯ ТЕКСТУР ПОЛА ====================
+function getFloorTexture(locId) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Базовая заливка
+    switch(locId) {
+        case 'coal_mine':
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // угольная крошка
+            ctx.fillStyle = '#222222';
+            for (let i = 0; i < 2000; i++) {
+                ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 2, 2);
+            }
+            ctx.fillStyle = '#444444';
+            for (let i = 0; i < 1000; i++) {
+                ctx.beginPath();
+                ctx.arc(Math.random()*canvas.width, Math.random()*canvas.height, Math.random()*3+1, 0, 2*Math.PI);
+                ctx.fill();
+            }
+            break;
+        case 'iron_mine':
+            ctx.fillStyle = '#885533';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // ржавчина
+            ctx.fillStyle = '#aa6633';
+            for (let i = 0; i < 1500; i++) {
+                ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 3, 3);
+            }
+            // полосы, имитация рельсов
+            ctx.strokeStyle = '#664422';
+            ctx.lineWidth = 4;
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i*100, 0);
+                ctx.lineTo(i*100, canvas.height);
+                ctx.stroke();
+            }
+            break;
+        case 'gold_mine':
+            // золотистый песок
+            const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            grad.addColorStop(0, '#ccaa55');
+            grad.addColorStop(1, '#aa8833');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // блестки
+            ctx.fillStyle = '#ffdd88';
+            for (let i = 0; i < 500; i++) {
+                ctx.beginPath();
+                ctx.arc(Math.random()*canvas.width, Math.random()*canvas.height, Math.random()*2+1, 0, 2*Math.PI);
+                ctx.fill();
+            }
+            break;
+        case 'diamond_cave':
+            // ледяной пол
+            ctx.fillStyle = '#aaddff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // трещины
+            ctx.strokeStyle = '#88aaff';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 20; i++) {
+                ctx.beginPath();
+                ctx.moveTo(Math.random()*canvas.width, Math.random()*canvas.height);
+                ctx.lineTo(Math.random()*canvas.width, Math.random()*canvas.height);
+                ctx.stroke();
+            }
+            // искорки
+            ctx.fillStyle = '#ffffff';
+            for (let i = 0; i < 800; i++) {
+                ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 1, 1);
+            }
+            break;
+        case 'mithril_mine':
+            // тёмный камень с рунами
+            ctx.fillStyle = '#332244';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // светящиеся линии
+            ctx.strokeStyle = '#aa88ff';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 8; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i*70);
+                ctx.lineTo(canvas.width, i*70+30);
+                ctx.stroke();
+            }
+            break;
+        default:
+            ctx.fillStyle = '#555555';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    return new THREE.CanvasTexture(canvas);
+}
+
+function getFloorBumpTexture(locId) {
+    // Для простоты сгенерируем простую bump-карту (шум)
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#808080'; // средний серый
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < 5000; i++) {
+        const val = Math.floor(Math.random() * 255);
+        ctx.fillStyle = `rgb(${val},${val},${val})`;
+        ctx.fillRect(Math.floor(Math.random()*canvas.width), Math.floor(Math.random()*canvas.height), 2, 2);
+    }
+    return new THREE.CanvasTexture(canvas);
+}
                 // ==================== ОКРУЖЕНИЕ ДЛЯ ОБЫЧНЫХ ЛОКАЦИЙ ====================
         function createEnvironmentForLocation(locId) {
     if (!scene || !THREE) return;
@@ -4457,6 +4569,7 @@ function createMithrilMineSky() {
     </script>
 </body>
 </html>
+
 
 
 
