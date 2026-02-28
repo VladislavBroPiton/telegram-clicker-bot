@@ -4519,60 +4519,74 @@ for (let i = 0; i < count; i++) {
     if (bossGroup) allObjects = allObjects.concat(bossGroup.children);
     const intersects = raycaster.intersectObjects(allObjects, true);
 
-    if (intersects.length > 0) {
-        let hit = intersects[0].object;
-        // Поднимаемся по иерархии в поисках объекта с нужным userData
-        while (hit) {
-            if (hit.userData && (hit.userData.type === 'resource' || hit.userData.isBossPart || hit.userData.type === 'lever')) {
+    if (intersects.length === 0) {
+        debugLog('No intersection');
+        return;
+    }
+
+    // Перебираем все пересечения, ищем первое, у которого есть подходящий userData
+    let hit = null;
+    for (let i = 0; i < intersects.length; i++) {
+        let obj = intersects[i].object;
+        while (obj) {
+            if (obj.userData && (obj.userData.type === 'resource' || obj.userData.isBossPart || obj.userData.type === 'lever')) {
+                hit = obj;
                 break;
             }
-            hit = hit.parent;
+            obj = obj.parent;
         }
-        if (hit) {
-            if (hit.userData.type === 'resource') {
-                if (!canClick) return;
-                canClick = false;
-                setTimeout(() => canClick = true, 200);
+        if (hit) break;
+    }
 
-                hapticFeedback('light');
-                if (hit.scale) {
-                    const originalScale = hit.scale.clone();
-                    hit.scale.set(0.8, 0.8, 0.8);
-                    setTimeout(() => hit.scale.copy(originalScale), 100);
-                }
-                createHitParticles(hit.position.clone());
-                flashObject(hit, 0xffaa22, 150);
+    if (!hit) {
+        debugLog('No valid hit');
+        return;
+    }
 
-                apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
-                    if (data) {
-                        goldSpan.textContent = data.new_gold;
-                        hudExp.textContent = data.new_exp;
-                        updateInventoryDisplay(data.inventory);
-                        loadUser();
+    if (hit.userData.type === 'resource') {
+        if (!canClick) return;
+        canClick = false;
+        setTimeout(() => canClick = true, 200);
 
-                        let phrase = '';
-                        if (data.is_crit) {
-                            phrase = CRIT_PHRASES[Math.floor(Math.random() * CRIT_PHRASES.length)];
-                            flashObject(hit, 0xffdd44, 400);
-                        } else if (data.found_resource && RARE_FIND_PHRASES[data.found_resource]) {
-                            const arr = RARE_FIND_PHRASES[data.found_resource];
-                            phrase = arr[Math.floor(Math.random() * arr.length)];
-                            if (RARE_RESOURCES.includes(data.found_resource)) {
-                                flashObject(hit, 0xaa88ff, 400);
-                            }
-                        }
-                        if (phrase) showToast(phrase, 1000);
+        hapticFeedback('light');
+        if (hit.scale) {
+            const originalScale = hit.scale.clone();
+            hit.scale.set(0.8, 0.8, 0.8);
+            setTimeout(() => hit.scale.copy(originalScale), 100);
+        }
+        createHitParticles(hit.position.clone());
+        flashObject(hit, 0xffaa22, 150);
+
+        apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
+            if (data) {
+                goldSpan.textContent = data.new_gold;
+                hudExp.textContent = data.new_exp;
+                updateInventoryDisplay(data.inventory);
+                loadUser();
+
+                let phrase = '';
+                if (data.is_crit) {
+                    phrase = CRIT_PHRASES[Math.floor(Math.random() * CRIT_PHRASES.length)];
+                    flashObject(hit, 0xffdd44, 400);
+                } else if (data.found_resource && RARE_FIND_PHRASES[data.found_resource]) {
+                    const arr = RARE_FIND_PHRASES[data.found_resource];
+                    phrase = arr[Math.floor(Math.random() * arr.length)];
+                    if (RARE_RESOURCES.includes(data.found_resource)) {
+                        flashObject(hit, 0xaa88ff, 400);
                     }
-                });
-            } else if (hit.userData.isBossPart && !currentLocationId) {
-                debugLog('✅ Это часть босса!');
-                throttledAttackBoss();
-            } else if (hit.userData.type === 'lever') {
-                hit.userData.isOn = !hit.userData.isOn;
-                if (hit.children[1]) hit.children[1].rotation.z = hit.userData.isOn ? -0.3 : 0.3;
-                showToast('Рычаг переключён', 1000);
+                }
+                if (phrase) showToast(phrase, 1000);
             }
-        } else {
+        });
+    } else if (hit.userData.isBossPart && !currentLocationId) {
+        debugLog('✅ Это часть босса!');
+        throttledAttackBoss();
+    } else if (hit.userData.type === 'lever') {
+        hit.userData.isOn = !hit.userData.isOn;
+        if (hit.children[1]) hit.children[1].rotation.z = hit.userData.isOn ? -0.3 : 0.3;
+        showToast('Рычаг переключён', 1000);
+    }
+} else {
             debugLog('No intersection with known object');
         }
     } else {
@@ -4693,6 +4707,7 @@ loadUser();
     </script>
 </body>
 </html>
+
 
 
 
