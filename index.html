@@ -4510,6 +4510,8 @@ for (let i = 0; i < count; i++) {
                 const mouse = new THREE.Vector2();
 
                 function handleClick(event) {
+                    console.log('handleClick', event);
+console.log('resourceObjects length:', resourceObjects.length);
     const rect = renderer.domElement.getBoundingClientRect();
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -4518,6 +4520,10 @@ for (let i = 0; i < count; i++) {
     let allObjects = resourceObjects;
     if (bossGroup) allObjects = allObjects.concat(bossGroup.children);
     const intersects = raycaster.intersectObjects(allObjects, true);
+                    console.log('intersects length:', intersects.length);
+for (let i = 0; i < Math.min(intersects.length, 5); i++) {
+    console.log('intersect', i, intersects[i].object);
+}
 
     if (intersects.length === 0) {
         debugLog('No intersection');
@@ -4700,6 +4706,7 @@ loadUser();
     </script>
 </body>
 </html>
+
 
 
 
