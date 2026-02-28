@@ -3970,29 +3970,45 @@ for (let i = 0; i < detailCount; i++) {
                     emissive = 0x224466;
                     break;
                 case 'mithril':
-                    color = 0xaa88ff;
-                    geometry = new THREE.TorusKnotGeometry(0.25, 0.1, 20, 5);
-                    emissive = 0x442288;
-                    break;
-                default:
-                    color = 0x888888;
-                    geometry = new THREE.SphereGeometry(0.4);
-                    emissive = 0x222222;
-            }
-
-            for (let i = 0; i < count; i++) {
-                const material = new THREE.MeshStandardMaterial({ color, emissive });
-                const mesh = new THREE.Mesh(geometry, material);
-                // Размещаем почти на полу, с небольшим разбросом по высоте
-                mesh.position.set((Math.random() - 0.5) * 8, 0.2 + Math.random() * 0.3, (Math.random() - 0.5) * 8);
-                mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-                mesh.castShadow = true;
-                mesh.receiveShadow = true;
-                mesh.userData = { type: 'resource', id: 0, resourceType: resourceType };
-                objects.push(mesh);
-            }
-            return objects;
-        }
+    // Создаём группу кристаллов вместо одного объекта
+    const group = new THREE.Group();
+    
+    // Центральный кристалл (октаэдр)
+    const coreGeo = new THREE.OctahedronGeometry(0.3);
+    const coreMat = new THREE.MeshStandardMaterial({
+        color: 0xaa88ff,
+        emissive: 0x442288,
+        roughness: 0.2,
+        metalness: 0.3
+    });
+    const core = new THREE.Mesh(coreGeo, coreMat);
+    group.add(core);
+    
+    // Маленькие кристаллы вокруг
+    for (let j = 0; j < 4; j++) {
+        const angle = (j / 4) * Math.PI * 2;
+        const smallGeo = new THREE.OctahedronGeometry(0.15);
+        const smallMat = new THREE.MeshStandardMaterial({
+            color: 0xcc88ff,
+            emissive: 0x331166,
+            transparent: true,
+            opacity: 0.8
+        });
+        const small = new THREE.Mesh(smallGeo, smallMat);
+        small.position.set(
+            Math.cos(angle) * 0.6,
+            Math.sin(angle * 2) * 0.2,
+            Math.sin(angle) * 0.6
+        );
+        group.add(small);
+    }
+    
+    // Вращение группы будет задаваться в цикле animate позже,
+    // но можно сохранить ссылку на группу для анимации
+    group.userData = { rotates: true };
+    
+    // Вместо одного меша возвращаем группу
+    return group; // обратите внимание: нужно будет адаптировать цикл создания объектов
 
         // ==================== ОЧИСТКА ОКРУЖЕНИЯ ====================
         function clearEnvironment() {
@@ -4635,6 +4651,7 @@ for (let i = 0; i < detailCount; i++) {
     </script>
 </body>
 </html>
+
 
 
 
