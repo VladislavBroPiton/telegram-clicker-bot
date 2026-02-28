@@ -3947,61 +3947,107 @@ for (let i = 0; i < detailCount; i++) {
             }
 
             // Цвета и форма
-            let color, geometry, emissive;
-            switch (resourceType) {
-                case 'coal':
-                    color = 0x222222;
-                    geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-                    emissive = 0x111111;
-                    break;
-                case 'iron':
-                    color = 0xaa5533;
-                    geometry = new THREE.CylinderGeometry(0.3, 0.3, 0.6, 6);
-                    emissive = 0x331100;
-                    break;
-                case 'gold':
-                    color = 0xffaa00;
-                    geometry = new THREE.SphereGeometry(0.35, 8);
-                    emissive = 0x442200;
-                    break;
-                case 'diamond':
-                    color = 0x88aaff;
-                    geometry = new THREE.OctahedronGeometry(0.4);
-                    emissive = 0x224466;
-                    break;
-                case 'mithril':
-    // Создаём группу кристаллов вместо одного объекта
-    const group = new THREE.Group();
-    
-    // Центральный кристалл (октаэдр)
-    const coreGeo = new THREE.OctahedronGeometry(0.3);
-    const coreMat = new THREE.MeshStandardMaterial({
-        color: 0xaa88ff,
-        emissive: 0x442288,
-        roughness: 0.2,
-        metalness: 0.3
-    });
-    const core = new THREE.Mesh(coreGeo, coreMat);
-    group.add(core);
-    
-    // Маленькие кристаллы вокруг
-    for (let j = 0; j < 4; j++) {
-        const angle = (j / 4) * Math.PI * 2;
-        const smallGeo = new THREE.OctahedronGeometry(0.15);
-        const smallMat = new THREE.MeshStandardMaterial({
-            color: 0xcc88ff,
-            emissive: 0x331166,
-            transparent: true,
-            opacity: 0.8
+let color, geometry, emissive;
+switch (resourceType) {
+    case 'coal':
+        color = 0x222222;
+        geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+        emissive = 0x111111;
+        break;
+    case 'iron':
+        color = 0xaa5533;
+        geometry = new THREE.CylinderGeometry(0.3, 0.3, 0.6, 6);
+        emissive = 0x331100;
+        break;
+    case 'gold':
+        color = 0xffaa00;
+        geometry = new THREE.SphereGeometry(0.35, 8);
+        emissive = 0x442200;
+        break;
+    case 'diamond':
+        color = 0x88aaff;
+        geometry = new THREE.OctahedronGeometry(0.4);
+        emissive = 0x224466;
+        break;
+    case 'mithril':
+        // Для мифрила отдельная обработка в цикле, здесь можно оставить запасные значения
+        color = 0xaa88ff;
+        geometry = null; // не используется
+        emissive = 0x442288;
+        break;
+    default:
+        color = 0x888888;
+        geometry = new THREE.SphereGeometry(0.4);
+        emissive = 0x222222;
+}
+
+for (let i = 0; i < count; i++) {
+    let obj;
+
+    if (resourceType === 'mithril') {
+        // Создаём группу кристаллов для мифрила
+        const group = new THREE.Group();
+
+        // Центральный кристалл (октаэдр)
+        const coreGeo = new THREE.OctahedronGeometry(0.3);
+        const coreMat = new THREE.MeshStandardMaterial({
+            color: 0xaa88ff,
+            emissive: 0x442288,
+            roughness: 0.2,
+            metalness: 0.3
         });
-        const small = new THREE.Mesh(smallGeo, smallMat);
-        small.position.set(
-            Math.cos(angle) * 0.6,
-            Math.sin(angle * 2) * 0.2,
-            Math.sin(angle) * 0.6
-        );
-        group.add(small);
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        core.castShadow = true;
+        core.receiveShadow = true;
+        group.add(core);
+
+        // Маленькие кристаллы вокруг
+        for (let j = 0; j < 4; j++) {
+            const angle = (j / 4) * Math.PI * 2;
+            const smallGeo = new THREE.OctahedronGeometry(0.15);
+            const smallMat = new THREE.MeshStandardMaterial({
+                color: 0xcc88ff,
+                emissive: 0x331166,
+                transparent: true,
+                opacity: 0.8
+            });
+            const small = new THREE.Mesh(smallGeo, smallMat);
+            small.position.set(
+                Math.cos(angle) * 0.6,
+                Math.sin(angle * 2) * 0.2,
+                Math.sin(angle) * 0.6
+            );
+            small.castShadow = true;
+            small.receiveShadow = true;
+            group.add(small);
+        }
+
+        group.userData = { type: 'resource', id: 0, resourceType: 'mithril' };
+        obj = group;
+    } else {
+        // Для остальных ресурсов — обычный меш
+        const material = new THREE.MeshStandardMaterial({ color, emissive });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.userData = { type: 'resource', id: 0, resourceType: resourceType };
+        obj = mesh;
     }
+
+    // Общие настройки для всех объектов
+    obj.position.set(
+        (Math.random() - 0.5) * 8,
+        0.2 + Math.random() * 0.3,
+        (Math.random() - 0.5) * 8
+    );
+    obj.rotation.set(
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI
+    );
+    obj.castShadow = true;
+    obj.receiveShadow = true;
+
+    objects.push(obj);
+}
     
 
         // ==================== ОЧИСТКА ОКРУЖЕНИЯ ====================
@@ -4645,6 +4691,7 @@ for (let i = 0; i < detailCount; i++) {
     </script>
 </body>
 </html>
+
 
 
 
