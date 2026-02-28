@@ -3629,16 +3629,80 @@ function getFloorBumpTexture(locId) {
     scene.add(skyMesh);
     environmentObjects.push(skyMesh);
 
-    // --- БАЗОВЫЙ ПОЛ ---
-    const floorGeometry = new THREE.CircleGeometry(15, 32);
-    const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
-    floorMaterial.receiveShadow = true;
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -0.1;
-    floor.receiveShadow = true;
-    scene.add(floor);
-    environmentObjects.push(floor);
+    // Пол с текстурой
+const floorGeometry = new THREE.CircleGeometry(15, 32);
+const floorTexture = getFloorTexture(locId);
+floorTexture.wrapS = THREE.RepeatWrapping;
+floorTexture.wrapT = THREE.RepeatWrapping;
+floorTexture.repeat.set(4, 4); // чтобы текстура повторялась несколько раз
+
+const floorBump = getFloorBumpTexture(locId);
+floorBump.wrapS = THREE.RepeatWrapping;
+floorBump.wrapT = THREE.RepeatWrapping;
+floorBump.repeat.set(4, 4);
+
+const floorMaterial = new THREE.MeshStandardMaterial({
+    map: floorTexture,
+    bumpMap: floorBump,
+    bumpScale: 0.5,
+    color: 0xffffff,
+    emissive: 0x000000,
+    roughness: 0.7,
+    metalness: 0.1
+});
+floorMaterial.receiveShadow = true;
+
+const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = -0.1;
+floor.receiveShadow = true;
+scene.add(floor);
+environmentObjects.push(floor);
+            // Добавляем случайные камни/детали на пол
+const detailCount = 20;
+for (let i = 0; i < detailCount; i++) {
+    let detailMat;
+    let detailGeo;
+    let scale = 0.1 + Math.random() * 0.2;
+    switch(locId) {
+        case 'coal_mine':
+            detailGeo = new THREE.DodecahedronGeometry(0.15);
+            detailMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+            break;
+        case 'iron_mine':
+            detailGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+            detailMat = new THREE.MeshStandardMaterial({ color: 0xaa5533 });
+            break;
+        case 'gold_mine':
+            detailGeo = new THREE.SphereGeometry(0.1);
+            detailMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
+            break;
+        case 'diamond_cave':
+            detailGeo = new THREE.OctahedronGeometry(0.1);
+            detailMat = new THREE.MeshStandardMaterial({ color: 0x88aaff, emissive: 0x224466 });
+            break;
+        case 'mithril_mine':
+            detailGeo = new THREE.TorusKnotGeometry(0.08, 0.03, 20, 5);
+            detailMat = new THREE.MeshStandardMaterial({ color: 0xaa88ff, emissive: 0x442288 });
+            break;
+        default:
+            continue;
+    }
+    const detail = new THREE.Mesh(detailGeo, detailMat);
+    // случайное положение в пределах круга
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 5 + Math.random() * 8; // от 5 до 13
+    detail.position.set(
+        Math.cos(angle) * radius,
+        0.05,
+        Math.sin(angle) * radius
+    );
+    detail.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+    detail.castShadow = true;
+    detail.receiveShadow = true;
+    scene.add(detail);
+    environmentObjects.push(detail);
+}
 
     // ========== УГОЛЬНАЯ ШАХТА ==========
     if (locId === 'coal_mine') {
@@ -4341,6 +4405,8 @@ function getFloorBumpTexture(locId) {
                 light2.shadow.mapSize.height = 1024;
                 light2.shadow.bias = -0.0001;
                 scene.add(light2);
+                const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+                scene.add(hemiLight);
 
 
                 if (currentLocationId) {
@@ -4569,6 +4635,7 @@ function getFloorBumpTexture(locId) {
     </script>
 </body>
 </html>
+
 
 
 
