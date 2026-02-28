@@ -785,6 +785,7 @@
         // ===== ПЕРЕКЛЮЧЕНИЕ ЛОКАЦИЙ =====
         let currentMode = 'boss'; // 'boss' или 'location'
         let currentLocationIndex = 0;
+        let locationInitialized = false; // флаг, что окружение локации уже создано
 
         // ===== ЗАЩИТА ОТ АВТОКЛИКЕРА =====
         let canClick = true;          // для кликов по ресурсам
@@ -3354,7 +3355,7 @@
                 }
                 sparkGeom.setAttribute('position', new THREE.BufferAttribute(sparkPositions, 3));
                 const sparkMat = new THREE.PointsMaterial({ color: 0xffaa22, size: 0.1 });
-                const sparkParticles = new THREE.Points(sparkGeom, sparkMat);
+                sparkParticles = new THREE.Points(sparkGeom, sparkMat);
                 scene.add(sparkParticles);
                 environmentObjects.push(sparkParticles);
 
@@ -3610,11 +3611,25 @@
                 if (threeReady) loadBossInfo(currentBossId);
                 else setTimeout(() => loadBossInfo(currentBossId), 500);
             } else if (currentLocationId) {
-                // Если мы в обычной локации, скрываем панель босса
+                // Если мы в обычной локации
                 bossHealthDiv.style.display = 'none';
-                // Загружаем окружение для локации
-                if (threeReady) {
+                if (!locationInitialized && threeReady) {
+                    // Первый запуск - создаём окружение
                     loadLocationInfo(currentLocationId);
+                } else {
+                    // Уже инициализировано, просто обновляем HUD
+                    goldSpan.textContent = data.gold;
+                    updateExpBar(data.level, data.exp);
+                    updateInventoryDisplay(data.inventory);
+                    let toolDisplay = 'неизвестно';
+                    if (data.active_tool) {
+                        const parts = data.active_tool.split('/');
+                        const toolCode = parts[0];
+                        const toolLevel = parts[1] ? `+${parts[1]}` : '';
+                        const baseName = TOOL_NAMES[toolCode] || toolCode;
+                        toolDisplay = baseName + (toolLevel ? ` ${toolLevel}` : '');
+                    }
+                    activeToolSpan.textContent = toolDisplay;
                 }
             }
         }
@@ -3663,6 +3678,7 @@
             
             // Обновляем навигацию
             updateNavigation();
+            locationInitialized = true;
         }
 
         function updateNavigation() {
