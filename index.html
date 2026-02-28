@@ -785,6 +785,7 @@
         let dustParticles = null;
         let waterPlane = null;
         let leverObjects = [];
+        let skySphere = null;
 
         // ===== ПЕРЕКЛЮЧЕНИЕ ЛОКАЦИЙ =====
         let currentMode = 'boss'; // 'boss' или 'location'
@@ -3455,28 +3456,167 @@ function createMithrilMineSky() {
                 scene.fog = new THREE.FogExp2(0x442200, 0.01);
             }
         }
+
+        // ==================== УЛУЧШЕННЫЕ ФУНКЦИИ ДЛЯ НЕБА ====================
+function createCoalMineSky() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    // Градиент от тёмно-коричневого к чёрному
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, '#221100');
+    grad.addColorStop(0.8, '#110000');
+    grad.addColorStop(1, '#000000');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Едва заметные звёзды
+    for (let i = 0; i < 300; i++) {
+        ctx.fillStyle = `rgba(255, 200, 150, ${Math.random()*0.2+0.1})`;
+        ctx.beginPath();
+        ctx.arc(Math.random()*canvas.width, Math.random()*canvas.height, Math.random()*2+0.5, 0, 2*Math.PI);
+        ctx.fill();
+    }
+    // Лёгкая дымка у горизонта
+    ctx.fillStyle = 'rgba(100, 20, 0, 0.1)';
+    ctx.fillRect(0, canvas.height*0.8, canvas.width, canvas.height*0.2);
+    return new THREE.CanvasTexture(canvas);
+}
+
+function createIronMineSky() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, '#663322');
+    grad.addColorStop(0.6, '#442211');
+    grad.addColorStop(1, '#221100');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Искры (мелкие точки)
+    for (let i = 0; i < 200; i++) {
+        ctx.fillStyle = `rgba(255, 150, 50, ${Math.random()*0.3})`;
+        ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 2, 2);
+    }
+    // Тёмные полосы дыма
+    ctx.fillStyle = 'rgba(0,0,0,0.1)';
+    for (let i = 0; i < 10; i++) {
+        ctx.fillRect(0, Math.random()*canvas.height, canvas.width, 20);
+    }
+    return new THREE.CanvasTexture(canvas);
+}
+
+function createGoldMineSky() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    // Радиальный градиент – имитация золотого сияния
+    const grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width/2);
+    grad.addColorStop(0, '#ffaa33');
+    grad.addColorStop(0.4, '#aa5522');
+    grad.addColorStop(0.8, '#442200');
+    grad.addColorStop(1, '#221100');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Лучи
+    ctx.strokeStyle = 'rgba(255, 220, 150, 0.1)';
+    for (let i = 0; i < 16; i++) {
+        ctx.beginPath();
+        ctx.moveTo(canvas.width/2, canvas.height/2);
+        ctx.lineTo(canvas.width/2 + Math.cos(i*Math.PI/8)*600, canvas.height/2 + Math.sin(i*Math.PI/8)*600);
+        ctx.stroke();
+    }
+    return new THREE.CanvasTexture(canvas);
+}
+
+function createDiamondCaveSky() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, '#224466');
+    grad.addColorStop(0.5, '#113355');
+    grad.addColorStop(1, '#002244');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Множество ярких звёзд
+    for (let i = 0; i < 600; i++) {
+        ctx.fillStyle = `rgba(255,255,255,${Math.random()*0.8+0.2})`;
+        ctx.beginPath();
+        ctx.arc(Math.random()*canvas.width, Math.random()*canvas.height, Math.random()*3+0.5, 0, 2*Math.PI);
+        ctx.fill();
+    }
+    // Лёгкая туманность
+    const grad2 = ctx.createRadialGradient(300, 200, 0, 300, 200, 300);
+    grad2.addColorStop(0, 'rgba(100, 50, 150, 0.1)');
+    grad2.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad2;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    return new THREE.CanvasTexture(canvas);
+}
+
+function createMithrilMineSky() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    // Тёмно-фиолетовый фон
+    ctx.fillStyle = '#221133';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Северное сияние – три волны
+    for (let layer = 0; layer < 3; layer++) {
+        const y = 150 + layer * 80;
+        const grd = ctx.createLinearGradient(0, y, canvas.width, y+60);
+        grd.addColorStop(0, 'rgba(100, 200, 255, 0.15)');
+        grd.addColorStop(0.5, 'rgba(200, 100, 255, 0.3)');
+        grd.addColorStop(1, 'rgba(100, 200, 255, 0.15)');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, y, canvas.width, 60);
+    }
+    // Звёзды
+    for (let i = 0; i < 400; i++) {
+        ctx.fillStyle = `rgba(255,255,255,${Math.random()*0.8})`;
+        ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 1, 1);
+    }
+    return new THREE.CanvasTexture(canvas);
+}
                 // ==================== ОКРУЖЕНИЕ ДЛЯ ОБЫЧНЫХ ЛОКАЦИЙ ====================
         function createEnvironmentForLocation(locId) {
     if (!scene || !THREE) return;
     clearEnvironment();
 
-    // Создаём небо (сфера)
+    // --- СОЗДАНИЕ НЕБА (сфера с текстурой) ---
     const skyGeo = new THREE.SphereGeometry(100, 32, 16);
     let skyTex;
-    switch(locId) {
-        case 'coal_mine': skyTex = createCoalMineSky(); break;
-        case 'iron_mine': skyTex = createIronMineSky(); break;
-        case 'gold_mine': skyTex = createGoldMineSky(); break;
-        case 'diamond_cave': skyTex = createDiamondCaveSky(); break;
-        case 'mithril_mine': skyTex = createMithrilMineSky(); break;
-        default: skyTex = createCoalMineSky();
+    switch (locId) {
+        case 'coal_mine':
+            skyTex = createCoalMineSky();
+            break;
+        case 'iron_mine':
+            skyTex = createIronMineSky();
+            break;
+        case 'gold_mine':
+            skyTex = createGoldMineSky();
+            break;
+        case 'diamond_cave':
+            skyTex = createDiamondCaveSky();
+            break;
+        case 'mithril_mine':
+            skyTex = createMithrilMineSky();
+            break;
+        default:
+            skyTex = createCoalMineSky();
     }
     const skyMat = new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide });
-    const skySphere = new THREE.Mesh(skyGeo, skyMat);
-    scene.add(skySphere);
-    environmentObjects.push(skySphere);
+    const skyMesh = new THREE.Mesh(skyGeo, skyMat);
+    skySphere = skyMesh; // сохраняем для анимации
+    scene.add(skyMesh);
+    environmentObjects.push(skyMesh);
 
-    // Базовый пол для всех локаций
+    // --- БАЗОВЫЙ ПОЛ ---
     const floorGeometry = new THREE.CircleGeometry(15, 32);
     const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
     floorMaterial.receiveShadow = true;
@@ -3492,153 +3632,221 @@ function createMithrilMineSky() {
         scene.fog = new THREE.FogExp2(0x111111, 0.03);
         // Деревянные крепи
         const woodMat = new THREE.MeshStandardMaterial({ color: 0x8B5A2B });
-        [[-4,1,-4],[4,1,-4],[-4,1,4],[4,1,4],[-2,1,-2],[2,1,-2],[-2,1,2],[2,1,2]].forEach(pos => {
-            const p = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,2,6), woodMat);
-            p.position.set(pos[0],pos[1],pos[2]); p.castShadow = true; p.receiveShadow = true;
-            scene.add(p); environmentObjects.push(p);
+        const positions = [
+            [-4,1,-4],[4,1,-4],[-4,1,4],[4,1,4],
+            [-2,1,-2],[2,1,-2],[-2,1,2],[2,1,2]
+        ];
+        positions.forEach(pos => {
+            const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,2,6), woodMat);
+            pillar.position.set(pos[0],pos[1],pos[2]);
+            pillar.castShadow = true; pillar.receiveShadow = true;
+            scene.add(pillar); environmentObjects.push(pillar);
         });
+
         // Вагонетка
-        const cart = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.8,1.0), new THREE.MeshStandardMaterial({ color:0x555555 }));
-        body.position.y=0.4; body.castShadow=body.receiveShadow=true; cart.add(body);
-        for(let s=-1;s<=1;s+=2) for(let a=-1;a<=1;a+=2) {
-            const w = new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.25,0.2,8), new THREE.MeshStandardMaterial({ color:0x222222 }));
-            w.rotation.z=Math.PI/2; w.position.set(s*0.7,0.2,a*0.5); w.castShadow=w.receiveShadow=true; cart.add(w);
+        const cartMat = new THREE.MeshStandardMaterial({ color:0x555555 });
+        const wheelMat = new THREE.MeshStandardMaterial({ color:0x222222 });
+        const cartGroup = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.8,1.0), cartMat);
+        body.position.y=0.4; body.castShadow=body.receiveShadow=true;
+        cartGroup.add(body);
+        for (let side=-1; side<=1; side+=2) {
+            for (let axle=-1; axle<=1; axle+=2) {
+                const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.25,0.2,8), wheelMat);
+                wheel.rotation.z=Math.PI/2;
+                wheel.position.set(side*0.7,0.2,axle*0.5);
+                wheel.castShadow=wheel.receiveShadow=true;
+                cartGroup.add(wheel);
+            }
         }
-        cart.position.set(0,0.2,2); scene.add(cart); environmentObjects.push(cart);
+        cartGroup.position.set(0,0.2,2);
+        scene.add(cartGroup); environmentObjects.push(cartGroup);
+
         // Угольная пыль
         const dustGeom = new THREE.BufferGeometry();
-        const dustPos = new Float32Array(60*3);
-        for(let i=0;i<60;i++) { dustPos[i*3]=(Math.random()-0.5)*14; dustPos[i*3+1]=0.5+Math.random()*4; dustPos[i*3+2]=(Math.random()-0.5)*14; }
-        dustGeom.setAttribute('position', new THREE.BufferAttribute(dustPos,3));
-        dustParticles = new THREE.Points(dustGeom, new THREE.PointsMaterial({ color:0x888888, size:0.15, transparent:true, opacity:0.5 }));
+        const dustPositions = new Float32Array(60*3);
+        for (let i=0; i<60; i++) {
+            dustPositions[i*3]   = (Math.random()-0.5)*14;
+            dustPositions[i*3+1] = 0.5 + Math.random()*4;
+            dustPositions[i*3+2] = (Math.random()-0.5)*14;
+        }
+        dustGeom.setAttribute('position', new THREE.BufferAttribute(dustPositions,3));
+        const dustMat = new THREE.PointsMaterial({ color:0x888888, size:0.15, transparent:true, opacity:0.5 });
+        dustParticles = new THREE.Points(dustGeom, dustMat);
         scene.add(dustParticles); environmentObjects.push(dustParticles);
+
         // Фонари
         const lampMat = new THREE.MeshStandardMaterial({ color:0x888888 });
         const lightMat = new THREE.MeshStandardMaterial({ color:0xffaa66, emissive:0x442200 });
-        for(let i=0;i<3;i++) {
-            const a = (i/3)*Math.PI*2; const x=Math.sin(a)*5, z=Math.cos(a)*5;
+        for (let i=0; i<3; i++) {
+            const angle = (i/3)*Math.PI*2;
+            const x = Math.sin(angle)*5, z = Math.cos(angle)*5;
             const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,3), lampMat);
-            pole.position.set(x,1.5,z); pole.castShadow=pole.receiveShadow=true; scene.add(pole); environmentObjects.push(pole);
+            pole.position.set(x,1.5,z); pole.castShadow=pole.receiveShadow=true;
+            scene.add(pole); environmentObjects.push(pole);
             const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.3), lightMat);
-            lamp.position.set(x,3.0,z); lamp.castShadow=true; scene.add(lamp); environmentObjects.push(lamp);
+            lamp.position.set(x,3.0,z); lamp.castShadow=true;
+            scene.add(lamp); environmentObjects.push(lamp);
             const light = new THREE.PointLight(0xffaa66,0.8,8);
-            light.position.set(x,3.0,z); light.castShadow=true; light.shadow.mapSize.width=512; light.shadow.mapSize.height=512;
-            scene.add(light); environmentObjects.push(light); torchLights.push({ light, baseIntensity:0.8, flame:lamp });
+            light.position.set(x,3.0,z); light.castShadow=true;
+            light.shadow.mapSize.width=512; light.shadow.mapSize.height=512;
+            scene.add(light); environmentObjects.push(light);
+            torchLights.push({ light, baseIntensity:0.8, flame:lamp });
         }
+
         // Рычаг
-        const lever = new THREE.Group();
+        const leverGroup = new THREE.Group();
         const base = new THREE.Mesh(new THREE.BoxGeometry(0.4,0.1,0.6), new THREE.MeshStandardMaterial({ color:0x886644 }));
-        base.position.y=0.05; base.castShadow=base.receiveShadow=true; lever.add(base);
+        base.position.y=0.05; base.castShadow=base.receiveShadow=true; leverGroup.add(base);
         const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.8), new THREE.MeshStandardMaterial({ color:0xaa8866 }));
-        handle.position.y=0.5; handle.rotation.z=0.3; handle.castShadow=handle.receiveShadow=true; lever.add(handle);
-        lever.position.set(2,0.1,2); lever.userData={ type:'lever', isOn:false };
-        scene.add(lever); environmentObjects.push(lever); leverObjects.push(lever);
+        handle.position.y=0.5; handle.rotation.z=0.3; handle.castShadow=handle.receiveShadow=true; leverGroup.add(handle);
+        leverGroup.position.set(2,0.1,2); leverGroup.userData={ type:'lever', isOn:false };
+        scene.add(leverGroup); environmentObjects.push(leverGroup); leverObjects.push(leverGroup);
+
         playAmbient(locId);
     }
+
     // ========== ЖЕЛЕЗНЫЙ РУДНИК ==========
     else if (locId === 'iron_mine') {
         scene.fog = new THREE.FogExp2(0x442211, 0.02);
-        // Рельсы
         const railMat = new THREE.MeshStandardMaterial({ color:0x886644 });
-        for(let i=-1;i<=1;i++) {
-            const r = new THREE.Mesh(new THREE.BoxGeometry(8,0.1,0.3), railMat);
-            r.position.set(0,0.1,i*2); r.receiveShadow=r.castShadow=true; scene.add(r); environmentObjects.push(r);
+        for (let i=-1; i<=1; i++) {
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(8,0.1,0.3), railMat);
+            rail.position.set(0,0.1,i*2); rail.receiveShadow=rail.castShadow=true;
+            scene.add(rail); environmentObjects.push(rail);
         }
-        // Бочки
-        for(let i=0;i<4;i++) {
-            const b = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,1.0,8), new THREE.MeshStandardMaterial({ color:0x8B4513 }));
-            b.position.set((Math.random()-0.5)*6,0.5,(Math.random()-0.5)*6); b.rotation.y=Math.random()*Math.PI;
-            b.castShadow=b.receiveShadow=true; scene.add(b); environmentObjects.push(b);
+        const barrelMat = new THREE.MeshStandardMaterial({ color:0x8B4513 });
+        for (let i=0; i<4; i++) {
+            const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,1.0,8), barrelMat);
+            barrel.position.set((Math.random()-0.5)*6,0.5,(Math.random()-0.5)*6);
+            barrel.rotation.y = Math.random()*Math.PI;
+            barrel.castShadow=barrel.receiveShadow=true;
+            scene.add(barrel); environmentObjects.push(barrel);
         }
-        // Шестерни
         const gearMat = new THREE.MeshStandardMaterial({ color:0xaa5533 });
-        for(let i=0;i<3;i++) {
-            const g = new THREE.Group();
+        for (let i=0; i<3; i++) {
+            const gearGroup = new THREE.Group();
             const gear = new THREE.Mesh(new THREE.TorusGeometry(0.5,0.1,8,24), gearMat);
-            gear.rotation.x=Math.PI/2; gear.castShadow=gear.receiveShadow=true; g.add(gear);
+            gear.rotation.x = Math.PI/2; gear.castShadow=gear.receiveShadow=true;
+            gearGroup.add(gear);
             const axle = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.8), gearMat);
-            axle.position.y=0.4; axle.castShadow=axle.receiveShadow=true; g.add(axle);
-            g.position.set((Math.random()-0.5)*6,0.5,(Math.random()-0.5)*6); g.rotation.z=Math.random()*Math.PI;
-            scene.add(g); environmentObjects.push(g); gears.push({ group:g, speed:0.02+Math.random()*0.02 });
+            axle.position.y=0.4; axle.castShadow=axle.receiveShadow=true;
+            gearGroup.add(axle);
+            gearGroup.position.set((Math.random()-0.5)*6,0.5,(Math.random()-0.5)*6);
+            gearGroup.rotation.z = Math.random()*Math.PI;
+            scene.add(gearGroup); environmentObjects.push(gearGroup);
+            gears.push({ group:gearGroup, speed:0.02+Math.random()*0.02 });
         }
-        // Искры
         const sparkGeom = new THREE.BufferGeometry();
         const sparkPos = new Float32Array(40*3);
-        for(let i=0;i<40;i++) { sparkPos[i*3]=(Math.random()-0.5)*12; sparkPos[i*3+1]=0.2+Math.random()*3; sparkPos[i*3+2]=(Math.random()-0.5)*12; }
+        for (let i=0; i<40; i++) {
+            sparkPos[i*3] = (Math.random()-0.5)*12;
+            sparkPos[i*3+1] = 0.2+Math.random()*3;
+            sparkPos[i*3+2] = (Math.random()-0.5)*12;
+        }
         sparkGeom.setAttribute('position', new THREE.BufferAttribute(sparkPos,3));
         sparkParticles = new THREE.Points(sparkGeom, new THREE.PointsMaterial({ color:0xffaa22, size:0.15 }));
         scene.add(sparkParticles); environmentObjects.push(sparkParticles);
-        // Освещение
         scene.add(new THREE.AmbientLight(0x442211,0.5));
-        const pl = new THREE.PointLight(0xff6633,1,12); pl.position.set(0,3,0); pl.castShadow=true;
-        pl.shadow.mapSize.width=512; pl.shadow.mapSize.height=512; scene.add(pl); environmentObjects.push(pl);
+        const pointLight = new THREE.PointLight(0xff6633,1,12);
+        pointLight.position.set(0,3,0); pointLight.castShadow=true;
+        pointLight.shadow.mapSize.width=512; pointLight.shadow.mapSize.height=512;
+        scene.add(pointLight); environmentObjects.push(pointLight);
         playAmbient(locId);
     }
+
     // ========== ЗОЛОТАЯ ЖИЛА ==========
     else if (locId === 'gold_mine') {
         scene.fog = new THREE.FogExp2(0x332211, 0.01);
-        // Прожилки
-        for(let i=0;i<10;i++) {
-            const v = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.5+Math.random(),0.2), new THREE.MeshStandardMaterial({ color:0xffaa00, emissive:0x442200 }));
-            v.position.set((Math.random()-0.5)*8,1+Math.random()*3,(Math.random()-0.5)*8); v.castShadow=v.receiveShadow=true; scene.add(v); environmentObjects.push(v);
+        const veinMat = new THREE.MeshStandardMaterial({ color:0xffaa00, emissive:0x442200 });
+        for (let i=0; i<10; i++) {
+            const vein = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.5+Math.random(),0.2), veinMat);
+            vein.position.set((Math.random()-0.5)*8, 1+Math.random()*3, (Math.random()-0.5)*8);
+            vein.castShadow=vein.receiveShadow=true;
+            scene.add(vein); environmentObjects.push(vein);
         }
-        // Кристаллы
-        for(let i=0;i<8;i++) {
-            const c = new THREE.Mesh(new THREE.OctahedronGeometry(0.4), new THREE.MeshStandardMaterial({ color:0xffaa44, emissive:0x442200 }));
-            c.position.set((Math.random()-0.5)*7,0.5+Math.random()*2,(Math.random()-0.5)*7); c.castShadow=c.receiveShadow=true;
-            scene.add(c); environmentObjects.push(c); floatingCrystals.push(c);
+        const crystalMat = new THREE.MeshStandardMaterial({ color:0xffaa44, emissive:0x442200 });
+        for (let i=0; i<8; i++) {
+            const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.4), crystalMat);
+            crystal.position.set((Math.random()-0.5)*7, 0.5+Math.random()*2, (Math.random()-0.5)*7);
+            crystal.castShadow=crystal.receiveShadow=true;
+            scene.add(crystal); environmentObjects.push(crystal);
+            floatingCrystals.push(crystal);
         }
-        // Яркий свет
-        const pl = new THREE.PointLight(0xffaa33,2,15); pl.position.set(0,5,0); pl.castShadow=true;
-        pl.shadow.mapSize.width=1024; pl.shadow.mapSize.height=1024; scene.add(pl); environmentObjects.push(pl);
+        const pointLight = new THREE.PointLight(0xffaa33,2,15);
+        pointLight.position.set(0,5,0); pointLight.castShadow=true;
+        pointLight.shadow.mapSize.width=1024; pointLight.shadow.mapSize.height=1024;
+        scene.add(pointLight); environmentObjects.push(pointLight);
         playAmbient(locId);
     }
+
     // ========== АЛМАЗНАЯ ПЕЩЕРА ==========
     else if (locId === 'diamond_cave') {
         scene.fog = new THREE.FogExp2(0x113355, 0.01);
         const iceMat = new THREE.MeshStandardMaterial({ color:0xaaccff, emissive:0x224466 });
-        for(let i=0;i<15;i++) {
-            const x=(Math.random()-0.5)*12, z=(Math.random()-0.5)*12; if(Math.abs(x)<2&&Math.abs(z)<2) continue;
-            const h=1+Math.random()*2;
-            const stal = new THREE.Mesh(new THREE.ConeGeometry(0.3,h,6), iceMat);
-            stal.position.set(x,4.5,z); stal.rotation.x=Math.PI; stal.castShadow=stal.receiveShadow=true; scene.add(stal); environmentObjects.push(stal);
-            const stalag = new THREE.Mesh(new THREE.ConeGeometry(0.3,h,6), iceMat);
-            stalag.position.set(x,0.2,z); stalag.castShadow=stalag.receiveShadow=true; scene.add(stalag); environmentObjects.push(stalag);
+        const stalCount = 10 + Math.floor(Math.random()*10);
+        for (let i=0; i<stalCount; i++) {
+            const x = (Math.random()-0.5)*12;
+            const z = (Math.random()-0.5)*12;
+            if (Math.abs(x)<2 && Math.abs(z)<2) continue;
+            const height = 1 + Math.random()*2;
+            const stal = new THREE.Mesh(new THREE.ConeGeometry(0.3,height,6), iceMat);
+            stal.position.set(x,4.5,z); stal.rotation.x = Math.PI;
+            stal.castShadow=stal.receiveShadow=true; scene.add(stal); environmentObjects.push(stal);
+            const stalag = new THREE.Mesh(new THREE.ConeGeometry(0.3,height,6), iceMat);
+            stalag.position.set(x,0.2,z);
+            stalag.castShadow=stalag.receiveShadow=true; scene.add(stalag); environmentObjects.push(stalag);
         }
-        // Кристаллы
-        for(let i=0;i<10;i++) {
-            const c = new THREE.Mesh(new THREE.OctahedronGeometry(0.5), new THREE.MeshStandardMaterial({ color:0x88aaff, emissive:0x224466 }));
-            c.position.set((Math.random()-0.5)*7,0.5+Math.random()*3,(Math.random()-0.5)*7); c.castShadow=c.receiveShadow=true; scene.add(c); environmentObjects.push(c);
+        const crystalMat = new THREE.MeshStandardMaterial({ color:0x88aaff, emissive:0x224466 });
+        for (let i=0; i<10; i++) {
+            const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.5), crystalMat);
+            crystal.position.set((Math.random()-0.5)*7, 0.5+Math.random()*3, (Math.random()-0.5)*7);
+            crystal.castShadow=crystal.receiveShadow=true; scene.add(crystal); environmentObjects.push(crystal);
         }
-        // Вода
-        const waterCanvas = document.createElement('canvas'); waterCanvas.width=256; waterCanvas.height=256;
-        const wctx = waterCanvas.getContext('2d'); wctx.fillStyle='#224466'; wctx.fillRect(0,0,256,256);
-        for(let i=0;i<1000;i++) { wctx.fillStyle=`rgba(100,200,255,${Math.random()*0.3})`; wctx.fillRect(Math.floor(Math.random()*256),Math.floor(Math.random()*256),4,4); }
+        // Водная поверхность
+        const waterCanvas = document.createElement('canvas');
+        waterCanvas.width = 256; waterCanvas.height = 256;
+        const wctx = waterCanvas.getContext('2d');
+        wctx.fillStyle = '#224466'; wctx.fillRect(0,0,256,256);
+        for (let i=0; i<1000; i++) {
+            wctx.fillStyle = `rgba(100,200,255,${Math.random()*0.3})`;
+            wctx.fillRect(Math.floor(Math.random()*256), Math.floor(Math.random()*256), 4, 4);
+        }
         const waterTex = new THREE.CanvasTexture(waterCanvas);
-        waterPlane = new THREE.Mesh(new THREE.PlaneGeometry(10,10), new THREE.MeshStandardMaterial({ map:waterTex, color:0x88aaff, emissive:0x113355, transparent:true, opacity:0.7, side:THREE.DoubleSide }));
-        waterPlane.rotation.x=-Math.PI/2; waterPlane.position.y=0.15; waterPlane.receiveShadow=true; scene.add(waterPlane); environmentObjects.push(waterPlane);
+        const waterMaterial = new THREE.MeshStandardMaterial({ map:waterTex, color:0x88aaff, emissive:0x113355, transparent:true, opacity:0.7, side:THREE.DoubleSide });
+        waterPlane = new THREE.Mesh(new THREE.PlaneGeometry(10,10), waterMaterial);
+        waterPlane.rotation.x = -Math.PI/2; waterPlane.position.y = 0.15; waterPlane.receiveShadow = true;
+        scene.add(waterPlane); environmentObjects.push(waterPlane);
         playAmbient(locId);
     }
+
     // ========== МИФРИЛОВЫЕ КОПИ ==========
     else if (locId === 'mithril_mine') {
         scene.fog = new THREE.FogExp2(0x221133, 0.01);
         // Руны
-        for(let i=0;i<8;i++) {
-            const r = new THREE.Mesh(new THREE.TorusGeometry(0.5,0.1,8,16), new THREE.MeshStandardMaterial({ color:0xaa88ff, emissive:0x442288 }));
-            r.position.set((Math.random()-0.5)*6,1.5+Math.random()*2,(Math.random()-0.5)*6); r.rotation.x=Math.PI/2; r.rotation.z=Math.random()*Math.PI; r.castShadow=true;
-            scene.add(r); environmentObjects.push(r);
+        for (let i=0; i<8; i++) {
+            const rune = new THREE.Mesh(new THREE.TorusGeometry(0.5,0.1,8,16), new THREE.MeshStandardMaterial({ color:0xaa88ff, emissive:0x442288 }));
+            rune.position.set((Math.random()-0.5)*6, 1.5+Math.random()*2, (Math.random()-0.5)*6);
+            rune.rotation.x = Math.PI/2; rune.rotation.z = Math.random()*Math.PI;
+            rune.castShadow = true;
+            scene.add(rune); environmentObjects.push(rune);
         }
         // Парящие камни
-        for(let i=0;i<5;i++) {
-            const s = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4), new THREE.MeshStandardMaterial({ color:0x8866aa, emissive:0x331166 }));
-            s.position.set((Math.random()-0.5)*5,1.5+Math.random()*2,(Math.random()-0.5)*5); s.castShadow=s.receiveShadow=true;
-            scene.add(s); environmentObjects.push(s); floatingCrystals.push(s);
+        const floatingMat = new THREE.MeshStandardMaterial({ color:0x8866aa, emissive:0x331166 });
+        for (let i=0; i<5; i++) {
+            const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4), floatingMat);
+            stone.position.set((Math.random()-0.5)*5, 1.5+Math.random()*2, (Math.random()-0.5)*5);
+            stone.castShadow=stone.receiveShadow=true; scene.add(stone); environmentObjects.push(stone);
+            floatingCrystals.push(stone);
         }
         // Звёзды
         const starGeom = new THREE.BufferGeometry();
         const starPos = new Float32Array(300*3);
-        for(let i=0;i<300;i++) { starPos[i*3]=(Math.random()-0.5)*30; starPos[i*3+1]=8+Math.random()*8; starPos[i*3+2]=(Math.random()-0.5)*30; }
+        for (let i=0; i<300; i++) {
+            starPos[i*3]   = (Math.random()-0.5)*30;
+            starPos[i*3+1] = 8 + Math.random()*8;
+            starPos[i*3+2] = (Math.random()-0.5)*30;
+        }
         starGeom.setAttribute('position', new THREE.BufferAttribute(starPos,3));
         const stars = new THREE.Points(starGeom, new THREE.PointsMaterial({ color:0xffffff, size:0.15 }));
         scene.add(stars); environmentObjects.push(stars);
@@ -3742,6 +3950,7 @@ function createMithrilMineSky() {
             lavaTexture = null;
             scene.fog = null;
             scene.background = new THREE.Color(0x0a0a20);
+            skySphere = null;
         }
 
         // ==================== ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ ====================
@@ -4312,6 +4521,9 @@ function createMithrilMineSky() {
                             const hue = (time * 0.1 + idx * 0.1) % 1;
                             crystal.material.color.setHSL(hue, 1, 0.5);
                         }
+                        if (skySphere && currentLocationId === 'mithril_mine') {
+                            skySphere.material.map.offset.x += 0.0002;
+                        }
                     });
 
                     // Обновление uniform времени для шейдерных рун
@@ -4346,6 +4558,7 @@ function createMithrilMineSky() {
     </script>
 </body>
 </html>
+
 
 
 
