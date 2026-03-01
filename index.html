@@ -4111,21 +4111,23 @@
 
         // ==================== ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ ====================
         async function loadUser() {
-            const data = await apiCall('user');
-            if (!data) return;
-            goldSpan.textContent = data.gold;
-            updateExpBar(data.level, data.exp);
-            updateInventoryDisplay(data.inventory);
+    const data = await apiCall('user');
+    if (!data) return;
 
-            let toolDisplay = 'неизвестно';
-            if (data.active_tool) {
-                const parts = data.active_tool.split('/');
-                const toolCode = parts[0];
-                const toolLevel = parts[1] ? `+${parts[1]}` : '';
-                const baseName = TOOL_NAMES[toolCode] || toolCode;
-                toolDisplay = baseName + (toolLevel ? ` ${toolLevel}` : '');
-            }
-            activeToolSpan.textContent = toolDisplay;
+    // Обновляем базовые показатели
+    goldSpan.textContent = data.gold;
+    updateExpBar(data.level, data.exp);
+    updateInventoryDisplay(data.inventory);
+
+    let toolDisplay = 'неизвестно';
+    if (data.active_tool) {
+        const parts = data.active_tool.split('/');
+        const toolCode = parts[0];
+        const toolLevel = parts[1] ? `+${parts[1]}` : '';
+        const baseName = TOOL_NAMES[toolCode] || toolCode;
+        toolDisplay = baseName + (toolLevel ? ` ${toolLevel}` : '');
+    }
+    activeToolSpan.textContent = toolDisplay;
 
             if (!currentLocationId && data.boss_progress) {
                 if (currentBossId && data.boss_progress[currentBossId] && !data.boss_progress[currentBossId].defeated) {
@@ -4405,37 +4407,36 @@
             }
             const data = await apiCall('boss/attack', 'POST', { boss_id: currentBossId });
             if (data) {
-                debugLog('attack response: ' + JSON.stringify(data));
-                if (data.new_gold !== undefined) goldSpan.textContent = data.new_gold;
-                if (data.new_exp !== undefined) hudExp.textContent = data.new_exp;
-                if (data.inventory) updateInventoryDisplay(data.inventory);
-                if (data.current_health !== undefined) {
-                    updateBossHealth(data.current_health, data.max_health);
-                    if (bossGroup) {
-                        const worldPos = new THREE.Vector3();
-                        bossGroup.getWorldPosition(worldPos);
-                        createHitParticles(worldPos);
-                        showDamageText(data.damage, worldPos);
-                    }
+    debugLog('attack response: ' + JSON.stringify(data));
+    if (data.new_gold !== undefined) goldSpan.textContent = data.new_gold;
+    if (data.new_exp !== undefined) hudExp.textContent = data.new_exp;
+    if (data.inventory) updateInventoryDisplay(data.inventory);
+    if (data.current_health !== undefined) {
+        updateBossHealth(data.current_health, data.max_health);
+        if (bossGroup) {
+            const worldPos = new THREE.Vector3();
+            bossGroup.getWorldPosition(worldPos);
+            createHitParticles(worldPos);
+            showDamageText(data.damage, worldPos);
+        }
+    }
+    if (data.defeated) {
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+                if (bossGroup) {
+                    const pos = bossGroup.position.clone();
+                    createHitParticles(pos);
                 }
-                if (data.defeated) {
-                    for (let i = 0; i < 5; i++) {
-                        setTimeout(() => {
-                            if (bossGroup) {
-                                const pos = bossGroup.position.clone();
-                                createHitParticles(pos);
-                            }
-                        }, i * 100);
-                    }
-                    bossGroup.visible = false;
-                    bossHealthDiv.style.display = 'none';
-                    if (data.loot && data.loot.length) {
-                        showToast(`🏆 Босс побеждён! Награда: ${data.loot.join(', ')}`, 3000);
-                    } else {
-                        showToast('🏆 Босс побеждён!', 2000);
-                    }
-                }
-                loadUser();
+            }, i * 100);
+        }
+        bossGroup.visible = false;
+        bossHealthDiv.style.display = 'none';
+        if (data.loot && data.loot.length) {
+            showToast(`🏆 Босс побеждён! Награда: ${data.loot.join(', ')}`, 3000);
+        } else {
+            showToast('🏆 Босс побеждён!', 2000);
+        }
+    }
             } else {
                 debugLog('attackBoss: no data received');
             }
@@ -4574,26 +4575,26 @@
                         flashObject(hit, 0xffaa22, 150);
 
                         apiCall('click', 'POST', { resourceId: hit.userData.id }).then(data => {
-                            if (data) {
-                                goldSpan.textContent = data.new_gold;
-                                hudExp.textContent = data.new_exp;
-                                updateInventoryDisplay(data.inventory);
-                                loadUser();
+    if (data) {
+        goldSpan.textContent = data.new_gold;
+        hudExp.textContent = data.new_exp;
+        updateInventoryDisplay(data.inventory);
+        // loadUser();  // <-- УДАЛИТЕ ЭТУ СТРОКУ
 
-                                let phrase = '';
-                                if (data.is_crit) {
-                                    phrase = CRIT_PHRASES[Math.floor(Math.random() * CRIT_PHRASES.length)];
-                                    flashObject(hit, 0xffdd44, 400);
-                                } else if (data.found_resource && RARE_FIND_PHRASES[data.found_resource]) {
-                                    const arr = RARE_FIND_PHRASES[data.found_resource];
-                                    phrase = arr[Math.floor(Math.random() * arr.length)];
-                                    if (RARE_RESOURCES.includes(data.found_resource)) {
-                                        flashObject(hit, 0xaa88ff, 400);
-                                    }
-                                }
-                                if (phrase) showToast(phrase, 1000);
-                            }
-                        });
+        let phrase = '';
+        if (data.is_crit) {
+            phrase = CRIT_PHRASES[Math.floor(Math.random() * CRIT_PHRASES.length)];
+            flashObject(hit, 0xffdd44, 400);
+        } else if (data.found_resource && RARE_FIND_PHRASES[data.found_resource]) {
+            const arr = RARE_FIND_PHRASES[data.found_resource];
+            phrase = arr[Math.floor(Math.random() * arr.length)];
+            if (RARE_RESOURCES.includes(data.found_resource)) {
+                flashObject(hit, 0xaa88ff, 400);
+            }
+        }
+        if (phrase) showToast(phrase, 1000);
+    }
+});
                     }
                     else if (hit.userData.isBossPart && !currentLocationId) {
                         console.log('Это часть босса');
@@ -4721,6 +4722,7 @@
     </script>
 </body>
 </html>
+
 
 
 
