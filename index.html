@@ -2378,7 +2378,7 @@
             // Динамический импорт GLTFLoader, так как мы в модуле
             const { GLTFLoader } = await import('https://unpkg.com/three@0.128.0/examples/jsm/loaders/GLTFLoader.js');
             const loader = new GLTFLoader();
-            const url = `/models/${bossId}.glb`; // путь к файлу (поместите модели в папку models на сервере)
+            const url = `/telegram-clicker-bot/models/${bossId}.glb`; // путь к файлу (поместите модели в папку models на сервере)
             try {
                 const gltf = await loader.loadAsync(url);
                 const model = gltf.scene;
@@ -4713,4 +4713,5 @@
     </script>
 </body>
 </html>
+
 
