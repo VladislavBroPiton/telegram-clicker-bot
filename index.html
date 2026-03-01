@@ -2374,43 +2374,51 @@
 
         // ==================== ФУНКЦИЯ ЗАГРУЗКИ glTF-МОДЕЛИ ====================
         async function loadGLTFBoss(bossId) {
-            if (!THREE) return null;
-            // Динамический импорт GLTFLoader, так как мы в модуле
-            const { GLTFLoader } = await import('https://unpkg.com/three@0.128.0/examples/jsm/loaders/GLTFLoader.js');
-            const loader = new GLTFLoader();
-            const url = `/telegram-clicker-bot/models/${bossId}.glb`; // путь к файлу (поместите модели в папку models на сервере)
-            try {
-                const gltf = await loader.loadAsync(url);
-                const model = gltf.scene;
-                
-                // Масштабируем модель под размеры сцены (подберите нужный масштаб)
-                model.scale.set(1.2, 1.2, 1.2);
-                
-                // Помечаем все меши как части босса
-                model.traverse(child => {
-                    if (child.isMesh) {
-                        child.castShadow = true;
-                        child.receiveShadow = true;
-                        child.userData.isBossPart = true;
-                    }
-                });
-                
-                // Если есть анимации, можно сохранить mixer для последующего использования
-                if (gltf.animations && gltf.animations.length) {
-                    const mixer = new THREE.AnimationMixer(model);
-                    // Например, проигрываем первую анимацию
-                    const action = mixer.clipAction(gltf.animations[0]);
-                    action.play();
-                    // Сохраняем mixer в userData модели, чтобы обновлять в animate
-                    model.userData.mixer = mixer;
-                }
-                
-                return model;
-            } catch (error) {
-                console.error(`Ошибка загрузки glTF для ${bossId}:`, error);
-                return null;
+    if (!THREE) return null;
+    
+    // Импортируем GLTFLoader и DRACOLoader
+    const { GLTFLoader } = await import('https://unpkg.com/three@0.128.0/examples/jsm/loaders/GLTFLoader.js');
+    const { DRACOLoader } = await import('https://unpkg.com/three@0.128.0/examples/jsm/loaders/DRACOLoader.js');
+
+    const loader = new GLTFLoader();
+    
+    // Настраиваем DRACOLoader
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.4.1/'); // путь к декодеру
+    loader.setDRACOLoader(dracoLoader);
+
+    const url = `/telegram-clicker-bot/models/${bossId}.glb`; // путь к модели (у вас уже правильный)
+    
+    try {
+        const gltf = await loader.loadAsync(url);
+        const model = gltf.scene;
+        
+        // Масштабируем модель
+        model.scale.set(1.2, 1.2, 1.2);
+        
+        // Помечаем все меши как части босса
+        model.traverse(child => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+                child.userData.isBossPart = true;
             }
+        });
+        
+        // Если есть анимации, запускаем первую
+        if (gltf.animations && gltf.animations.length) {
+            const mixer = new THREE.AnimationMixer(model);
+            const action = mixer.clipAction(gltf.animations[0]);
+            action.play();
+            model.userData.mixer = mixer;
         }
+        
+        return model;
+    } catch (error) {
+        console.error(`Ошибка загрузки glTF для ${bossId}:`, error);
+        return null;
+    }
+}
 
         // ==================== УНИКАЛЬНЫЕ РЕСУРСЫ ДЛЯ КАЖДОГО БОССА ====================
         function createResourceObjectsForBoss(bossId) {
@@ -4713,5 +4721,6 @@
     </script>
 </body>
 </html>
+
 
 
