@@ -4109,8 +4109,8 @@
             skySphere = null;
         }
 
-        // ==================== ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ ====================
-        async function loadUser() {
+      // ==================== ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ ====================
+async function loadUser() {
     const data = await apiCall('user');
     if (!data) return;
 
@@ -4129,59 +4129,13 @@
     }
     activeToolSpan.textContent = toolDisplay;
 
-            if (!currentLocationId && data.boss_progress) {
-                if (currentBossId && data.boss_progress[currentBossId] && !data.boss_progress[currentBossId].defeated) {
-                    // ok
-                } else {
-                    let found = false;
-                    for (let i = currentBossIndex + 1; i < BOSS_IDS.length; i++) {
-                        const prog = data.boss_progress[BOSS_IDS[i]];
-                        if (prog && !prog.defeated) {
-                            currentBossIndex = i;
-                            currentBossId = BOSS_IDS[i];
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        for (let i = 0; i < currentBossIndex; i++) {
-                            const prog = data.boss_progress[BOSS_IDS[i]];
-                            if (prog && !prog.defeated) {
-                                currentBossIndex = i;
-                                currentBossId = BOSS_IDS[i];
-                                found = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (!found) {
-                        currentBossIndex = 0;
-                        currentBossId = BOSS_IDS[0];
-                    }
-                }
-                bossIndexSpan.textContent = `${currentBossIndex+1}/${BOSS_IDS.length}`;
-                if (threeReady) loadBossInfo(currentBossId);
-                else setTimeout(() => loadBossInfo(currentBossId), 500);
-            } else if (currentLocationId) {
-                bossHealthDiv.style.display = 'none';
-                if (!locationInitialized && threeReady) {
-                    loadLocationInfo(currentLocationId);
-                } else {
-                    goldSpan.textContent = data.gold;
-                    updateExpBar(data.level, data.exp);
-                    updateInventoryDisplay(data.inventory);
-                    let toolDisplay = 'неизвестно';
-                    if (data.active_tool) {
-                        const parts = data.active_tool.split('/');
-                        const toolCode = parts[0];
-                        const toolLevel = parts[1] ? `+${parts[1]}` : '';
-                        const baseName = TOOL_NAMES[toolCode] || toolCode;
-                        toolDisplay = baseName + (toolLevel ? ` ${toolLevel}` : '');
-                    }
-                    activeToolSpan.textContent = toolDisplay;
-                }
-            }
-        }
+    // В режиме боссов – только обновляем номер на панели, сцену не трогаем
+    if (!currentLocationId && data.boss_progress) {
+        bossIndexSpan.textContent = `${currentBossIndex+1}/${BOSS_IDS.length}`;
+    } else if (currentLocationId) {
+        bossIndexSpan.textContent = `${currentLocationIndex+1}/${LOCATION_IDS.length}`;
+    }
+}
 
         // ==================== ЗАГРУЗКА ИНФОРМАЦИИ О БОССЕ ====================
         async function loadBossInfo(bid) {
@@ -4722,6 +4676,7 @@
     </script>
 </body>
 </html>
+
 
 
 
