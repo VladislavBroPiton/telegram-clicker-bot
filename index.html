@@ -4197,35 +4197,63 @@ for (let i = 0; i < count; i++) {
         }
 
         async function loadBossInfo(bid) {
-            debugLog(`loadBossInfo for ${bid}`);
-            const data = await apiCall(`boss/${bid}`);
-            if (data) {
-                bossNameSpan.textContent = BOSS_NAMES[bid] || bid;
-                updateBossHealth(data.current_health, data.max_health);
-                bossHealthDiv.style.display = 'block';
-                updateNavigation();
+    debugLog(`loadBossInfo for ${bid}`);
+    const data = await apiCall(`boss/${bid}`);
+    if (data) {
+        bossNameSpan.textContent = BOSS_NAMES[bid] || bid;
+        updateBossHealth(data.current_health, data.max_health);
+        bossHealthDiv.style.display = 'block';
+        updateNavigation();
 
-                // Тематические классы для панели босса и для HUD
-                bossHealthDiv.className = 'boss-theme-' + bid;
-                document.getElementById('hud').className = 'hud-theme-' + bid;
+        // Тематические классы
+        bossHealthDiv.className = 'boss-theme-' + bid;
+        document.getElementById('hud').className = 'hud-theme-' + bid;
 
-                // Удаляем старые ресурсы
-                resourceObjects.forEach(obj => {
-                    disposeObject(obj);
-                    scene.remove(obj);
-                });
-                resourceObjects = [];
+        // Полная очистка сцены
+        clearEnvironment();
 
-                // Создаём новые ресурсы для текущего босса
-                const newResources = createResourceObjectsForBoss(bid);
-                newResources.forEach(obj => {
-                    obj.castShadow = true;
-                    obj.receiveShadow = true;
-                    scene.add(obj);
-                    resourceObjects.push(obj);
-                });
-            }
+        // Новое окружение
+        createEnvironmentForBoss(bid);
+
+        // Новые ресурсные объекты
+        const newResources = createResourceObjectsForBoss(bid);
+        newResources.forEach(obj => {
+            obj.castShadow = true;
+            obj.receiveShadow = true;
+            scene.add(obj);
+            resourceObjects.push(obj);
+        });
+
+        // Создаём нового босса
+        if (bossGroup) {
+            disposeObject(bossGroup);
+            scene.remove(bossGroup);
         }
+        bossGroup = new THREE.Group();
+        scene.add(bossGroup);
+
+        const visualBoss = createVisualBossModel(bid);
+        visualBoss.traverse(child => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+                child.userData.isBossPart = true; // гарантия флага
+            }
+        });
+        bossGroup.add(visualBoss);
+
+        // Коллайдер
+        const colliderGeom = new THREE.SphereGeometry(5.0, 8);
+        const colliderMat = new THREE.MeshBasicMaterial({ visible: false });
+        const collider = new THREE.Mesh(colliderGeom, colliderMat);
+        collider.position.set(0, 2.0, 0);
+        collider.userData.isBossPart = true;
+        bossGroup.add(collider);
+        bossCollider = collider;
+
+        bossGroup.position.set(0, 2, 0);
+    }
+}
 
         async function loadLocationInfo(locId) {
             debugLog(`loadLocationInfo for ${locId}`);
@@ -4502,42 +4530,10 @@ for (let i = 0; i < count; i++) {
 
 
                 if (currentLocationId) {
-                    // Группа босса не нужна
-                    bossGroup = null;
-                } else {
-                    // Режим боссов: создаём ресурсы для текущего босса
-                    resourceObjects = createResourceObjectsForBoss(currentBossId);
-                    resourceObjects.forEach(obj => {
-                        obj.castShadow = true;
-                        obj.receiveShadow = true;
-                        scene.add(obj);
-                    });
-
-                    // Группа для босса
-                    bossGroup = new THREE.Group();
-                    scene.add(bossGroup);
-
-                    const visualBoss = createVisualBossModel(currentBossId);
-                    visualBoss.traverse(child => {
-                        if (child.isMesh) {
-                            child.castShadow = true;
-                            child.receiveShadow = true;
-                        }
-                    });
-                    bossGroup.add(visualBoss);
-
-                    const colliderGeom = new THREE.SphereGeometry(5.0, 8);
-                    const colliderMat = new THREE.MeshBasicMaterial({ visible: false });
-                    const collider = new THREE.Mesh(colliderGeom, colliderMat);
-                    collider.position.set(0, 2.0, 0);
-                    collider.userData.isBossPart = true;
-                    bossGroup.add(collider);
-                    bossCollider = collider;
-
-                    bossGroup.position.set(0, 2, 0);
-
-                    createEnvironmentForBoss(currentBossId);
-                }
+    bossGroup = null;
+} else {
+    bossGroup = null; // босс будет создан позже в loadBossInfo
+}
 
                 threeReady = true;
                 debugLog('Three.js готов');
@@ -4759,3 +4755,4 @@ loadUser();
     </script>
 </body>
 </html>
+
