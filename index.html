@@ -4666,9 +4666,11 @@ async function loadUser() {
 
                                 loadUser();
 
-                // ===== ДОБАВЛЕНО: загружаем первого босса, если мы в режиме боссов =====
+                // ===== ЗАГРУЗКА ПЕРВОГО БОССА ИЛИ ЛОКАЦИИ =====
                 if (!currentLocationId && threeReady) {
                     loadBossInfo(currentBossId);
+                } else if (currentLocationId && threeReady && !locationInitialized) {
+                    loadLocationInfo(currentLocationId);
                 }
 
             } catch (e) {
@@ -4681,6 +4683,7 @@ async function loadUser() {
     </script>
 </body>
 </html>
+
 
 
 
