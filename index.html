@@ -4664,7 +4664,12 @@ async function loadUser() {
                     renderer.setSize(innerWidth, innerHeight);
                 });
 
-                loadUser();
+                                loadUser();
+
+                // ===== ДОБАВЛЕНО: загружаем первого босса, если мы в режиме боссов =====
+                if (!currentLocationId && threeReady) {
+                    loadBossInfo(currentBossId);
+                }
 
             } catch (e) {
                 debugLog(`❌ Ошибка в init3D: ${e.message}`);
@@ -4676,6 +4681,7 @@ async function loadUser() {
     </script>
 </body>
 </html>
+
 
 
 
